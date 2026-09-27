@@ -84,6 +84,8 @@ function PlanView({ tab }: { tab: Tab }) {
 
 function ActivityView({ tab }: { tab: Tab }) {
   const s = tab.session!
+  const openFile = useWorkbench((x) => x.openFile)
+  const projectId = useWorkbench((x) => x.activeProjectId)!
   const icon = (kind: string) => {
     switch (kind) {
       case 'user': return Icons.terminal(12)
@@ -105,7 +107,7 @@ function ActivityView({ tab }: { tab: Tab }) {
       <div className="events">
         {s.events.length === 0 && <Empty>Rien pour l'instant</Empty>}
         {s.events.map((e) => (
-          <div key={e.id} className={'event ' + (e.kind === 'user' ? 'user' : e.kind === 'text' ? 'text' : 'tool')} onDoubleClick={() => e.file && window.ct.app.openExternal(e.file)} title={e.file ?? undefined}>
+          <div key={e.id} className={'event ' + (e.kind === 'user' ? 'user' : e.kind === 'text' ? 'text' : 'tool')} onDoubleClick={() => e.file && openFile(projectId, e.file)} title={e.file ?? undefined}>
             <span className="ico">{icon(e.kind)}</span>
             {e.kind !== 'user' && e.kind !== 'text' && <span className="kind">{e.kind}</span>}
             <span className="detail">{e.file ? short(e.file) : e.detail}</span>
@@ -125,6 +127,8 @@ function EndAnchor({ dep }: { dep: number }) {
 
 function FilesView({ tab }: { tab: Tab }) {
   const s = tab.session!
+  const openFile = useWorkbench((x) => x.openFile)
+  const projectId = useWorkbench((x) => x.activeProjectId)!
   const isModified = (p: string) => !!s.backups[p] || !!s.bashDiffs[p]
   const rows = Object.keys(s.files).sort((a, b) => { const ea = isModified(a), eb = isModified(b); return ea !== eb ? (ea ? -1 : 1) : a.localeCompare(b) })
   const [selected, setSelected] = useState<string | null>(null)
@@ -152,7 +156,7 @@ function FilesView({ tab }: { tab: Tab }) {
     <div className="files">
       <div className="files-list" style={{ width: listWidth }}>
         {rows.map((p) => (
-          <div key={p} className={'frow' + (p === current ? ' sel' : '')} onClick={() => setSelected(p)} onDoubleClick={() => window.ct.app.openExternal(p)} title={p}>
+          <div key={p} className={'frow' + (p === current ? ' sel' : '')} onClick={() => setSelected(p)} onDoubleClick={() => openFile(projectId, p)} title={p}>
             <span className="ico" style={{ color: isModified(p) ? 'var(--ct-accent)' : 'var(--ct-text-tertiary)' }}>{isModified(p) ? Icons.file(12) : Icons.file(12)}</span>
             <span className="name">{p.split(/[\\/]/).pop()}</span>
             <span className="rel">{short(p).replace(/[^/]*$/, '')}</span>

@@ -20,6 +20,7 @@ export const Icons = {
   chevronDown: (s?: number) => <I size={s} d="M6 9l6 6 6-6" />,
   chevronUp: (s?: number) => <I size={s} d="M18 15l-6-6-6 6" />,
   folder: (s?: number) => <I size={s} d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.6 3.9A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z" />,
+  image: (s?: number) => <I size={s} d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z|M8.5 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z|M21 15l-5-5L5 21" />,
   file: (s?: number) => <I size={s} d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z|M14 2v5h5" />,
   link: (s?: number) => <I size={s} d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7|M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />,
   info: (s?: number) => <I size={s} d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z|M12 16v-4|M12 8h.01" />,

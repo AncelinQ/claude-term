@@ -20,6 +20,13 @@ export interface Tab {
   /** derived Claude session state (main's SessionTracker) */
   session?: SessionState
   attention?: Attention | null
+  // file tabs
+  fileKind?: 'text' | 'image' | 'other'
+  dirty?: boolean
+  /** the file changed on disk while there were unsaved edits */
+  changedOnDisk?: boolean
+  imageUrl?: string
+  error?: string
 }
 
 export const isClaude = (t: Tab) => t.kind === 'claude' || t.claudeRunning
@@ -62,12 +69,17 @@ interface Workbench {
   setActiveProject(id: string): void
   select(projectId: string, path: string, isDir: boolean): void
   newTab(projectId: string, kind: TabKind, cwd?: string): Promise<void>
-  closeTab(projectId: string, tabId: string): void
+  closeTab(projectId: string, tabId: string): Promise<void>
   setCurrentTab(projectId: string, tabId: string): void
   tabExited(ptyId: string, code: number): void
   /** "start;<cmd>" | "end;<exit>" from the shell hooks (OSC 7770) */
   shellEvent(tabId: string, msg: string): void
   clearAttention(tabId: string): void
+  /** opens a text or image file in the center (anything else goes to the default app) */
+  openFile(projectId: string, path: string): Promise<void>
+  reloadFile(path: string): Promise<void>
+  saveCurrentFile(): Promise<void>
+  setFileDirty(path: string, dirty: boolean): void
   /** tells main which tab is in front and clears its attention */
   visibleChanged(): void
   setCwd(tabId: string, cwd: string): void
@@ -111,6 +123,12 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       if (p) { set({ activeProjectId: p.id }); get().setCurrentTab(p.id, tabId) }
     })
     window.addEventListener('focus', () => get().visibleChanged())
+    window.ct.fs.onChanged((path) => {
+      const tabs = get().projects.flatMap((p) => p.tabs).filter((t) => t.kind === 'file' && t.path === path)
+      if (!tabs.length) return
+      if (tabs.some((t) => t.dirty)) set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path ? { ...t, changedOnDisk: true } : t)) })) }))
+      else get().reloadFile(path)
+    })
   },
 
   setLeft(a) { set({ leftActivity: a }); window.ct.settings.set({ leftActivity: a }) },
@@ -166,9 +184,18 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     else if (kind === 'claude') window.ct.claude.track(tab.id, dir)
     get().visibleChanged()
   },
-  closeTab(projectId, tabId) {
+  async closeTab(projectId, tabId) {
     const p = get().projects.find((x) => x.id === projectId)
     const t = p?.tabs.find((x) => x.id === tabId)
+    if (t?.kind === 'file' && t.path) {
+      if (t.dirty) {
+        const r = await window.ct.app.confirmSave(t.title)
+        if (r === 'cancel') return
+        if (r === 'save') { get().setCurrentTab(projectId, tabId); await get().saveCurrentFile(); if (get().projects.find((x) => x.id === projectId)?.tabs.find((x) => x.id === tabId)?.dirty) return }
+      }
+      const stillOpen = get().projects.some((x) => x.tabs.some((y) => y.id !== tabId && y.kind === 'file' && y.path === t.path))
+      if (!stillOpen) { window.ct.fs.unwatch(t.path); (await import('@/editor/EditorHost')).disposeFile(t.path) }
+    }
     if (t?.ptyId) window.ct.pty.kill(t.ptyId)
     window.ct.claude.untrack(tabId)
     set((s) => ({
@@ -211,6 +238,40 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       }
       return {}
     })
+  },
+  async openFile(projectId, path) {
+    const p = get().projects.find((x) => x.id === projectId)
+    if (!p) return
+    const existing = p.tabs.find((t) => t.kind === 'file' && t.path === path)
+    if (existing) { get().setCurrentTab(projectId, existing.id); return }
+    const r = await window.ct.fs.readFile(path)
+    if (r.kind === 'other') { window.ct.app.openExternal(path); return }
+    const tab: Tab = { id: 't' + ++seq, kind: 'file', title: path.split(/[\\/]/).pop() ?? path, cwd: path.replace(/[\\/][^\\/]*$/, ''), path, alive: true, busy: false, lastCommand: '', lastExit: null, claudeRunning: false, fileKind: r.kind, dirty: false, imageUrl: r.dataUrl, error: r.error }
+    if (r.kind === 'text' && r.text !== undefined) (await import('@/editor/EditorHost')).setFileText(path, r.text)
+    window.ct.fs.watch(path)
+    set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)) }))
+    get().visibleChanged()
+  },
+  async reloadFile(path) {
+    const r = await window.ct.fs.readFile(path)
+    const ed = await import('@/editor/EditorHost')
+    if (r.kind === 'text' && r.text !== undefined) ed.setFileText(path, r.text)
+    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path ? { ...t, dirty: false, changedOnDisk: false, imageUrl: r.dataUrl ?? t.imageUrl, error: r.error } : t)) })) }))
+  },
+  async saveCurrentFile() {
+    const s = get()
+    const p = s.projects.find((x) => x.id === s.activeProjectId)
+    const t = p?.tabs.find((x) => x.id === p.currentTabId)
+    if (!t || t.kind !== 'file' || t.fileKind !== 'text' || !t.path) return
+    const ed = await import('@/editor/EditorHost')
+    const text = ed.fileText(t.path)
+    if (text === null) return
+    const r = await window.ct.fs.writeFile(t.path, text)
+    if (r.ok) { ed.markSaved(t.path); patchTab(set, t.id, () => ({ dirty: false, changedOnDisk: false, error: undefined })) }
+    else patchTab(set, t.id, () => ({ error: r.error }))
+  },
+  setFileDirty(path, dirty) {
+    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path && t.dirty !== dirty ? { ...t, dirty } : t)) })) }))
   },
   clearAttention(tabId) {
     const t = get().projects.flatMap((p) => p.tabs).find((x) => x.id === tabId)

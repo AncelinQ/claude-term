@@ -48,11 +48,12 @@ function DirRow({ project, entry, depth }: { project: Project; entry: DirEntry; 
 
 function FileRow({ project, entry, depth }: { project: Project; entry: DirEntry; depth: number }) {
   const select = useWorkbench((s) => s.select)
+  const openFile = useWorkbench((s) => s.openFile)
   const sel = project.selectedPath === entry.path
   return (
     <div className={'row file' + (sel ? ' sel' : '')} style={{ paddingLeft: 6 + depth * 14 + 19 }}
       onClick={() => select(project.id, entry.path, false)}
-      onDoubleClick={() => window.ct.app.openExternal(entry.path)}
+      onDoubleClick={() => openFile(project.id, entry.path)}
       title={entry.path}>
       <span className="ico">{Icons.file(14)}</span>
       <span style={{ opacity: entry.hidden ? 0.6 : 1 }}>{entry.name}</span>

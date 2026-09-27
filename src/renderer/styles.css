@@ -213,3 +213,14 @@ input:focus { border-color: var(--ct-accent); }
 .check { display: inline-flex; align-items: center; gap: 6px; }
 select { font: inherit; color: var(--ct-text); background: var(--ct-input-bg); border: 1px solid var(--ct-input-border); border-radius: 6px; padding: 4px 8px; }
 input[type=checkbox] { accent-color: var(--ct-accent); }
+
+/* editor */
+.term-wrap.editor-bg { background: var(--ct-editor-bg); }
+.editor-wrap { position: absolute; inset: 0; }
+.editor { position: absolute; inset: 0; }
+.image-wrap { position: absolute; inset: 0; overflow: auto; display: grid; place-items: center; padding: 20px; }
+.image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.tab .close.dot { opacity: 1; }
+.tab .dirty-dot { width: 8px; height: 8px; border-radius: 4px; background: var(--ct-accent); display: block; }
+.tab:hover .close.dot .dirty-dot { display: none; }
+.tab:hover .close.dot::after { content: "×"; font-size: 12px; line-height: 1; }

@@ -109,6 +109,12 @@ export interface CtApi {
   fs: {
     readdir(path: string): Promise<DirEntry[]>
     exists(path: string): Promise<boolean>
+    /** editor: kind by content; text or image data URL */
+    readFile(path: string): Promise<{ kind: 'text' | 'image' | 'other'; text?: string; dataUrl?: string; error?: string }>
+    writeFile(path: string, text: string): Promise<{ ok: boolean; error?: string }>
+    watch(path: string): void
+    unwatch(path: string): void
+    onChanged(cb: (path: string) => void): () => void
   }
   themes: {
     list(): Promise<ThemeSpec[]>
@@ -143,6 +149,8 @@ export interface CtApi {
   }
   setHooks(on: boolean): Promise<{ ok: boolean; error?: string }>
   app: {
+    /** "Enregistrer" | "Ne pas enregistrer" | "Annuler" → 'save' | 'discard' | 'cancel' */
+    confirmSave(name: string): Promise<'save' | 'discard' | 'cancel'>
     pickFolder(): Promise<string | null>
     openExternal(path: string): void
     revealInFinder(path: string): void

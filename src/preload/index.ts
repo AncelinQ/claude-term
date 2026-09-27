@@ -21,6 +21,11 @@ const api: CtApi = {
   fs: {
     readdir: (path) => ipcRenderer.invoke('fs:readdir', path),
     exists: (path) => ipcRenderer.invoke('fs:exists', path),
+    readFile: (path) => ipcRenderer.invoke('fs:readFile', path),
+    writeFile: (path, text) => ipcRenderer.invoke('fs:writeFile', { path, text }),
+    watch: (path) => ipcRenderer.send('fs:watch', path),
+    unwatch: (path) => ipcRenderer.send('fs:unwatch', path),
+    onChanged: (cb) => channel('fs:changed', () => true, (p) => p.path as string, cb),
   },
   themes: {
     list: () => ipcRenderer.invoke('themes:list'),
@@ -53,6 +58,7 @@ const api: CtApi = {
   },
   setHooks: (on) => ipcRenderer.invoke('hooks:set', on),
   app: {
+    confirmSave: (name) => ipcRenderer.invoke('app:confirmSave', name),
     pickFolder: () => ipcRenderer.invoke('app:pickFolder'),
     openExternal: (path) => ipcRenderer.send('app:openExternal', path),
     revealInFinder: (path) => ipcRenderer.send('app:reveal', path),

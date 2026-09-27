@@ -16,7 +16,7 @@ export function App() {
     if (import.meta.env.DEV) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
       return { activeProjectId: s.activeProjectId, leftActivity: s.leftActivity, rightActivity: s.rightActivity, showSettings: s.showSettings, sessionMode: s.sessionMode,
-        projects: s.projects.map((p) => ({ id: p.id, root: p.root, currentTabId: p.currentTabId, selectedPath: p.selectedPath, tabs: p.tabs.map((t) => ({ id: t.id, kind: t.kind, title: t.title, cwd: t.cwd, alive: t.alive, busy: t.busy, lastCommand: t.lastCommand, lastExit: t.lastExit, claudeRunning: t.claudeRunning, attention: t.attention, session: t.session && { id: t.session.sessionId, events: t.session.events.length, files: Object.keys(t.session.files).length, planMode: t.session.planMode, tokens: [t.session.inputTokens, t.session.outputTokens] } })) })) }
+        projects: s.projects.map((p) => ({ id: p.id, root: p.root, currentTabId: p.currentTabId, selectedPath: p.selectedPath, tabs: p.tabs.map((t) => ({ id: t.id, kind: t.kind, title: t.title, cwd: t.cwd, alive: t.alive, busy: t.busy, lastCommand: t.lastCommand, lastExit: t.lastExit, claudeRunning: t.claudeRunning, attention: t.attention, path: t.path, dirty: t.dirty, changedOnDisk: t.changedOnDisk, session: t.session && { id: t.session.sessionId, events: t.session.events.length, files: Object.keys(t.session.files).length, planMode: t.session.planMode, tokens: [t.session.inputTokens, t.session.outputTokens] } })) })) }
     }
   }, [])
   useEffect(() => { if (theme) applyTheme(theme) }, [theme])
@@ -31,6 +31,7 @@ export function App() {
       else if (e.key === 't' && e.shiftKey && p?.root) { e.preventDefault(); newTab(p.id, 'claude') }
       else if (e.key === 'w' && !e.shiftKey && p?.currentTabId) { e.preventDefault(); closeTab(p.id, p.currentTabId) }
       else if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newProject(null) }
+      else if (e.key === 's' && !e.shiftKey) { e.preventDefault(); useWorkbench.getState().saveCurrentFile() }
       else if (e.key === ',') { e.preventDefault(); const s = useWorkbench.getState(); s.setShowSettings(!s.showSettings) }
       else if (e.key === 'w' && !e.shiftKey && useWorkbench.getState().showSettings) { e.preventDefault(); useWorkbench.getState().setShowSettings(false) }
       else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }
@@ -70,6 +71,22 @@ export function App() {
   )
 }
 
+function FileStatus({ tab }: { tab: import('./stores/workbench').Tab }) {
+  const reload = useWorkbench((s) => s.reloadFile)
+  const save = useWorkbench((s) => s.saveCurrentFile)
+  const home = window.ct.home
+  const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
+  return (
+    <>
+      <span className="item">{Icons.file(12)} {short(tab.path!)}</span>
+      {tab.dirty && <span className="badge" style={{ background: 'var(--ct-tab-active-bg)', color: 'var(--ct-text)' }}>modifié</span>}
+      {tab.changedOnDisk && <span className="item"><span className="badge" style={{ background: 'color-mix(in srgb, var(--ct-badge-warn) 20%, transparent)', color: 'var(--ct-badge-warn)' }}>modifié sur le disque</span><button className="linkbtn" onClick={() => reload(tab.path!)}>Recharger</button></span>}
+      {tab.error && <span className="item" style={{ color: 'var(--ct-badge-error)' }}>{tab.error}</span>}
+      {tab.dirty && <button className="linkbtn" onClick={() => save()}>Enregistrer (⌘S)</button>}
+    </>
+  )
+}
+
 function StatusBar() {
   const project = useActiveProject()
   const tab = project?.tabs.find((t) => t.id === project.currentTabId)
@@ -78,7 +95,8 @@ function StatusBar() {
   return (
     <div className="status">
       {project?.root && <span className="item">{Icons.folder(12)} {short(project.root)}</span>}
-      {tab && <span className="item">{isClaude(tab) ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
+      {tab && tab.kind === 'file' && <FileStatus tab={tab} />}
+      {tab && tab.kind !== 'file' && <span className="item">{isClaude(tab) ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
       {tab && tab.attention && <span className="badge" style={{ background: `color-mix(in srgb, ${attentionColor(tab.attention)} 20%, transparent)`, color: attentionColor(tab.attention) }}>{attentionLabel(tab.attention)}</span>}
       {tab && isClaude(tab) && tab.session?.permissionMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>{tab.session.permissionMode}</span>}
       {tab && isClaude(tab) && tab.session?.planMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>plan</span>}
@@ -91,7 +109,7 @@ function StatusBar() {
       )}
       <span className="spacer" />
       {tab && isClaude(tab) && tab.session && <span className="item muted">{tab.session.inputTokens.toLocaleString()} ↓ {tab.session.outputTokens.toLocaleString()} ↑</span>}
-      {tab && <span className="item"><span className="dot" style={{ width: 7, height: 7, borderRadius: 4, background: tab.alive ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }} /> {tab.alive ? 'actif' : 'terminé'}</span>}
+      {tab && tab.kind !== 'file' && <span className="item"><span className="dot" style={{ width: 7, height: 7, borderRadius: 4, background: tab.alive ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }} /> {tab.alive ? 'actif' : 'terminé'}</span>}
     </div>
   )
 }

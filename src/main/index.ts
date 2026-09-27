@@ -9,6 +9,7 @@ import { ClaudeData } from './services/claude-data'
 import { SessionTracker } from './services/session-tracker'
 import { ClaudeSettings } from './services/claude-settings'
 import { HookHub } from './services/hooks'
+import { FileService } from './services/files'
 import type { DirEntry } from '@shared/ipc'
 
 // dev: Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts)
@@ -42,6 +43,15 @@ ipcMain.handle('fs:readdir', (_e, path: string): DirEntry[] => {
   } catch { return [] }
 })
 ipcMain.handle('fs:exists', (_e, path: string) => existsSync(path))
+const files = new FileService((path) => send('fs:changed', { path }))
+ipcMain.handle('fs:readFile', (_e, path: string) => files.read(path))
+ipcMain.handle('fs:writeFile', (_e, { path, text }) => files.write(path, text))
+ipcMain.on('fs:watch', (_e, path: string) => files.watch(path))
+ipcMain.on('fs:unwatch', (_e, path: string) => files.unwatch(path))
+ipcMain.handle('app:confirmSave', async (_e, name: string) => {
+  const r = await dialog.showMessageBox(win!, { type: 'question', message: `Enregistrer les modifications de ${name} ?`, detail: 'Sinon elles seront perdues.', buttons: ['Enregistrer', 'Ne pas enregistrer', 'Annuler'], defaultId: 0, cancelId: 2 })
+  return (['save', 'discard', 'cancel'] as const)[r.response]
+})
 
 // themes / settings
 ipcMain.handle('themes:list', () => themes.list())
