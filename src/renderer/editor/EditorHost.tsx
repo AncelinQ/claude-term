@@ -3,6 +3,7 @@ import { monaco, applyMonacoTheme } from './monaco'
 import { useWorkbench, type Tab } from '@/stores/workbench'
 import { ACTIONS, binding, parse } from '@shared/keymap'
 import { runAppAction } from '@/actions'
+import { FindBar, openFind } from './FindBar'
 
 /** One Monaco editor for the center; models (and their undo stacks) live per file path. */
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
@@ -60,7 +61,8 @@ export function applyKeymap(overrides: Record<string, string>) {
   for (const a of ACTIONS) {
     const kb = monacoKey(binding(a.id, overrides))
     if (kb === null) continue
-    const run = a.scope === 'editor' ? () => { editor!.getAction(a.id)?.run() ?? editor!.trigger('keymap', a.id, null) } : () => { runAppAction(a.id) }
+    const run = a.id === 'actions.find' ? () => openFind(false) : a.id === 'editor.action.startFindReplaceAction' ? () => openFind(true)
+      : a.scope === 'editor' ? () => { editor!.getAction(a.id)?.run() ?? editor!.trigger('keymap', a.id, null) } : () => { runAppAction(a.id) }
     keymapDisposables.push(editor.addAction({ id: 'ct.' + a.id, label: a.label, keybindings: [kb], run }))
   }
 }
@@ -141,7 +143,12 @@ export function EditorHost({ tab }: { tab: Tab }) {
   }, [theme, settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight, settings.editorWordWrap, settings.editorMinimap])
   useEffect(() => { applyKeymap(settings.keybindings ?? {}) }, [JSON.stringify(settings.keybindings ?? {})])
 
-  return <div className="editor-wrap" ref={ref} />
+  return (
+    <div className="editor-col">
+      <FindBar getEditor={() => editor} />
+      <div className="editor-wrap rel" ref={ref} />
+    </div>
+  )
 }
 
 export function ImageView({ src }: { src: string }) {

@@ -16,6 +16,15 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 const EN: Record<string, string> = {
+  'Respecter la casse': 'Match case',
+  'Mot entier': 'Whole word',
+  'Expression régulière': 'Regular expression',
+  '0 résultat': '0 results',
+  'Précédent (⇧↩)': 'Previous (⇧↩)',
+  'Suivant (↩)': 'Next (↩)',
+  'Fermer (Échap)': 'Close (Esc)',
+  'Remplacer par': 'Replace with',
+  'Tout remplacer': 'Replace all',
   'Raccourcis': 'Shortcuts',
   "Reformater à l'enregistrement": 'Format on save',
   'Indentation et mise en forme avant chaque écriture (JSON, JS/TS, CSS, HTML…).': 'Indentation and formatting before each write (JSON, JS/TS, CSS, HTML…).',
