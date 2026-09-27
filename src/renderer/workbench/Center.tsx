@@ -66,6 +66,7 @@ export function Center({ project }: { project: Project }) {
             <MenuButton title={tr('Nouvel onglet')} items={[
               { label: tr('Claude'), icon: <span style={{ color: 'var(--ct-accent)', display: 'inline-flex' }}>{Icons.sparkle(13)}</span>, shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
               { label: tr('Shell'), icon: Icons.terminal(13), shortcut: '⌘T', onSelect: () => newTab(project.id, 'shell') },
+              ...(window.ct.platform === 'darwin' ? ['sep' as const, { label: tr("Capture d'écran → prompt"), icon: Icons.camera(13), shortcut: '⌥⌘S', onSelect: () => useWorkbench.getState().captureScreen(project.id) }] : []),
             ]}>{Icons.plus()}</MenuButton>}>
           {current && current.kind === 'file' ? (
             current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>

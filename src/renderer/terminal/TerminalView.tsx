@@ -4,10 +4,18 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import type { ResolvedTheme } from '@shared/theme'
 import { OSC_SHELL } from '@shared/ipc'
+import * as pathsMod from '@shared/paths'
+const require_paths = () => pathsMod
 import { useWorkbench, type Tab } from '@/stores/workbench'
 
 /** Terminals live outside React (one xterm per tab), attached to the visible container. */
 const terminals = new Map<string, { term: Terminal; fit: FitAddon; el: HTMLDivElement; dispose: () => void }>()
+if (import.meta.env.DEV) (window as any).__ct_termText = (tabId: string) => {
+  const t = terminals.get(tabId)?.term; if (!t) return null
+  const b = t.buffer.active; const lines: string[] = []
+  for (let i = Math.max(0, b.baseY + b.cursorY - 5); i <= b.baseY + b.cursorY; i++) lines.push(b.getLine(i)?.translateToString(true) ?? '')
+  return lines
+}
 
 function xtermTheme(t: ResolvedTheme) {
   const k = t.tokens
@@ -47,6 +55,35 @@ export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, 
     unsubs.push(window.ct.pty.onData(id, (d) => term.write(d)))
     unsubs.push(window.ct.pty.onExit(id, (code) => { useWorkbench.getState().tabExited(id, code); term.write(`\r\n\x1b[90m[process terminé, code ${code}]\x1b[0m\r\n`) }))
     term.onData((d) => window.ct.pty.write(id, d))
+    // ⌘V / Ctrl+V with an image on the clipboard: save it and type its path instead of pasting text
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown' && (e.metaKey || e.ctrlKey) && e.key === 'v' && !e.shiftKey) {
+        window.ct.attachments.clipboardImage().then((p) => { if (p) window.ct.pty.write(id, (require_paths().pathsForPrompt)([p])) })
+        return true   // text paste still goes through xterm's own handler
+      }
+      return true
+    })
+    // drop: files (their paths), images (saved), or plain-text paths from our own tree
+    el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer!.dropEffect = 'copy' })
+    el.addEventListener('drop', async (e) => {
+      e.preventDefault()
+      const paths: string[] = []
+      for (const f of Array.from(e.dataTransfer?.files ?? [])) { const p = window.ct.attachments.pathForFile(f); if (p) paths.push(p) }
+      if (!paths.length) {
+        const txt = e.dataTransfer?.getData('text/plain') ?? ''
+        if (txt.startsWith('/') || /^[A-Za-z]:\\/.test(txt)) paths.push(...txt.split('\n').filter(Boolean))
+      }
+      if (!paths.length) {
+        for (const item of Array.from(e.dataTransfer?.items ?? [])) {
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const blob = item.getAsFile(); if (!blob) continue
+            const url = await new Promise<string>((r) => { const fr = new FileReader(); fr.onload = () => r(String(fr.result)); fr.readAsDataURL(blob) })
+            const p = await window.ct.attachments.saveDataUrl(url); if (p) paths.push(p)
+          }
+        }
+      }
+      if (paths.length) { window.ct.pty.write(id, require_paths().pathsForPrompt(paths)); term.focus() }
+    })
     term.onResize(({ cols, rows }) => window.ct.pty.resize(id, cols, rows))
     // shell integration (start/end of commands) and cwd reports
     term.parser.registerOscHandler(OSC_SHELL, (data) => { useWorkbench.getState().shellEvent(tab.id, data); return true })

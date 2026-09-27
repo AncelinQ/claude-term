@@ -237,6 +237,13 @@ export interface CtApi {
   search: {
     files(root: string, query: string): Promise<string[]>
   }
+  attachments: {
+    /** absolute path of a dropped File (Electron webUtils) */
+    pathForFile(file: File): string
+    saveDataUrl(dataUrl: string): Promise<string | null>
+    clipboardImage(): Promise<string | null>
+    captureScreen(): Promise<string | null>
+  }
   app: {
     /** "Enregistrer" | "Ne pas enregistrer" | "Annuler" → 'save' | 'discard' | 'cancel' */
     confirmSave(name: string): Promise<'save' | 'discard' | 'cancel'>

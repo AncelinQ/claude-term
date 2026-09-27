@@ -15,6 +15,7 @@ import { Skills } from './services/skills'
 import { Mcp } from './services/mcp'
 import { scanClaudeProcesses } from './services/process'
 import { FileIndex } from './services/search'
+import { Attachments } from './services/attachments'
 import type { DirEntry } from '@shared/ipc'
 
 // dev: Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts)
@@ -125,6 +126,12 @@ ipcMain.handle('proc:scan', () => scanClaudeProcesses())
 ipcMain.on('proc:kill', (_e, { pid, signal }) => { try { process.kill(pid, signal ?? 'SIGTERM') } catch { /* gone */ } })
 const index = new FileIndex()
 ipcMain.handle('search:files', (_e, { root, query }) => index.search(root, query))
+
+// attachments (images → files → prompt)
+const attachments = new Attachments()
+ipcMain.handle('att:saveDataUrl', (_e, d: string) => attachments.saveDataUrl(d))
+ipcMain.handle('att:clipboardImage', () => attachments.clipboardImage())
+ipcMain.handle('att:captureScreen', async () => { const p = await attachments.captureScreen(); if (p) { win?.show(); win?.focus() } return p })
 
 // app
 ipcMain.handle('app:pickFolder', async () => {

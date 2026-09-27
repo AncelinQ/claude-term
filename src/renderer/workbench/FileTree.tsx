@@ -36,6 +36,7 @@ function DirRow({ project, entry, depth }: { project: Project; entry: DirEntry; 
         onClick={() => { select(project.id, entry.path, true) }}
         onDoubleClick={() => setOpen(!open)}
         onContextMenu={(e) => { e.preventDefault(); newTab(project.id, 'claude', entry.path) }}
+        draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', entry.path); e.dataTransfer.effectAllowed = 'copy' }}
         title={entry.path}>
         <span className={'chev' + (open ? ' open' : '')} onClick={(e) => { e.stopPropagation(); setOpen(!open) }}>{Icons.chevron(10)}</span>
         <span className="ico">{Icons.folder(14)}</span>
@@ -54,6 +55,7 @@ function FileRow({ project, entry, depth }: { project: Project; entry: DirEntry;
     <div className={'row file' + (sel ? ' sel' : '')} style={{ paddingLeft: 6 + depth * 14 + 19 }}
       onClick={() => select(project.id, entry.path, false)}
       onDoubleClick={() => openFile(project.id, entry.path)}
+      draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', entry.path); e.dataTransfer.effectAllowed = 'copy' }}
       title={entry.path}>
       <span className="ico">{Icons.file(14)}</span>
       <span style={{ opacity: entry.hidden ? 0.6 : 1 }}>{entry.name}</span>

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { t } from '@/i18n'
+import { pathsForPrompt } from '@shared/paths'
 import type { ResolvedTheme } from '@shared/theme'
 import type { Settings, TabKind, SessionState, Attention } from '@shared/ipc'
 
@@ -74,6 +75,9 @@ interface Workbench {
   newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string): Promise<void>
   /** types text into the current Claude tab of the project (opens one if needed) */
   insertPrompt(projectId: string, text: string): Promise<void>
+  /** types escaped file paths into a terminal tab (the current one, else the Claude tab) */
+  sendPaths(projectId: string, paths: string[], tabId?: string): Promise<void>
+  captureScreen(projectId: string): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
   /** closes every file tab (terminals stay), except `keep` */
   closeFiles(projectId: string, keep?: string): Promise<void>
@@ -194,6 +198,19 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     if (error) console.error(error)
     else if (kind === 'claude') window.ct.claude.track(tab.id, dir, resume ? { resume } : undefined)
     get().visibleChanged()
+  },
+  async sendPaths(projectId, paths, tabId) {
+    if (!paths.length) return
+    const p = get().projects.find((x) => x.id === projectId)
+    const t = p?.tabs.find((x) => x.id === (tabId ?? p.currentTabId))
+    if (t?.ptyId && t.kind !== 'file' && t.alive) {
+      window.ct.pty.write(t.ptyId, pathsForPrompt(paths))
+      ;(await import('@/terminal/TerminalView')).focusTerminal(t.id)
+    } else await get().insertPrompt(projectId, pathsForPrompt(paths))
+  },
+  async captureScreen(projectId) {
+    const p = await window.ct.attachments.captureScreen()
+    if (p) get().sendPaths(projectId, [p])
   },
   async insertPrompt(projectId, text) {
     const p = get().projects.find((x) => x.id === projectId)

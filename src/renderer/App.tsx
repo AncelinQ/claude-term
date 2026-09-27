@@ -40,6 +40,7 @@ export function App() {
       else if (e.key === 'w' && !e.shiftKey && st.showSettings) { e.preventDefault(); st.setShowSettings(false) }
       else if (e.key === 'w' && !e.shiftKey && p?.currentTabId) { e.preventDefault(); closeTab(p.id, p.currentTabId) }
       else if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newProject(null) }
+      else if (e.key === 's' && e.altKey && p?.root) { e.preventDefault(); st.captureScreen(p.id) }
       else if (e.key === 's' && !e.shiftKey) { e.preventDefault(); st.saveCurrentFile() }
       else if (e.key === ',') { e.preventDefault(); st.setShowSettings(!st.showSettings) }
       else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }

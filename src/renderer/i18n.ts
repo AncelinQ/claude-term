@@ -122,6 +122,7 @@ const EN: Record<string, string> = {
   'Enregistrer (⌘S)': 'Save (⌘S)',
   'Image illisible': 'Unreadable image',
   'Code': 'Code',
+  "Capture d'écran → prompt": 'Screenshot → prompt',
   'Côte à côte': 'Side by side',
   'Rendu': 'Preview',
   // session block

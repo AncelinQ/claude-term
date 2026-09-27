@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { CtApi } from '@shared/ipc'
 
 function channel<T>(name: string, filter: (payload: any) => boolean, map: (payload: any) => T, cb: (v: T) => void) {
@@ -90,6 +90,12 @@ const api: CtApi = {
   },
   search: {
     files: (root, query) => ipcRenderer.invoke('search:files', { root, query }),
+  },
+  attachments: {
+    pathForFile: (file) => webUtils.getPathForFile(file),
+    saveDataUrl: (dataUrl) => ipcRenderer.invoke('att:saveDataUrl', dataUrl),
+    clipboardImage: () => ipcRenderer.invoke('att:clipboardImage'),
+    captureScreen: () => ipcRenderer.invoke('att:captureScreen'),
   },
   app: {
     confirmSave: (name) => ipcRenderer.invoke('app:confirmSave', name),
