@@ -5,14 +5,15 @@ import { join } from 'node:path'
 import { TempDir } from './helpers'
 
 const require = createRequire(import.meta.url)
-const { parseStatus, parseLog, parseRefs, LOG_FORMAT, REF_FORMAT, LABELS } = require('../resources/plugins/git/git.js')
+const { parseStatus, parseLog, parseRefs, parseDecorations, parseNameStatus, parseCommitInfo, LOG_FORMAT, REF_FORMAT, INFO_FORMAT, LABELS } = require('../resources/plugins/git/git.js')
+const { layout } = require('../resources/plugins/git/graph.js')
 const M = require('../resources/plugins/git/model.js')
 
 const env = (cwd: string) => ({ ...process.env, GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@x', GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@x', HOME: cwd })
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', env: env(cwd) })
 const status = (r: string) => parseStatus(git(r, 'status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all'))
 const refs = (r: string) => parseRefs(git(r, 'for-each-ref', '--format=' + REF_FORMAT, 'refs/heads', 'refs/remotes'))
-const log = (r: string) => parseLog(git(r, 'log', '--format=' + LOG_FORMAT))
+const log = (r: string) => parseLog(git(r, 'log', '--all', '--topo-order', '--format=' + LOG_FORMAT))
 
 /** A repo with a remote (bare) and one commit on main. */
 function repo() {
@@ -144,8 +145,10 @@ describe('model: views', () => {
     expect(b2.items[1].children[0]).toMatchObject({ detail: 'origin/x (disparue)', extra: '↑1 ↓2' })
     expect(M.branchesView({ ...s, status: { ...s.status, branch: null } }).items[0].label).toBe('HEAD (?)')
     const c = M.commitsView(s)
-    expect(c.kind).toBe('list'); expect(c.items[0].label).toBe('first'); expect(c.detail).toEqual({ kind: 'empty', text: 'Sélectionne un commit' })
-    expect(M.commitsView({ ...s, detail: 'diff --git' }).detail).toEqual({ kind: 'diff', text: 'diff --git' })
+    expect(c).toMatchObject({ kind: 'list', graph: true, search: true })
+    expect(c.items[0]).toMatchObject({ label: 'first', selected: false, graph: { node: 0 } })
+    expect(c.items[0].badges).toEqual(['main', 'origin/main', 'feature'])
+    expect(c.detail).toEqual({ kind: 'stack', panes: [{ kind: 'empty', text: 'Sélectionne un commit' }, { kind: 'empty', text: '' }] })
     expect(M.commitsView({ ...s, commits: [] })).toEqual({ kind: 'empty', text: 'Aucun commit' })
     const p = M.branchPopover(s)
     expect(p.items.map((g: any) => g.id)).toEqual(['g:actions', 'g:recent', 'g:local', 'g:remote'])
@@ -201,7 +204,7 @@ describe('model: reduce (events → state and effects)', () => {
     const res2 = M.reduce(s, ev('button', { actionId: 'commit' }))
     expect(res2.effects).toEqual([{ type: 'run', args: ['commit', '--amend', '-m', 'feat: x amended', '--', 'b.txt'] }])
     runEffects(r, res2.effects)
-    expect(log(r).map((c: any) => c.subject)).toEqual(['feat: x amended', 'first'])
+    expect(parseLog(git(r, 'log', '--format=' + LOG_FORMAT)).map((c: any) => c.subject)).toEqual(['feat: x amended', 'first'])
     t.dispose()
   })
   it('toolbar and prompt flows: refresh, fetch, new branch, rename, checkout revision, popover', () => {
@@ -251,7 +254,9 @@ describe('model: reduce (events → state and effects)', () => {
     const hash = log(r)[0].hash
     expect(M.reduce(s, ev('select', { itemId: 'file:a.txt' })).effects).toEqual([{ type: 'detailFile', path: 'a.txt' }])
     expect(M.reduce(s, ev('open', { itemId: 'file:a.txt' })).effects).toEqual([{ type: 'diffFile', path: 'a.txt' }])
-    expect(M.reduce(s, ev('select', { itemId: 'commit:' + hash })).effects).toEqual([{ type: 'detailCommit', hash }])
+    const sel = M.reduce(s, ev('select', { itemId: 'commit:' + hash }))
+    expect(sel.effects).toEqual([{ type: 'loadCommit', hash }])
+    expect(sel.state).toMatchObject({ selectedCommit: hash, commitFiles: null, commitInfo: null })
     expect(M.reduce(s, ev('open', { itemId: 'commit:' + hash })).effects).toEqual([{ type: 'diffCommit', hash }])
     expect(M.reduce(s, ev('open', { itemId: 'local:feature' })).effects).toEqual([{ type: 'run', args: ['switch', 'feature'] }])
     expect(M.reduce(s, ev('open', { itemId: 'local:main' })).effects).toEqual([])
@@ -346,5 +351,121 @@ describe('model: group by directory', () => {
     expect(M.changesView(s).toolbar.find((a: any) => a.id === 'groupDirs')).toMatchObject({ title: 'Liste à plat', icon: 'list' })
     expect(M.dirTree([], {}, 'changes', {})).toEqual([])
     t.dispose()
+  })
+})
+
+describe('commit graph', () => {
+  it('linear history: one lane, no line above the tip nor below the root', () => {
+    const rows = layout([{ hash: 'c', parents: ['b'] }, { hash: 'b', parents: ['a'] }, { hash: 'a', parents: [] }])
+    expect(rows.map((r: any) => r.node)).toEqual([0, 0, 0])
+    expect(rows[0]).toMatchObject({ up: [], down: [[0, 0, 0]], width: 1 })
+    expect(rows[1]).toMatchObject({ up: [[0, 0, 0]], down: [[0, 0, 0]] })
+    expect(rows[2]).toMatchObject({ up: [[0, 0, 0]], down: [] })
+  })
+  it('merge: the second parent opens a lane, both lanes converge on the base', () => {
+    const rows = layout([{ hash: 'm', parents: ['a1', 'b1'] }, { hash: 'a1', parents: ['r'] }, { hash: 'b1', parents: ['r'] }, { hash: 'r', parents: [] }])
+    expect(rows[0]).toMatchObject({ node: 0, up: [], down: [[0, 0, 0], [0, 1, 1]], width: 2 })
+    expect(rows[1]).toMatchObject({ node: 0, up: [[0, 0, 0], [1, 1, 1]], down: [[0, 0, 0], [1, 1, 1]] })
+    expect(rows[2]).toMatchObject({ node: 1, color: 1, down: [[0, 0, 0], [1, 0, 0]] })
+    expect(rows[3]).toMatchObject({ node: 0, up: [[0, 0, 0]], down: [], width: 1 })
+  })
+  it('two branch tips, a merge into an existing lane, a lane freed in the middle, colors cycle', () => {
+    // x and y are two tips; y's parent p is also x's second parent (joins an existing lane)
+    const rows = layout([{ hash: 'x', parents: ['q', 'p'] }, { hash: 'y', parents: ['p'] }, { hash: 'q', parents: ['p'] }, { hash: 'p', parents: [] }])
+    expect(rows[1]).toMatchObject({ node: 2, up: [[0, 0, 0], [1, 1, 1]] })
+    expect(rows[1].down).toEqual([[0, 0, 0], [1, 1, 1], [2, 1, 1]])
+    expect(rows[3]).toMatchObject({ node: 1, up: [[1, 1, 1]] })   // q and y joined p's lane
+    // a freed middle lane is reused by the next tip
+    const r2 = layout([{ hash: 'a', parents: ['c'] }, { hash: 'b', parents: ['d'] }, { hash: 'e1', parents: ['e'] }, { hash: 'd', parents: [] }, { hash: 'f', parents: ['g'] }, { hash: 'c', parents: [] }, { hash: 'e', parents: [] }, { hash: 'g', parents: [] }])
+    expect(r2.map((r: any) => r.node)).toEqual([0, 1, 2, 1, 1, 0, 2, 1])   // lane 1 freed by d, reused by f
+    const many = layout(Array.from({ length: 10 }, (_, i) => ({ hash: 't' + i, parents: [] })))
+    expect(many.map((r: any) => r.color)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 0, 1])
+  })
+  it('real repository with a merge', () => {
+    const { t, r } = repo()
+    git(r, 'switch', '-q', '-c', 'feat'); t.write('work/f.txt', 'f'); git(r, 'add', '.'); git(r, 'commit', '-q', '-m', 'feat')
+    git(r, 'switch', '-q', 'main'); t.write('work/m.txt', 'm'); git(r, 'add', '.'); git(r, 'commit', '-q', '-m', 'main work')
+    git(r, 'merge', '-q', '--no-ff', '-m', 'merge feat', 'feat')
+    const l = log(r)
+    expect(l[0]).toMatchObject({ subject: 'merge feat' }); expect(l[0].parents).toHaveLength(2)
+    expect(l[0].refs).toEqual([{ name: 'main', kind: 'head' }])
+    const rows = layout(l)
+    expect(rows[0].down.length).toBe(2)
+    expect(Math.max(...rows.map((x: any) => x.width))).toBe(2)
+    expect(rows.at(-1).down).toEqual([])
+    t.dispose()
+  })
+})
+
+describe('commit files and details', () => {
+  it('parsers: decorations, name-status (-z, renames), commit info', () => {
+    expect(parseDecorations('HEAD -> main, origin/main, tag: v1.0, feature, HEAD')).toEqual([
+      { name: 'main', kind: 'head' }, { name: 'origin/main', kind: 'remote' }, { name: 'v1.0', kind: 'tag' }, { name: 'feature', kind: 'local' }, { name: 'HEAD', kind: 'head' }])
+    expect(parseDecorations('')).toEqual([])
+    expect(parseNameStatus('M\0a.txt\0R100\0old.txt\0new.txt\0A\0b/c.ts\0D\0gone\0')).toEqual([
+      { status: 'M', path: 'a.txt' }, { status: 'R', from: 'old.txt', path: 'new.txt' }, { status: 'A', path: 'b/c.ts' }, { status: 'D', path: 'gone' }])
+    expect(parseNameStatus('')).toEqual([])
+    const { t, r } = repo()
+    t.write('work/src/x.ts', 'x'); git(r, 'add', '.'); git(r, 'commit', '-q', '-m', 'add x', '-m', 'body line')
+    const hash = log(r)[0].hash
+    const info = parseCommitInfo(git(r, 'show', '-s', '--date=format:%d/%m/%Y', '--format=' + INFO_FORMAT, hash))
+    expect(info).toMatchObject({ hash, author: 'T', email: 't@x', committer: 'T', message: 'add x\n\nbody line' })
+    expect(info.parents).toHaveLength(1); expect(info.refs).toEqual([{ name: 'main', kind: 'head' }])
+    expect(parseCommitInfo('h\x1fa\x1fe\x1fd\x1fc\x1fcd')).toMatchObject({ parents: [], refs: [], message: '' })
+    const files = parseNameStatus(git(r, 'diff-tree', '--no-commit-id', '-r', '-z', '--name-status', '-M', info.parents[0], hash))
+    expect(files).toEqual([{ status: 'A', path: 'src/x.ts' }])
+    const root = log(r).at(-1).hash
+    expect(parseNameStatus(git(r, 'diff-tree', '--no-commit-id', '-r', '-z', '--name-status', '-M', '--root', root))).toEqual([{ status: 'A', path: 'a.txt' }])
+    t.dispose()
+  })
+  it('views: files tree (compacted, tones, rename detail), details fields, loading states', () => {
+    const base = { ...M.initialState(), root: '/p', status: { entries: [] }, commits: [{ hash: 'h1', short: 'h1', author: 'T', when: 'now', subject: 's', parents: [], refs: [] }] }
+    expect(M.commitFilesView(base)).toEqual({ kind: 'empty', text: 'Sélectionne un commit' })
+    expect(M.commitFilesView({ ...base, selectedCommit: 'h1' })).toEqual({ kind: 'empty', text: 'Chargement…' })
+    expect(M.commitFilesView({ ...base, selectedCommit: 'h1', commitFiles: [] })).toEqual({ kind: 'empty', text: 'Aucun fichier modifié' })
+    const nested = M.commitFilesView({ ...base, selectedCommit: 'h1', commitFiles: [{ status: 'M', path: 'src/x.ts' }, { status: 'M', path: 'src/main/y.ts' }] })
+    expect(nested.items[0].label).toBe('src'); expect(nested.items[0].children[0]).toMatchObject({ id: 'cdir:src/main', label: 'main' })
+    const files = [{ status: 'A', path: 'src/main/a.ts' }, { status: 'R', from: 'src/old.ts', path: 'src/main/b.ts' }, { status: 'D', path: 'README.md' }, { status: 'X', path: 'odd' }]
+    const v = M.commitFilesView({ ...base, selectedCommit: 'h1', commitFiles: files })
+    expect(v.title).toBe('4 fichiers')
+    expect(v.items.map((i: any) => i.label)).toEqual(['src/main', 'README.md', 'odd'])
+    expect(v.items[0]).toMatchObject({ id: 'cdir:src/main', folder: 'src/main' })
+    expect(v.items[0].children.map((c: any) => [c.label, c.tone, c.detail])).toEqual([['a.ts', 'added', ''], ['b.ts', 'renamed', '← src/old.ts']])
+    expect(v.items[1].tone).toBe('deleted'); expect(v.items[2].tone).toBe('modified')
+    expect(M.commitFilesView({ ...base, selectedCommit: 'h1', commitFiles: [files[0]] }).title).toBe('1 fichier')
+    expect(M.commitInfoView(base)).toEqual({ kind: 'empty', text: '' })
+    const info = { hash: 'h1', author: 'A', email: 'a@x', authorDate: 'd', committer: 'C', commitDate: 'cd', parents: ['p1', 'p2'], refs: [{ name: 'main', kind: 'head' }], message: 'msg' }
+    const d = M.commitInfoView({ ...base, commitInfo: info })
+    expect(d.kind).toBe('detail'); expect(d.body).toBe('msg')
+    expect(d.fields.map((f: any) => f.label)).toEqual(['Auteur', 'Date', 'Commité par', 'Hash', 'Parents', 'Références'])
+    const d2 = M.commitInfoView({ ...base, commitInfo: { ...info, committer: 'A', parents: ['p1'], refs: [] } })
+    expect(d2.fields.map((f: any) => f.label)).toEqual(['Auteur', 'Date', 'Hash', 'Parent'])
+    expect(M.commitInfoView({ ...base, commitInfo: { ...info, committer: 'A', parents: [], refs: [] } }).fields.map((f: any) => f.label)).toEqual(['Auteur', 'Date', 'Hash'])
+    const cv = M.commitsView({ ...base, selectedCommit: 'h1', commits: [{ ...base.commits[0], refs: [{ name: 'v1', kind: 'tag' }] }] })
+    expect(cv.items[0]).toMatchObject({ selected: true, badges: ['🏷 v1'] })
+  })
+  it('reduce: commit file selection and menus, withCommit ignores stale loads, withData drops a vanished selection', () => {
+    const ev = (type: string, extra = {}) => ({ viewId: 'claudeterm.git:commits', type, ...extra })
+    const info = { hash: 'h1', parents: ['p0'], author: 'T', email: '', authorDate: '', committer: 'T', commitDate: '', refs: [], message: '' }
+    const f = { status: 'M', path: 'a.txt' }
+    let s = { ...M.initialState(), selectedCommit: 'h1', commitFiles: [f], commitInfo: info }
+    expect(M.reduce(s, ev('select', { itemId: 'cfile:a.txt' })).effects).toEqual([{ type: 'diffCommitFile', hash: 'h1', parent: 'p0', file: f }])
+    expect(M.reduce({ ...s, commitInfo: { ...info, parents: [] } }, ev('open', { itemId: 'cfile:a.txt' })).effects[0].parent).toBeNull()
+    expect(M.reduce(s, ev('select', { itemId: 'cfile:nope' })).effects).toEqual([])
+    expect(M.reduce({ ...s, commitFiles: null }, ev('select', { itemId: 'cfile:a.txt' })).effects).toEqual([])
+    expect(M.reduce(s, ev('menu', { itemId: 'cfile:a.txt', actionId: 'diffCommitFile' })).effects[0].type).toBe('diffCommitFile')
+    expect(M.reduce({ ...s, commitInfo: { ...info, parents: [] } }, ev('menu', { itemId: 'cfile:a.txt', actionId: 'diffCommitFile' })).effects[0].parent).toBeNull()
+    expect(M.reduce(s, ev('menu', { itemId: 'cfile:a.txt', actionId: 'openFile' })).effects).toEqual([{ type: 'openFile', path: 'a.txt' }])
+    expect(M.reduce(s, ev('menu', { itemId: 'cfile:nope', actionId: 'diffCommitFile' })).effects).toEqual([])
+    expect(M.reduce({ ...s, commitFiles: null }, ev('menu', { itemId: 'cfile:a.txt', actionId: 'diffCommitFile' })).effects).toEqual([])
+    expect(M.reduce(s, ev('menu', { itemId: 'commit:h1', actionId: 'checkoutCommit' })).effects).toEqual([{ type: 'run', args: ['switch', '--detach', 'h1'] }])
+    const nb = M.reduce(s, ev('menu', { itemId: 'commit:h1', actionId: 'newFromCommit' })).effects[0]
+    expect(nb).toMatchObject({ type: 'prompt', then: { action: 'newBranch', from: 'h1' } })
+    // stale load (selection moved on) is ignored
+    expect(M.withCommit(s, 'other', [], info)).toBe(s)
+    expect(M.withCommit({ ...s, commitFiles: null }, 'h1', [f], info).commitFiles).toEqual([f])
+    // selection kept when still listed, dropped otherwise
+    expect(M.withData(s, '/p', null, [{ hash: 'h1' }], { local: [], remote: [] }).selectedCommit).toBe('h1')
+    expect(M.withData(s, '/p', null, [{ hash: 'h2' }], { local: [], remote: [] })).toMatchObject({ selectedCommit: null, commitFiles: null, commitInfo: null })
   })
 })

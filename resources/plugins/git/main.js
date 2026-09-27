@@ -1,5 +1,5 @@
 // Git plugin glue: runs git (read), executes the model's effects (writes go through a visible shell tab).
-const { parseStatus, parseLog, parseRefs, LOG_FORMAT, REF_FORMAT } = require('./git')
+const { parseStatus, parseLog, parseRefs, parseNameStatus, parseCommitInfo, LOG_FORMAT, REF_FORMAT, INFO_FORMAT } = require('./git')
 const M = require('./model')
 
 exports.activate = (ctx) => {
@@ -14,7 +14,7 @@ exports.activate = (ctx) => {
     if (!root) { s = M.withData(s, null, null, [], { local: [], remote: [] }); return render() }
     const top = await git(['rev-parse', '--show-toplevel'])
     if (top.code !== 0) { s = M.withData(s, root, null, [], { local: [], remote: [] }); return render() }
-    const [st, lg, rf] = await Promise.all([git(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all']), git(['log', '-n', '100', '--format=' + LOG_FORMAT]), git(['for-each-ref', '--format=' + REF_FORMAT, 'refs/heads', 'refs/remotes'])])
+    const [st, lg, rf] = await Promise.all([git(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all']), git(['log', '--all', '--topo-order', '-n', '400', '--format=' + LOG_FORMAT]), git(['for-each-ref', '--format=' + REF_FORMAT, 'refs/heads', 'refs/remotes'])])
     if (st.code !== 0) { changes.set({ kind: 'empty', text: 'git status a échoué : ' + st.stderr.trim() }); return }
     s = M.withData(s, root, parseStatus(st.stdout), lg.code === 0 ? parseLog(lg.stdout) : [], rf.code === 0 ? parseRefs(rf.stdout) : { local: [], remote: [] })
     render()
@@ -31,7 +31,19 @@ exports.activate = (ctx) => {
     if (f.type === 'popover') { popover = ctx.ui.popover(f.view, f.model); popover.onEvent(dispatch); return }
     if (f.type === 'prompt') { const v = await ctx.ui.prompt(f.req); return dispatch({ ...f.then, value: v }) }
     if (f.type === 'detailFile') { const r = await git(['diff', 'HEAD', '--', f.path]); const alt = r.stdout.trim() ? r.stdout : (await git(['diff', '--no-index', '--', '/dev/null', f.path])).stdout; s = { ...s, detail: alt.trim() }; return commits.set(M.commitsView(s)) }
-    if (f.type === 'detailCommit') { const r = await git(['show', '--stat', '--format=%H%n%an <%ae>%n%ad%n%n%s%n%n%b', f.hash]); s = { ...s, detail: r.stdout.trim() }; return commits.set(M.commitsView(s)) }
+    if (f.type === 'loadCommit') {
+      commits.set(M.commitsView(s))
+      const info = parseCommitInfo((await git(['show', '-s', '--date=format:%d/%m/%Y %H:%M', '--format=' + INFO_FORMAT, f.hash])).stdout)
+      const base = info.parents[0]
+      const ns = await git(base ? ['diff-tree', '--no-commit-id', '-r', '-z', '--name-status', '-M', base, f.hash] : ['diff-tree', '--no-commit-id', '-r', '-z', '--name-status', '-M', '--root', f.hash])
+      s = M.withCommit(s, f.hash, parseNameStatus(ns.stdout), info)
+      return commits.set(M.commitsView(s))
+    }
+    if (f.type === 'diffCommitFile') {
+      const orig = f.parent && f.file.status !== 'A' ? await git(['show', `${f.parent}:${f.file.from || f.file.path}`]) : { code: 0, stdout: '' }
+      const mod = f.file.status !== 'D' ? await git(['show', `${f.hash}:${f.file.path}`]) : { code: 0, stdout: '' }
+      return ctx.workspace.openDiff({ title: `${f.file.path.split('/').pop()} @ ${f.hash.slice(0, 7)}`, path: s.root + '/' + f.file.path, original: orig.stdout, modified: mod.stdout })
+    }
     if (f.type === 'diffFile') {
       const head = await git(['show', 'HEAD:' + f.path])
       let modified = ''

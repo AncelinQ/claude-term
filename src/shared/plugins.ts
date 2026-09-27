@@ -48,6 +48,12 @@ export interface ViewItem {
   checked?: boolean
   /** dimmed row */
   muted?: boolean
+  /** label color by change kind */
+  tone?: 'added' | 'deleted' | 'modified' | 'renamed'
+  /** highlighted row */
+  selected?: boolean
+  /** commit graph cell (list with graph: true) */
+  graph?: { node: number; color: number; up: [number, number, number][]; down: [number, number, number][]; width: number }
 }
 export interface ViewFooter {
   fields?: { id: string; placeholder?: string; value?: string; multiline?: boolean }[]
@@ -56,10 +62,14 @@ export interface ViewFooter {
 }
 export type ViewModel =
   | { kind: 'empty'; text: string }
-  | { kind: 'list'; items: ViewItem[]; toolbar?: ViewAction[]; footer?: ViewFooter; search?: boolean; title?: string; detail?: ViewModel }
+  | { kind: 'list'; items: ViewItem[]; toolbar?: ViewAction[]; footer?: ViewFooter; search?: boolean; title?: string; detail?: ViewModel; graph?: boolean }
   | { kind: 'tree'; items: ViewItem[]; toolbar?: ViewAction[]; footer?: ViewFooter; search?: boolean; title?: string; detail?: ViewModel }
   | { kind: 'markdown'; text: string }
   | { kind: 'diff'; text: string }
+  /** panes stacked vertically with draggable separators */
+  | { kind: 'stack'; panes: ViewModel[] }
+  /** key/value fields and a text body (e.g. a commit) */
+  | { kind: 'detail'; fields: { label: string; value: string; mono?: boolean }[]; body?: string }
 
 /** Renderer → host: an interaction on a view (or a popover, whose id is "popover:<n>"). */
 export interface ViewEvent {

@@ -33,13 +33,44 @@ function parseStatus(text) {
   return out
 }
 
-const LOG_FORMAT = '%H%x1f%h%x1f%an%x1f%ar%x1f%s%x1e'
+const LOG_FORMAT = '%H%x1f%h%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%D%x1e'
 /** `git log --format=<LOG_FORMAT>` */
 function parseLog(text) {
   return text.split('\x1e').map((r) => r.replace(/^\n/, '')).filter((r) => r.trim()).map((r) => {
-    const [hash, short, author, when, subject] = r.split('\x1f')
-    return { hash, short, author, when, subject }
+    const [hash, short, author, when, subject, parents = '', refs = ''] = r.split('\x1f')
+    return { hash, short, author, when, subject, parents: parents.split(' ').filter(Boolean), refs: parseDecorations(refs) }
   })
+}
+
+/** "%D" decorations: "HEAD -> main, origin/main, tag: v1" → [{ name, kind }] */
+function parseDecorations(text) {
+  return text.split(', ').map((d) => d.trim()).filter(Boolean).map((d) => {
+    if (d.startsWith('HEAD -> ')) return { name: d.slice(8), kind: 'head' }
+    if (d === 'HEAD') return { name: 'HEAD', kind: 'head' }
+    if (d.startsWith('tag: ')) return { name: d.slice(5), kind: 'tag' }
+    return { name: d, kind: d.includes('/') ? 'remote' : 'local' }
+  })
+}
+
+/** `git diff-tree -r -z --name-status -M …` → [{ status, path, from? }] */
+function parseNameStatus(text) {
+  const out = [], f = text.split('\0')
+  for (let i = 0; i < f.length; i++) {
+    const st = f[i]
+    if (!st) continue
+    const code = st[0]
+    if (code === 'R' || code === 'C') { out.push({ status: code, from: f[i + 1], path: f[i + 2] }); i += 2 }
+    else { out.push({ status: code, path: f[i + 1] }); i += 1 }
+  }
+  return out
+}
+
+const INFO_FORMAT = '%H%x1f%an%x1f%ae%x1f%ad%x1f%cn%x1f%cd%x1f%P%x1f%D%x1f%B'
+/** `git show -s --date=format:%d/%m/%Y %H:%M --format=<INFO_FORMAT>` */
+function parseCommitInfo(text) {
+  const [hash, author, email, authorDate, committer, commitDate, parents = '', refs = '', ...body] = text.split('\x1f')
+  const message = body.join('\x1f').replace(/\s+$/, '')
+  return { hash, author, email, authorDate, committer, commitDate, parents: parents.split(' ').filter(Boolean), refs: parseDecorations(refs), message }
 }
 
 const REF_FORMAT = '%(refname)%09%(objectname:short)%09%(upstream:short)%09%(upstream:track)%09%(HEAD)%09%(committerdate:unix)'
@@ -63,4 +94,4 @@ function parseRefs(text) {
 
 const LABELS = { M: 'modifié', A: 'ajouté', D: 'supprimé', R: 'renommé', C: 'copié', T: 'type', U: 'conflit' }
 
-module.exports = { parseStatus, parseLog, parseRefs, LOG_FORMAT, REF_FORMAT, LABELS }
+module.exports = { parseStatus, parseLog, parseRefs, parseDecorations, parseNameStatus, parseCommitInfo, LOG_FORMAT, REF_FORMAT, INFO_FORMAT, LABELS }

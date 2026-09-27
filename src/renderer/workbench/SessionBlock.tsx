@@ -50,7 +50,7 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
   return (
     <Island title={title} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
       {mode.includes(':') ? (
-        <PluginViewBody model={pluginModel} wide send={(type, extra) => window.ct.plugins.event({ viewId: mode, type, ...extra })} />
+        <PluginViewBody model={pluginModel} wide layoutKey={mode} send={(type, extra) => window.ct.plugins.event({ viewId: mode, type, ...extra })} />
       ) : !tab || !session ? (
         <Empty>{t('Sélectionne un onglet Claude, ou tape claude dans un shell')}</Empty>
       ) : mode === 'plan' ? <PlanView tab={tab} /> : mode === 'activity' ? <ActivityView tab={tab} /> : <FilesView tab={tab} />}

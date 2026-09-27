@@ -1,9 +1,11 @@
 // Pure model of the git plugin: state + event → new state, effects (git commands, views, prompts).
 // No I/O here. main.js executes the effects. Every write is a plain git command; nothing destructive.
 const { LABELS } = require('./git')
+const { layout } = require('./graph')
 
 const RUN = (args) => ({ type: 'run', args })
-const initialState = () => ({ root: null, status: null, commits: [], refs: { local: [], remote: [] }, checked: {}, message: '', amend: false, detail: null, collapsed: {}, groupByDir: false })
+const initialState = () => ({ root: null, status: null, commits: [], refs: { local: [], remote: [] }, checked: {}, message: '', amend: false, detail: null, collapsed: {}, groupByDir: false,
+  selectedCommit: null, commitFiles: null, commitInfo: null })
 
 /** Files grouped by directory, single-child chains compacted ("src/main/services"), like JetBrains. */
 function dirTree(entries, checked, group, collapsed) {
@@ -111,17 +113,66 @@ function branchesView(s) {
   return { kind: 'tree', items, toolbar: [{ id: 'fetch', title: 'Récupérer (git fetch --all --prune)', icon: 'activity' }, { id: 'newBranch', title: 'Nouvelle branche…', icon: 'plus' }] }
 }
 
-/** Commits (bottom block): list + detail. */
+const TONES = { A: 'added', D: 'deleted', R: 'renamed', C: 'renamed', M: 'modified', T: 'modified' }
+const refBadges = (refs) => refs.map((r) => (r.kind === 'tag' ? `🏷 ${r.name}` : r.name))
+
+/** Files of the selected commit, grouped by directory (compacted), colored by change. */
+function commitFilesView(s) {
+  if (!s.selectedCommit) return { kind: 'empty', text: 'Sélectionne un commit' }
+  if (!s.commitFiles) return { kind: 'empty', text: 'Chargement…' }
+  if (!s.commitFiles.length) return { kind: 'empty', text: 'Aucun fichier modifié' }
+  const root = { dirs: {}, files: [] }
+  for (const f of s.commitFiles) {
+    let node = root
+    for (const d of f.path.split('/').slice(0, -1)) node = node.dirs[d] = node.dirs[d] || { dirs: {}, files: [] }
+    node.files.push(f)
+  }
+  const build = (node, prefix) => {
+    const items = []
+    for (const name of Object.keys(node.dirs).sort()) {
+      let label = name, child = node.dirs[name], path = prefix ? `${prefix}/${name}` : name
+      while (child.files.length === 0 && Object.keys(child.dirs).length === 1) { const only = Object.keys(child.dirs)[0]; label += '/' + only; path += '/' + only; child = child.dirs[only] }
+      items.push({ id: `cdir:${path}`, label, folder: path, expanded: true, children: build(child, path) })
+    }
+    for (const f of node.files) items.push({ id: `cfile:${f.path}`, label: f.path.split('/').pop(), file: f.path, tone: TONES[f.status] || 'modified', detail: f.from ? `← ${f.from}` : '',
+      contextMenu: [{ id: 'diffCommitFile', title: 'Diff côte à côte', icon: 'columns' }, { id: 'openFile', title: 'Ouvrir la version actuelle', icon: 'file' }] })
+    return items
+  }
+  return { kind: 'tree', items: build(root, ''), title: `${s.commitFiles.length} fichier${s.commitFiles.length > 1 ? 's' : ''}` }
+}
+
+/** Details of the selected commit. */
+function commitInfoView(s) {
+  const i = s.commitInfo
+  if (!i) return { kind: 'empty', text: '' }
+  return {
+    kind: 'detail', body: i.message,
+    fields: [
+      { label: 'Auteur', value: `${i.author} <${i.email}>` }, { label: 'Date', value: i.authorDate },
+      ...(i.committer !== i.author ? [{ label: 'Commité par', value: `${i.committer} · ${i.commitDate}` }] : []),
+      { label: 'Hash', value: i.hash, mono: true },
+      ...(i.parents.length ? [{ label: i.parents.length > 1 ? 'Parents' : 'Parent', value: i.parents.map((p) => p.slice(0, 8)).join(' '), mono: true }] : []),
+      ...(i.refs.length ? [{ label: 'Références', value: i.refs.map((r) => r.name).join(', ') }] : []),
+    ],
+  }
+}
+
+/** Commits (bottom block): graph list on the left, files over details on the right. */
 function commitsView(s) {
   if (!s.root || !s.status) return { kind: 'empty', text: 'Pas un dépôt git' }
   if (!s.commits.length) return { kind: 'empty', text: 'Aucun commit' }
+  const graph = layout(s.commits)
   return {
-    kind: 'list', search: true,
-    items: s.commits.map((c) => ({ id: `commit:${c.hash}`, label: c.subject, detail: `${c.short} · ${c.author} · ${c.when}`, icon: 'clock', contextMenu: [
-      { id: 'diffCommit', title: 'Diff du commit (onglet)', icon: 'columns' },
-      { id: 'copyHash', title: 'Copier le hash', icon: 'list' },
-    ] })),
-    detail: s.detail ? { kind: 'diff', text: s.detail } : { kind: 'empty', text: 'Sélectionne un commit' },
+    kind: 'list', search: true, graph: true,
+    items: s.commits.map((c, i) => ({ id: `commit:${c.hash}`, label: c.subject, detail: `${c.author} · ${c.when}`, extra: c.short, graph: graph[i], badges: refBadges(c.refs), selected: c.hash === s.selectedCommit,
+      contextMenu: [
+        { id: 'diffCommit', title: 'Diff du commit (onglet)', icon: 'columns' },
+        { id: 'copyHash', title: 'Copier le hash', icon: 'list' },
+        'sep',
+        { id: 'newFromCommit', title: 'Nouvelle branche ici…', icon: 'plus' },
+        { id: 'checkoutCommit', title: 'Checkout (HEAD détachée)', icon: 'git' },
+      ] })),
+    detail: { kind: 'stack', panes: [commitFilesView(s), commitInfoView(s)] },
   }
 }
 
@@ -228,12 +279,26 @@ function reduce(s, e) {
       return { state: s, effects }
     }
     if (id.startsWith('file:')) return { state: s, effects: [e.type === 'open' ? { type: 'diffFile', path: id.slice(5) } : { type: 'detailFile', path: id.slice(5) }] }
-    if (id.startsWith('commit:')) return { state: s, effects: [e.type === 'open' ? { type: 'diffCommit', hash: id.slice(7) } : { type: 'detailCommit', hash: id.slice(7) }] }
+    if (id.startsWith('commit:')) {
+      const hash = id.slice(7)
+      if (e.type === 'open') return { state: s, effects: [{ type: 'diffCommit', hash }] }
+      return { state: { ...s, selectedCommit: hash, commitFiles: null, commitInfo: null }, effects: [{ type: 'loadCommit', hash }] }
+    }
+    if (id.startsWith('cfile:')) {
+      const f = (s.commitFiles || []).find((x) => x.path === id.slice(6))
+      return { state: s, effects: f && s.commitInfo ? [{ type: 'diffCommitFile', hash: s.commitInfo.hash, parent: s.commitInfo.parents[0] || null, file: f }] : ef }
+    }
     if (id.startsWith('local:') && e.type === 'open') { const b = s.refs.local.find((x) => x.name === id.slice(6)); return { state: s, effects: b && !b.current ? [RUN(['switch', b.name])] : ef } }
     return { state: s, effects: ef }
   }
   if (e.type === 'menu') {
     const a = e.actionId
+    if (id.startsWith('cfile:')) {
+      const f = (s.commitFiles || []).find((x) => x.path === id.slice(6))
+      if (a === 'openFile') return { state: s, effects: [{ type: 'openFile', path: id.slice(6) }] }
+      if (a === 'diffCommitFile' && f && s.commitInfo) return { state: s, effects: [{ type: 'diffCommitFile', hash: s.commitInfo.hash, parent: s.commitInfo.parents[0] || null, file: f }] }
+      return { state: s, effects: ef }
+    }
     if (id.startsWith('file:')) {
       const p = id.slice(5)
       if (a === 'diff') return { state: s, effects: [{ type: 'diffFile', path: p }] }
@@ -246,6 +311,8 @@ function reduce(s, e) {
       const h = id.slice(7)
       if (a === 'diffCommit') return { state: s, effects: [{ type: 'diffCommit', hash: h }] }
       if (a === 'copyHash') return { state: s, effects: [{ type: 'copy', text: h }] }
+      if (a === 'checkoutCommit') return { state: s, effects: [RUN(['switch', '--detach', h])] }
+      if (a === 'newFromCommit') return { state: s, effects: [{ type: 'prompt', req: { title: `Nouvelle branche depuis ${h.slice(0, 8)}`, placeholder: 'nom' }, then: { type: 'promptResult', action: 'newBranch', from: h } }] }
       return { state: s, effects: ef }
     }
     const isRemote = id.startsWith('remote:')
@@ -263,11 +330,17 @@ function reduce(s, e) {
   return { state: s, effects: ef }
 }
 
-/** After a refresh: keeps checked paths that still exist. */
+/** After a refresh: keeps checked paths that still exist, and the selected commit if it is still listed. */
 function withData(s, root, status, commits, refs) {
   const checked = {}
   if (status) for (const e of status.entries) if (s.checked[e.path]) checked[e.path] = true
-  return { ...s, root, status, commits, refs, checked }
+  const keep = commits.some((c) => c.hash === s.selectedCommit)
+  return { ...s, root, status, commits, refs, checked, ...(keep ? {} : { selectedCommit: null, commitFiles: null, commitInfo: null }) }
 }
 
-module.exports = { initialState, changesView, branchesView, commitsView, branchPopover, reduce, withData, commitCommands, checkedPaths, dirTree }
+/** Loaded data of the selected commit (ignored if the selection changed meanwhile). */
+function withCommit(s, hash, files, info) {
+  return s.selectedCommit === hash ? { ...s, commitFiles: files, commitInfo: info } : s
+}
+
+module.exports = { initialState, changesView, branchesView, commitsView, commitFilesView, commitInfoView, branchPopover, reduce, withData, withCommit, commitCommands, checkedPaths, dirTree }

@@ -8,6 +8,7 @@ import { FileIcon } from './FileIcon'
 import { Island, Empty } from './Island'
 import { ContextMenu, type MenuItem } from './Menu'
 import { usePlugins } from '@/stores/plugins'
+import { Gutter, useStoredSize } from './Split'
 import { t } from '@/i18n'
 
 const icon = (name: string | undefined, size = 12) => {
@@ -42,34 +43,79 @@ export function PluginViewIsland({ viewId, title, grow }: { viewId: string; titl
 }
 
 /** The body of a view: list/tree with optional search, footer and detail pane; markdown; diff. */
-export function PluginViewBody({ model, send, wide }: { model: ViewModel | undefined; send: Send; wide?: boolean }) {
+export function PluginViewBody({ model, send, wide, layoutKey = 'pv' }: { model: ViewModel | undefined; send: Send; wide?: boolean; layoutKey?: string }) {
   const [q, setQ] = useState('')
   const [ctx, setCtx] = useState<{ x: number; y: number; item: ViewItem } | null>(null)
   if (!model) return <Empty>{t('Chargement…')}</Empty>
   if (model.kind === 'empty') return <Empty>{model.text}</Empty>
   if (model.kind === 'markdown') return <div className="md" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(model.text, { async: false }) as string) }} />
   if (model.kind === 'diff') return <DiffText text={model.text} />
+  if (model.kind === 'stack') return <Stack panes={model.panes} send={send} layoutKey={layoutKey} />
+  if (model.kind === 'detail') return (
+    <div className="pv-info">
+      {model.body && <div className="pv-info-body">{model.body}</div>}
+      <div className="pv-info-fields">{model.fields.map((f) => <div key={f.label} className="pv-info-row"><span className="k">{f.label}</span><span className={'v' + (f.mono ? ' mono' : '')}>{f.value}</span></div>)}</div>
+    </div>
+  )
   const items = q ? filterItems(model.items, q.toLowerCase()) : model.items
   const list = (
     <div className="pv-main">
       {model.search && <div className="search"><input value={q} placeholder={t('filtrer…')} onChange={(e) => setQ(e.target.value)} autoFocus /></div>}
-      <div className="list pv">
+      <div className={'list pv' + (model.kind === 'list' && model.graph ? ' graph' : '')}>
         {items.length === 0 && <Empty>{q ? t('Aucun résultat') : '—'}</Empty>}
-        {items.map((it) => <Node key={it.id} item={it} depth={0} tree={model.kind === 'tree'} send={send} onMenu={(e, item) => { e.preventDefault(); e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, item }) }} />)}
+        {items.map((it) => <Node key={it.id} item={it} depth={0} tree={model.kind === 'tree'} send={send} graphWidth={model.kind === 'list' && model.graph && !q ? Math.max(1, ...model.items.map((x) => x.graph?.width ?? 1)) : 0} onMenu={(e, item) => { e.preventDefault(); e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, item }) }} />)}
       </div>
       {model.footer && <Footer footer={model.footer} send={send} />}
       <ContextMenu at={ctx} onClose={() => setCtx(null)} items={(ctx?.item.contextMenu ?? []).map((a): MenuItem | 'sep' => a === 'sep' ? 'sep' : { label: a.title, icon: a.icon ? icon(a.icon, 13) : undefined, shortcut: a.shortcut, disabled: a.disabled, onSelect: () => send('menu', { itemId: ctx!.item.id, actionId: a.id }) })} />
     </div>
   )
-  if (model.detail && wide) {
-    return (
-      <div className="pv-split">
-        {list}
-        <div className="pv-detail"><PluginViewBody model={model.detail} send={send} /></div>
-      </div>
-    )
-  }
+  if (model.detail && wide) return <Split list={list} detail={<PluginViewBody model={model.detail} send={send} layoutKey={layoutKey + ':detail'} />} layoutKey={layoutKey} />
   return list
+}
+
+/** List on the left (75 % by default), detail on the right; the separator is draggable and remembered. */
+function Split({ list, detail, layoutKey }: { list: ReactNode; detail: ReactNode; layoutKey: string }) {
+  const [pct, setPct] = useStoredSize('split:' + layoutKey, 75)
+  const ref = useRef<HTMLDivElement>(null)
+  return (
+    <div className="pv-split" ref={ref}>
+      <div className="pv-split-main" style={{ width: `${pct}%` }}>{list}</div>
+      <Gutter axis="x" className="inner" onDrag={(d) => setPct((p) => Math.max(20, Math.min(90, p + (d / (ref.current?.clientWidth || 1000)) * 100)))} />
+      <div className="pv-detail">{detail}</div>
+    </div>
+  )
+}
+
+/** Panes stacked vertically; each separator is draggable, heights remembered as fractions. */
+function Stack({ panes, send, layoutKey }: { panes: ViewModel[]; send: Send; layoutKey: string }) {
+  const [first, setFirst] = useStoredSize('stack:' + layoutKey, 50)
+  const ref = useRef<HTMLDivElement>(null)
+  return (
+    <div className="pv-stack" ref={ref}>
+      {panes.map((p, i) => (
+        <div key={i} className="pv-stack-pane" style={i === 0 && panes.length > 1 ? { height: `${first}%`, flex: 'none' } : undefined}>
+          {i > 0 && <Gutter axis="y" className="inner" onDrag={(d) => setFirst((f) => Math.max(10, Math.min(90, f + (d / (ref.current?.clientHeight || 600)) * 100)))} />}
+          <PluginViewBody model={p} send={send} layoutKey={`${layoutKey}:${i}`} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const GRAPH_COLORS = ['#61afef', '#e5c07b', '#98c379', '#c678dd', '#e06c75', '#56b6c2', '#d19a66', '#ff9a3c']
+const LANE = 14, ROW = 24
+
+/** One row of the commit graph: segments to/from the row middle, and the commit dot. */
+function GraphCell({ g, width }: { g: NonNullable<ViewItem['graph']>; width: number }) {
+  const x = (i: number) => LANE / 2 + i * LANE, mid = ROW / 2
+  const col = (c: number) => GRAPH_COLORS[c % GRAPH_COLORS.length]
+  return (
+    <svg className="pv-graph" width={width * LANE} height={ROW} aria-hidden>
+      {g.up.map(([a, b, c], i) => <path key={'u' + i} d={a === b ? `M${x(a)} 0V${mid}` : `M${x(a)} 0C${x(a)} ${mid * 0.6} ${x(b)} ${mid * 0.4} ${x(b)} ${mid}`} stroke={col(c)} strokeWidth={1.6} fill="none" />)}
+      {g.down.map(([a, b, c], i) => <path key={'d' + i} d={a === b ? `M${x(a)} ${mid}V${ROW}` : `M${x(a)} ${mid}C${x(a)} ${mid + mid * 0.6} ${x(b)} ${mid + mid * 0.4} ${x(b)} ${ROW}`} stroke={col(c)} strokeWidth={1.6} fill="none" />)}
+      <circle cx={x(g.node)} cy={mid} r={3.6} fill={col(g.color)} stroke="var(--ct-island-bg)" strokeWidth={1.2} />
+    </svg>
+  )
 }
 
 function filterItems(items: ViewItem[], q: string): ViewItem[] {
@@ -115,7 +161,7 @@ function checkState(item: ViewItem): boolean | 'mixed' | undefined {
   return item.checked
 }
 
-function Node({ item, depth, tree, send, onMenu }: { item: ViewItem; depth: number; tree: boolean; send: Send; onMenu: (e: React.MouseEvent, item: ViewItem) => void }) {
+function Node({ item, depth, tree, send, onMenu, graphWidth = 0 }: { item: ViewItem; depth: number; tree: boolean; send: Send; onMenu: (e: React.MouseEvent, item: ViewItem) => void; graphWidth?: number }) {
   const [open, setOpen] = useState(item.expanded ?? true)
   const hasChildren = tree && !!item.children?.length
   const cs = checkState(item)
@@ -123,12 +169,13 @@ function Node({ item, depth, tree, send, onMenu }: { item: ViewItem; depth: numb
   useEffect(() => { if (cbRef.current) cbRef.current.indeterminate = cs === 'mixed' }, [cs])
   return (
     <>
-      <div className={'lrow pv-row' + (hasChildren && !item.folder ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '')} style={{ paddingLeft: 8 + depth * 20 }}
+      <div className={'lrow pv-row' + (hasChildren && !item.folder ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '') + (item.selected ? ' sel' : '') + (item.tone ? ' tone-' + item.tone : '')} style={{ paddingLeft: 8 + depth * 20 }}
         onClick={() => (hasChildren ? setOpen(!open) : send('select', { itemId: item.id }))} onDoubleClick={() => !hasChildren && send('open', { itemId: item.id })}
         onContextMenu={(e) => item.contextMenu?.length && onMenu(e, item)} title={item.detail}>
+        {graphWidth > 0 && item.graph ? <GraphCell g={item.graph} width={graphWidth} /> : null}
         {hasChildren ? <span className={'chev' + (open ? ' open' : '')}>{Icons.chevron(10)}</span> : tree ? <span className="chev placeholder" /> : null}
         {cs !== undefined && <input ref={cbRef} type="checkbox" className="pv-check" checked={cs === true} onClick={(e) => e.stopPropagation()} onChange={(e) => send('check', { itemId: item.id, value: e.target.checked })} />}
-        {item.folder ? <FileIcon path={item.folder} isDir open={open} size={16} /> : !hasChildren && (item.file ? <FileIcon path={item.file} size={16} /> : <span className="ico" style={{ color: colorOf(item.color) }}>{icon(item.icon)}</span>)}
+        {item.folder ? <FileIcon path={item.folder} isDir open={open} size={16} /> : !hasChildren && (item.file ? <FileIcon path={item.file} size={16} /> : item.graph ? null : <span className="ico" style={{ color: colorOf(item.color) }}>{icon(item.icon)}</span>)}
         <span className="pv-label"><span className="name">{item.label}</span>{item.detail && <span className="pv-detail-inline">{item.detail}</span>}{item.badges?.map((b) => <span key={b} className="badge dim">{b}</span>)}</span>
         {item.extra && <span className="pv-extra">{item.extra}</span>}
         {item.actions?.length ? (

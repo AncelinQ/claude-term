@@ -377,8 +377,9 @@ input[type=checkbox]:disabled { opacity: .4; }
 .pv-footer-row .btn { white-space: nowrap; height: 26px; padding: 0 10px; font-size: 11.5px; }
 .pv-footer-row .spacer { flex: 1; }
 .pv-split { display: flex; height: 100%; }
-.pv-split > .pv-main { width: 340px; flex: none; border-right: 1px solid var(--ct-island-border); }
-.pv-split > .pv-detail { flex: 1; min-width: 0; overflow: auto; display: flex; flex-direction: column; }
+.pv-split-main { flex: none; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid var(--ct-island-border); }
+.pv-split > .pv-detail { flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
+.pv-split > .gutter.x.inner { margin: 0 -4px; width: 8px; z-index: 3; }
 .vsep { width: 1px; height: 14px; background: var(--ct-island-border); margin: 0 4px; align-self: center; }
 .menu.popover { width: 360px; max-height: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .menu.popover .pv-main { max-height: 480px; }
@@ -387,3 +388,24 @@ input[type=checkbox]:disabled { opacity: .4; }
 /* file type icons (material-icon-theme) */
 .ficon { flex: none; display: block; }
 .tree .row .ficon { width: 16px; height: 16px; }
+
+/* commit graph, stack panes, commit details, change tones */
+.list.pv.graph .pv-row { height: 24px; padding-top: 0; padding-bottom: 0; }
+.pv-graph { flex: none; display: block; margin: 0 2px 0 -4px; }
+.pv-row .pv-extra { color: var(--ct-text-tertiary); font-family: var(--ct-font-mono); font-size: 10.5px; }
+.pv-row.sel { background: var(--ct-selection-bg); }
+.pv-stack { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.pv-stack-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.pv-stack-pane > .gutter.y.inner { margin: 0; height: 1px; background: var(--ct-island-border); position: relative; flex: none; }
+.pv-stack-pane > .gutter.y.inner::before { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; cursor: row-resize; }
+.pv-info { overflow: auto; padding: 10px 14px; user-select: text; }
+.pv-info-body { white-space: pre-wrap; font-size: 12.5px; line-height: 1.5; margin-bottom: 10px; }
+.pv-info-body::first-line { font-weight: 600; }
+.pv-info-row { display: flex; flex-direction: column; font-size: 11.5px; padding: 3px 0; }
+.pv-info-row .k { color: var(--ct-text-tertiary); font-size: 10.5px; }
+.pv-info-row .v { color: var(--ct-text-secondary); word-break: break-word; }
+.pv-info-row .v.mono { font-family: var(--ct-font-mono); font-size: 11px; }
+.pv-row.tone-added .name { color: var(--ct-badge-ok); }
+.pv-row.tone-deleted .name { color: var(--ct-text-tertiary); text-decoration: line-through; }
+.pv-row.tone-modified .name { color: var(--ct-badge-info); }
+.pv-row.tone-renamed .name { color: var(--ct-badge-warn); }
