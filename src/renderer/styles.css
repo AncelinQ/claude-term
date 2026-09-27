@@ -100,7 +100,7 @@ input:focus { border-color: var(--ct-accent); }
 .tabs .plus:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 
 /* project tabs (title strip) */
-.ptab { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 12px; border-radius: 13px; color: var(--ct-text-secondary); }
+.ptab { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 6px 0 10px; border-radius: 5px; color: var(--ct-text-secondary); }
 .ptab:hover { background: var(--ct-hover-bg); }
 .ptab.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
 .ptab .close { opacity: 0; }

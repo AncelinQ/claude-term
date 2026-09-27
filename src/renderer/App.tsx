@@ -65,7 +65,7 @@ export function App() {
             <button className="close" onClick={(e) => { e.stopPropagation(); closeProject(p.id) }} title={t('Fermer le projet (⇧⌘W)')}>{Icons.x(10)}</button>
           </div>
         ))}
-        <button className="plus" title={t('Nouveau projet (⌘N)')} onClick={() => newProject(null)} style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 12, color: 'var(--ct-text-secondary)' }}>{Icons.plus(12)}</button>
+        <button className="plus" title={t('Nouveau projet (⌘N)')} onClick={() => newProject(null)} style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 5, color: 'var(--ct-text-secondary)' }}>{Icons.plus(12)}</button>
         </div>
       </div>
       <div className="body">
