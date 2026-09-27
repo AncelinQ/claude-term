@@ -5,13 +5,14 @@ import { useWorkbench, type LeftActivity, type RightActivity } from '@/stores/wo
 const LEFT: { id: LeftActivity; title: string; icon: () => React.ReactElement }[] = [
   { id: 'explorer', title: 'Explorateur (⌘1)', icon: () => Icons.files() },
   { id: 'search', title: 'Recherche (⌘2)', icon: () => Icons.search() },
-  { id: 'skills', title: 'Skills du projet (⌘3)', icon: () => Icons.sparkle() },
-  { id: 'mcp', title: 'MCP (⌘4)', icon: () => Icons.plug() },
-  { id: 'plugins', title: 'Plugins (⌘5)', icon: () => Icons.puzzle() },
+  { id: 'history', title: 'Historique du projet (⌘3)', icon: () => Icons.clock() },
+  { id: 'skills', title: 'Skills du projet (⌘4)', icon: () => Icons.sparkle() },
+  { id: 'mcp', title: 'MCP (⌘5)', icon: () => Icons.plug() },
+  { id: 'plugins', title: 'Plugins (⌘6)', icon: () => Icons.puzzle() },
 ]
 const RIGHT: { id: RightActivity; title: string; icon: () => React.ReactElement }[] = [
   { id: 'process', title: 'Process Claude', icon: () => Icons.cpu() },
-  { id: 'history', title: 'Historique', icon: () => Icons.clock() },
+  { id: 'history', title: 'Historique (toutes les sessions)', icon: () => Icons.clock() },
   { id: 'skills', title: 'Skills perso et plugins', icon: () => Icons.sparkle() },
 ]
 

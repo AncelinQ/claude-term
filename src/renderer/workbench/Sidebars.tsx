@@ -31,6 +31,7 @@ export function LeftSidebar({ project }: { project: Project }) {
         />
       )}
       {activity === 'search' && <SearchIsland project={project} />}
+      {activity === 'history' && <HistoryIsland scope="project" />}
       {activity === 'skills' && <SkillsIsland title="Skills du projet" root={project.root} createIn={project.root} grow load={async () => [...(await window.ct.skills.project(project.root!)), ...(await window.ct.skills.linked(project.root!))]} />}
       {activity === 'mcp' && (
         <VStack id="mcp" collapsed={mcpCollapsed}
@@ -55,7 +56,7 @@ export function RightSidebar() {
     <Gutter axis="x" className="right" onDrag={(d) => setWidth((w) => Math.max(220, Math.min(700, w - d)))} />
     <div className="sidebar right" style={{ width }}>
       {activity === 'process' && <ProcessIsland />}
-      {activity === 'history' && <HistoryIsland />}
+      {activity === 'history' && <HistoryIsland scope="all" />}
       {activity === 'skills' && (
         <VStack id="skills" collapsed={pluginsCollapsed}
           top={<SkillsIsland title="Skills perso" root={null} createIn={null} grow load={() => window.ct.skills.personal()} />}

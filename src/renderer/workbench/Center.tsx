@@ -1,9 +1,11 @@
 import { Icons } from './icons'
 import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
+import { useEffect } from 'react'
 import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
 import { VStack, useCollapsed } from './Split'
 import { SessionBlock } from './SessionBlock'
 import { Island } from './Island'
+import { MenuButton } from './Menu'
 import { EditorHost, ImageView } from '@/editor/EditorHost'
 
 export function attentionColor(a: { kind: string }) {
@@ -25,6 +27,7 @@ export function Center({ project }: { project: Project }) {
   const { newTab, closeTab, setCurrentTab } = useWorkbench()
   const [sessionCollapsed, setSessionCollapsed] = useCollapsed('session')
   const current = project.tabs.find((t) => t.id === project.currentTabId) ?? null
+  useEffect(() => { document.querySelector('.tabs .tab.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [project.currentTabId])
   const home = window.ct.home
   const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
   return (
@@ -45,10 +48,11 @@ export function Center({ project }: { project: Project }) {
                 </div>
               ))}
             </div>}
-          actions={<>
-            <button title="Nouvel onglet shell (⌘T)" onClick={() => newTab(project.id, 'shell')}>{Icons.plus()}</button>
-            <button title="Nouvel onglet Claude (⇧⌘T)" onClick={() => newTab(project.id, 'claude')} style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle()}</button>
-          </>}>
+          actions={
+            <MenuButton title="Nouvel onglet" items={[
+              { label: 'Claude', icon: <span style={{ color: 'var(--ct-accent)', display: 'inline-flex' }}>{Icons.sparkle(13)}</span>, shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
+              { label: 'Shell', icon: Icons.terminal(13), shortcut: '⌘T', onSelect: () => newTab(project.id, 'shell') },
+            ]}>{Icons.plus()}</MenuButton>}>
           {current && current.kind === 'file' ? (
             current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
             : current.fileKind === 'image' ? <div className="term-wrap"><ImageView src={current.imageUrl ?? ''} /></div>

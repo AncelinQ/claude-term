@@ -5,9 +5,8 @@ import { Island, Empty } from '../Island'
 import { useWorkbench, useActiveProject } from '@/stores/workbench'
 
 /** Past Claude sessions (this project or all), resume in a new Claude tab, open the transcript, delete. */
-export function HistoryIsland() {
+export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
   const project = useActiveProject()
-  const [scope, setScope] = useState<'project' | 'all'>('project')
   const [sessions, setSessions] = useState<SessionInfo[]>([])
   const [q, setQ] = useState('')
   const { newTab, openFile } = useWorkbench()
@@ -19,13 +18,8 @@ export function HistoryIsland() {
   const fmt = (ms: number) => { const d = new Date(ms); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }
   const shown = sessions.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.projectPath.toLowerCase().includes(q.toLowerCase()))
   const resume = (s: SessionInfo) => project && newTab(project.id, 'claude', s.projectPath || undefined, s.id)
-  const actions = (
-    <select value={scope} onChange={(e) => setScope(e.target.value as 'project' | 'all')} style={{ fontSize: 10, padding: '1px 4px' }} disabled={!root}>
-      <option value="project">ce projet</option><option value="all">tous</option>
-    </select>
-  )
   return (
-    <Island title="Historique" icon={Icons.clock(14)} grow actions={actions}>
+    <Island title={scope === 'project' ? 'Historique du projet' : 'Historique'} icon={Icons.clock(14)} grow>
       <div className="search"><input placeholder="filtrer…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {shown.length === 0 ? <Empty>Aucune session</Empty> : (
         <div className="list">
