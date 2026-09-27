@@ -216,7 +216,7 @@ async function approvePlugin(req: ApprovalRequest): Promise<boolean> {
 
 /** GET with a size cap (file: and http(s) through Electron's net stack). */
 async function download(url: string, maxBytes: number): Promise<Buffer> {
-  const res = await net.fetch(url, { redirect: 'follow' })
+  const res = await net.fetch(url, { redirect: 'follow', cache: 'no-store' })
   if (!res.ok) throw new Error(`téléchargement : HTTP ${res.status}`)
   if (Number(res.headers.get('content-length') ?? 0) > maxBytes) throw new Error('fichier trop grand')
   const chunks: Uint8Array[] = []
