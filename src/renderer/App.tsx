@@ -24,7 +24,7 @@ export function App() {
       else if (e.key === 'w' && !e.shiftKey && p?.currentTabId) { e.preventDefault(); closeTab(p.id, p.currentTabId) }
       else if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newProject(null) }
       else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }
-      else if (['1', '2', '3', '4', '5'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'scripts', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; useWorkbench.getState().setLeft(useWorkbench.getState().leftActivity === id ? null : id) }
+      else if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'scripts', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; useWorkbench.getState().setLeft(useWorkbench.getState().leftActivity === id ? null : id) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

@@ -22,6 +22,7 @@ export function LeftSidebar({ project }: { project: Project }) {
       )}
       {activity === 'search' && <Island title="Recherche" icon={Icons.search(14)} grow><Empty>Bientôt : recherche de fichiers</Empty></Island>}
       {activity === 'scripts' && <Island title="Scripts npm" icon={Icons.box(14)} grow><Empty>Bientôt : scripts du package.json</Empty></Island>}
+      {activity === 'skills' && <Island title="Skills du projet" icon={Icons.sparkle(14)} grow><Empty>Bientôt : .claude/skills et .claude/commands</Empty></Island>}
       {activity === 'mcp' && (
         <>
           <Island title="MCP du projet" icon={Icons.plug(14)} grow><Empty>Bientôt : .mcp.json</Empty></Island>
@@ -42,8 +43,8 @@ export function RightSidebar() {
       {activity === 'history' && <Island title="Historique" icon={Icons.clock(14)} grow><Empty>Bientôt : sessions passées</Empty></Island>}
       {activity === 'skills' && (
         <>
-          <Island title="Skills du projet" icon={Icons.sparkle(14)} grow><Empty>Bientôt</Empty></Island>
-          <Island title="Skills perso" icon={Icons.sparkle(14)} grow collapsible><Empty>Bientôt</Empty></Island>
+          <Island title="Skills perso" icon={Icons.sparkle(14)} grow><Empty>Bientôt : ~/.claude/skills</Empty></Island>
+          <Island title="Skills des plugins" icon={Icons.sparkle(14)} grow collapsible><Empty>Bientôt</Empty></Island>
         </>
       )}
     </div>

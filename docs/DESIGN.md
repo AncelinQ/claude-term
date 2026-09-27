@@ -66,11 +66,11 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
   The top strip holds the project tabs and is the drag region. Menus: native menu bar on macOS,
   hidden on Windows (commands via palette and the ⋯ button), like VS Code's custom title bar.
 - **Left activity bar** (44 px): Explorer (2 islands: Finder, Linked folders), Search,
-  Scripts, MCP, Plugins. Click active = collapse. The left bar and sidebar are **project-bound**:
+  Scripts, Skills (project), MCP (project + personal), Plugins. Everything project-bound is on the left. Click active = collapse. The left bar and sidebar are **project-bound**:
   hidden while the active project has no folder (welcome screen).
 - **App settings**: gear button at the top right of the title strip (not in an activity bar);
   opens the Settings center tab.
-- **Right activity bar** (28 px, secondary): Process, History, Skills. **Global**, not bound to a
+- **Right activity bar** (28 px, secondary): Process, History, Skills (personal + plugins). **Global**, not bound to a
   project: always visible and usable, welcome screen included.
 - **Center**: tab bar (terminal + editor tabs interleaved), terminal/editor on top, session
   block below.

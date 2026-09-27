@@ -6,13 +6,14 @@ const LEFT: { id: LeftActivity; title: string; icon: () => React.ReactElement }[
   { id: 'explorer', title: 'Explorateur (⌘1)', icon: () => Icons.files() },
   { id: 'search', title: 'Recherche (⌘2)', icon: () => Icons.search() },
   { id: 'scripts', title: 'Scripts (⌘3)', icon: () => Icons.box() },
-  { id: 'mcp', title: 'MCP (⌘4)', icon: () => Icons.plug() },
-  { id: 'plugins', title: 'Plugins (⌘5)', icon: () => Icons.puzzle() },
+  { id: 'skills', title: 'Skills du projet (⌘4)', icon: () => Icons.sparkle() },
+  { id: 'mcp', title: 'MCP (⌘5)', icon: () => Icons.plug() },
+  { id: 'plugins', title: 'Plugins (⌘6)', icon: () => Icons.puzzle() },
 ]
 const RIGHT: { id: RightActivity; title: string; icon: () => React.ReactElement }[] = [
   { id: 'process', title: 'Process Claude', icon: () => Icons.cpu() },
   { id: 'history', title: 'Historique', icon: () => Icons.clock() },
-  { id: 'skills', title: 'Skills', icon: () => Icons.sparkle() },
+  { id: 'skills', title: 'Skills perso et plugins', icon: () => Icons.sparkle() },
 ]
 
 export function LeftActivityBar() {

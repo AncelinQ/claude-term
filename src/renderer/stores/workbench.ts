@@ -22,7 +22,7 @@ export interface Project {
   selectedFolder: string
 }
 
-export type LeftActivity = 'explorer' | 'search' | 'scripts' | 'mcp' | 'plugins'
+export type LeftActivity = 'explorer' | 'search' | 'scripts' | 'skills' | 'mcp' | 'plugins'
 export type RightActivity = 'process' | 'history' | 'skills'
 
 interface Workbench {
