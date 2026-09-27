@@ -66,7 +66,7 @@ export function App() {
         ))}
         <button className="plus" title={t('Nouveau projet (⌘N)')} onClick={() => newProject(null)} style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 12, color: 'var(--ct-text-secondary)' }}>{Icons.plus(12)}</button>
         <span className="spacer" />
-        <button className={'gear' + (showSettings ? ' on' : '')} title={t('Réglages (⌘,)')} onClick={() => setShowSettings(!showSettings)}>{Icons.gear(16)}</button>
+        {mac && <button className={'gear' + (showSettings ? ' on' : '')} title={t('Réglages (⌘,)')} onClick={() => setShowSettings(!showSettings)}>{Icons.gear(16)}</button>}
       </div>
       <div className="body">
         {project.root && <LeftActivityBar />}

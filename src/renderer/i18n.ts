@@ -26,6 +26,7 @@ const EN: Record<string, string> = {
   'Récents :': 'Recent:',
   'Réglages': 'Settings',
   'Réglages (⌘,)': 'Settings (⌘,)',
+  'Réglages (Ctrl+,)': 'Settings (Ctrl+,)',
   // activity bars
   'Explorateur (⌘1)': 'Explorer (⌘1)',
   'Recherche (⌘2)': 'Search (⌘2)',

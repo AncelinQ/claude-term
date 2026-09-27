@@ -4,7 +4,7 @@ import { readdirSync, statSync, existsSync } from 'node:fs'
 import { SettingsService } from './services/settings'
 import { ThemeService } from './services/themes'
 import { PtyService } from './services/pty'
-import { createWindow } from './window'
+import { createWindow, applyOverlayTheme } from './window'
 import { ClaudeData } from './services/claude-data'
 import { SessionTracker } from './services/session-tracker'
 import { ClaudeSettings } from './services/claude-settings'
@@ -62,7 +62,7 @@ ipcMain.handle('app:confirmSave', async (_e, name: string) => {
 // themes / settings
 ipcMain.handle('themes:list', () => themes.list())
 ipcMain.handle('themes:current', () => themes.current())
-themes.onChange((t) => send('themes:changed', t))
+themes.onChange((t) => { send('themes:changed', t); if (win) applyOverlayTheme(win, t) })
 ipcMain.handle('settings:get', () => settings.get())
 ipcMain.handle('settings:set', (_e, patch) => settings.set(patch))
 settings.onChange((s) => send('settings:changed', s))

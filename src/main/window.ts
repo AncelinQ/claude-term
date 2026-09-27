@@ -2,6 +2,12 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import type { ResolvedTheme } from '@shared/theme'
 
+/** Windows/Linux: recolors the native caption buttons when the theme changes. */
+export function applyOverlayTheme(win: BrowserWindow, theme: ResolvedTheme) {
+  if (process.platform === 'darwin') return
+  try { win.setTitleBarOverlay({ color: theme.tokens['activity.bg'], symbolColor: theme.tokens['text'], height: 38 }) } catch { /* not supported */ }
+}
+
 export function createWindow(theme: ResolvedTheme): BrowserWindow {
   const mac = process.platform === 'darwin'
   const win = new BrowserWindow({

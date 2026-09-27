@@ -31,7 +31,7 @@ export function LeftActivityBar() {
 }
 
 export function RightActivityBar() {
-  const { rightActivity, setRight } = useWorkbench()
+  const { rightActivity, setRight, showSettings, setShowSettings } = useWorkbench()
   return (
     <div className="activity right">
       {RIGHT.map((a) => (
@@ -39,6 +39,12 @@ export function RightActivityBar() {
           {a.icon()}
         </button>
       ))}
+      {window.ct.platform !== 'darwin' && (
+        <>
+          <span className="spacer" />
+          <button className={showSettings ? 'on' : ''} title={t('Réglages (Ctrl+,)')} onClick={() => setShowSettings(!showSettings)}>{Icons.gear()}</button>
+        </>
+      )}
     </div>
   )
 }

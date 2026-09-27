@@ -70,8 +70,9 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
   No "npm scripts" entry (decided 2026-09-27): a later **runnables plugin** will detect what a
   project can run (npm scripts, make targets, python entry points, cargo…) and offer it in one place. Click active = collapse. The left bar and sidebar are **project-bound**:
   hidden while the active project has no folder (welcome screen).
-- **App settings**: gear button at the top right of the title strip (not in an activity bar);
-  opens the Settings center tab.
+- **App settings**: gear button at the top right of the title strip on macOS; on Windows/Linux the
+  native caption buttons live there, so the gear sits at the bottom of the right activity bar.
+  Opens the Settings modal.
 - **Right activity bar** (28 px, secondary): Process, History (all sessions, no scope selector), Skills (personal + plugins). **Global**, not bound to a
   project: always visible and usable, welcome screen included.
 - **Center**: tab bar (terminal + editor tabs interleaved), terminal/editor on top, session
