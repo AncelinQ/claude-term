@@ -29,8 +29,8 @@ Download the installer from the [latest release](https://github.com/sunstan/clau
 `ClaudeTerm-<version>-arm64.dmg` (Apple silicon), `ClaudeTerm-<version>.dmg` (Intel), `ClaudeTerm Setup <version>.exe`,
 `ClaudeTerm-<version>.AppImage`. The builds are not signed:
 
-- macOS: move the app to Applications, then run `xattr -dr com.apple.quarantine /Applications/ClaudeTerm.app` once
-  (or System Settings › Privacy & Security › Open Anyway).
+- macOS (ad-hoc signed, no Apple certificate): move the app to Applications and open it; macOS refuses once, then
+  System Settings › Privacy & Security › Open Anyway. Or, in a terminal: `xattr -dr com.apple.quarantine /Applications/ClaudeTerm.app`.
 - Windows: SmartScreen › More info › Run anyway.
 
 After that the app updates itself: it checks the releases at startup and every 6 h, downloads in the background and

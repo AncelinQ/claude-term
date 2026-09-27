@@ -23,7 +23,9 @@ mac:
     # the zip is what the in-app updater downloads (latest-mac.yml)
     - target: zip
       arch: [arm64, x64]
-  identity: null
+  # ad-hoc signature (no certificate): a modified bundle with a broken seal shows "damaged" with no way to open it;
+  # ad-hoc signed, Gatekeeper offers "Open Anyway" (System Settings › Privacy & Security) like any unsigned app
+  identity: "-"
   hardenedRuntime: false
   extendInfo:
     LSMinimumSystemVersion: "12.0"
