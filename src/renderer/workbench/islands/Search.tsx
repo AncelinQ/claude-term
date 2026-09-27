@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icons } from '../icons'
 import { Island, Empty } from '../Island'
 import { useWorkbench, type Project } from '@/stores/workbench'
+import { t } from '@/i18n'
 
 /** File name search (fuzzy) over the project; Enter or double-click opens in the editor. */
 export function SearchIsland({ project }: { project: Project }) {
@@ -19,16 +20,16 @@ export function SearchIsland({ project }: { project: Project }) {
   }, [q, project.root])
   const open = (rel: string) => openFile(project.id, project.root + '/' + rel)
   return (
-    <Island title="Recherche" icon={Icons.search(14)} grow>
+    <Island title={t('Recherche')} icon={Icons.search(14)} grow>
       <div className="search">
-        <input ref={ref} value={q} placeholder="nom de fichier…" onChange={(e) => setQ(e.target.value)}
+        <input ref={ref} value={q} placeholder={t('nom de fichier…')} onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(s + 1, results.length - 1)) }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)) }
             else if (e.key === 'Enter' && results[sel]) open(results[sel])
           }} />
       </div>
-      {q && results.length === 0 && <Empty>Aucun fichier</Empty>}
+      {q && results.length === 0 && <Empty>{t('Aucun fichier')}</Empty>}
       <div className="results">
         {results.map((r, i) => (
           <div key={r} className={'frow' + (i === sel ? ' sel' : '')} onClick={() => setSel(i)} onDoubleClick={() => open(r)} title={r}>

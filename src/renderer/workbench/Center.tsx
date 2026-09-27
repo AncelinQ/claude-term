@@ -7,12 +7,13 @@ import { SessionBlock } from './SessionBlock'
 import { Island } from './Island'
 import { MenuButton, ContextMenu } from './Menu'
 import { EditorHost, ImageView } from '@/editor/EditorHost'
+import { t as tr } from '@/i18n'
 
 export function attentionColor(a: { kind: string }) {
   return a.kind === 'permission' ? 'var(--ct-accent)' : a.kind === 'idle' ? 'var(--ct-badge-warn)' : 'var(--ct-badge-info)'
 }
 export function attentionLabel(a: { kind: string; message: string }) {
-  return a.kind === 'permission' ? (a.message || 'Permission en attente') : a.kind === 'idle' ? 'Claude attend une réponse' : 'Claude a terminé'
+  return a.kind === 'permission' ? (a.message || tr('Permission en attente')) : a.kind === 'idle' ? tr('Claude attend une réponse') : tr('Claude a terminé')
 }
 
 function tabColor(t: Tab) {
@@ -35,11 +36,11 @@ export function Center({ project }: { project: Project }) {
   return (
     <div className="center">
       <ContextMenu at={ctx} onClose={() => setCtx(null)} items={ctx ? [
-        { label: 'Fermer', shortcut: '⌘W', onSelect: () => { if (ctx.tab.kind !== 'file') disposeTerminal(ctx.tab.id); closeTab(project.id, ctx.tab.id) } },
+        { label: tr('Fermer'), shortcut: '⌘W', onSelect: () => { if (ctx.tab.kind !== 'file') disposeTerminal(ctx.tab.id); closeTab(project.id, ctx.tab.id) } },
         'sep',
-        { label: 'Fermer les autres fichiers', disabled: fileCount < (ctx.tab.kind === 'file' ? 2 : 1), onSelect: () => closeFiles(project.id, ctx.tab.kind === 'file' ? ctx.tab.id : undefined) },
-        { label: 'Fermer tous les fichiers', disabled: fileCount === 0, onSelect: () => closeFiles(project.id) },
-        ...(ctx.tab.kind === 'file' ? ['sep' as const, { label: 'Afficher dans le Finder', onSelect: () => window.ct.app.revealInFinder(ctx.tab.path!) }, { label: 'Copier le chemin', onSelect: () => navigator.clipboard.writeText(ctx.tab.path!) }] : []),
+        { label: tr('Fermer les autres fichiers'), disabled: fileCount < (ctx.tab.kind === 'file' ? 2 : 1), onSelect: () => closeFiles(project.id, ctx.tab.kind === 'file' ? ctx.tab.id : undefined) },
+        { label: tr('Fermer tous les fichiers'), disabled: fileCount === 0, onSelect: () => closeFiles(project.id) },
+        ...(ctx.tab.kind === 'file' ? ['sep' as const, { label: tr('Afficher dans le Finder'), onSelect: () => window.ct.app.revealInFinder(ctx.tab.path!) }, { label: tr('Copier le chemin'), onSelect: () => navigator.clipboard.writeText(ctx.tab.path!) }] : []),
       ] : []} />
       <VStack id="session" collapsed={sessionCollapsed} initial={240} min={120}
         top={<Island grow title={
@@ -51,16 +52,16 @@ export function Center({ project }: { project: Project }) {
                     {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
                   </span>
                   <span style={{ fontStyle: t.dirty ? 'italic' : undefined }}>{t.title}</span>
-                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? 'Modifications non enregistrées (⌘S)' : 'Fermer (⌘W)'}>
+                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? tr('Modifications non enregistrées (⌘S)') : tr('Fermer (⌘W)')}>
                     {t.dirty ? <span className="dirty-dot" /> : Icons.x(10)}
                   </button>
                 </div>
               ))}
             </div>}
           actions={
-            <MenuButton title="Nouvel onglet" items={[
-              { label: 'Claude', icon: <span style={{ color: 'var(--ct-accent)', display: 'inline-flex' }}>{Icons.sparkle(13)}</span>, shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
-              { label: 'Shell', icon: Icons.terminal(13), shortcut: '⌘T', onSelect: () => newTab(project.id, 'shell') },
+            <MenuButton title={tr('Nouvel onglet')} items={[
+              { label: tr('Claude'), icon: <span style={{ color: 'var(--ct-accent)', display: 'inline-flex' }}>{Icons.sparkle(13)}</span>, shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
+              { label: tr('Shell'), icon: Icons.terminal(13), shortcut: '⌘T', onSelect: () => newTab(project.id, 'shell') },
             ]}>{Icons.plus()}</MenuButton>}>
           {current && current.kind === 'file' ? (
             current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
@@ -73,7 +74,7 @@ export function Center({ project }: { project: Project }) {
               <div className="welcome">
                 <div>
                   <div style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(36)}</div>
-                  <h1>Aucune session</h1>
+                  <h1>{tr('Aucune session')}</h1>
                   <p>{short(project.selectedFolder)}</p>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                     <button className="btn primary" onClick={() => newTab(project.id, 'claude')}>{Icons.sparkle(14)} Démarrer Claude</button>

@@ -9,6 +9,7 @@ import { SkillsIsland } from './islands/Skills'
 import { McpIsland } from './islands/Mcp'
 import { ProcessIsland } from './islands/Process'
 import { HistoryIsland } from './islands/History'
+import { t } from '@/i18n'
 
 export function LeftSidebar({ project }: { project: Project }) {
   const activity = useWorkbench((s) => s.leftActivity)
@@ -24,22 +25,22 @@ export function LeftSidebar({ project }: { project: Project }) {
         <VStack id="explorer" collapsed={linksCollapsed} initial={200}
           top={
             <Island title={name} icon={Icons.folder(14)} grow
-              actions={<button title="Afficher dans le Finder" onClick={() => project.root && window.ct.app.revealInFinder(project.root)}>{Icons.external()}</button>}>
-              {project.root ? <FileTree project={project} root={project.root} /> : <Empty>Aucun dossier</Empty>}
+              actions={<button title={t('Afficher dans le Finder')} onClick={() => project.root && window.ct.app.revealInFinder(project.root)}>{Icons.external()}</button>}>
+              {project.root ? <FileTree project={project} root={project.root} /> : <Empty>{t('Aucun dossier')}</Empty>}
             </Island>}
           bottom={<LinksIsland project={project} collapsed={linksCollapsed} onCollapse={setLinksCollapsed} />}
         />
       )}
       {activity === 'search' && <SearchIsland project={project} />}
       {activity === 'history' && <HistoryIsland scope="project" />}
-      {activity === 'skills' && <SkillsIsland title="Skills du projet" root={project.root} createIn={project.root} grow load={async () => [...(await window.ct.skills.project(project.root!)), ...(await window.ct.skills.linked(project.root!))]} />}
+      {activity === 'skills' && <SkillsIsland title={t('Skills du projet')} root={project.root} createIn={project.root} grow load={async () => [...(await window.ct.skills.project(project.root!)), ...(await window.ct.skills.linked(project.root!))]} />}
       {activity === 'mcp' && (
         <VStack id="mcp" collapsed={mcpCollapsed}
           top={<McpIsland scope="project" root={project.root} grow />}
           bottom={<McpIsland scope="user" root={project.root} collapsed={mcpCollapsed} onCollapse={setMcpCollapsed} />}
         />
       )}
-      {activity === 'plugins' && <Island title="Plugins" icon={Icons.puzzle(14)} grow><Empty>Phase 5</Empty></Island>}
+      {activity === 'plugins' && <Island title={t('Plugins')} icon={Icons.puzzle(14)} grow><Empty>{t('Phase 5')}</Empty></Island>}
     </div>
     <Gutter axis="x" className="left" onDrag={(d) => setWidth((w) => Math.max(180, Math.min(600, w + d)))} />
     </>
@@ -59,8 +60,8 @@ export function RightSidebar() {
       {activity === 'history' && <HistoryIsland scope="all" />}
       {activity === 'skills' && (
         <VStack id="skills" collapsed={pluginsCollapsed}
-          top={<SkillsIsland title="Skills perso" root={null} createIn={null} grow load={() => window.ct.skills.personal()} />}
-          bottom={<SkillsIsland title="Skills des plugins" root={null} collapsed={pluginsCollapsed} onCollapse={setPluginsCollapsed} load={() => window.ct.skills.plugins()} />}
+          top={<SkillsIsland title={t('Skills perso')} root={null} createIn={null} grow load={() => window.ct.skills.personal()} />}
+          bottom={<SkillsIsland title={t('Skills des plugins')} root={null} collapsed={pluginsCollapsed} onCollapse={setPluginsCollapsed} load={() => window.ct.skills.plugins()} />}
         />
       )}
     </div>

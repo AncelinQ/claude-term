@@ -1,5 +1,6 @@
 import { Icons } from './icons'
 import { useWorkbench, type Project } from '@/stores/workbench'
+import { t } from '@/i18n'
 
 export function Welcome({ project }: { project: Project }) {
   const { setRoot, settings } = useWorkbench()
@@ -13,11 +14,11 @@ export function Welcome({ project }: { project: Project }) {
           <div>
             <div style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(40)}</div>
             <h1>ClaudeTerm</h1>
-            <p>Ouvre un dossier pour démarrer un projet.</p>
+            <p>{t('Ouvre un dossier pour démarrer un projet.')}</p>
             <button className="btn primary" onClick={pick}>{Icons.folder(14)} Ouvrir un dossier…</button>
             {settings && settings.recentProjects.length > 0 && (
               <div style={{ marginTop: 24, textAlign: 'left', minWidth: 320 }}>
-                <div style={{ color: 'var(--ct-text-secondary)', fontWeight: 600, marginBottom: 6 }}>Récents</div>
+                <div style={{ color: 'var(--ct-text-secondary)', fontWeight: 600, marginBottom: 6 }}>{t('Récents')}</div>
                 {settings.recentProjects.map((r) => (
                   <div key={r} className="tree"><div className="row dir" onClick={() => setRoot(project.id, r)} title={r}>
                     <span className="ico">{Icons.folder(14)}</span><span>{r.split(/[\\/]/).filter(Boolean).pop()}</span>

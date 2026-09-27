@@ -6,6 +6,7 @@ import { Island, Empty } from './Island'
 import { diffStats } from '@shared/claude-format'
 import { useWorkbench, sessionTab, type Project, type Tab } from '@/stores/workbench'
 import { Gutter, useStoredSize } from './Split'
+import { t } from '@/i18n'
 
 const short = (p: string) => { const h = window.ct.home; return p.startsWith(h) ? '~' + p.slice(h.length) : p }
 
@@ -31,16 +32,16 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
   )
   const title = (
     <span className="modes">
-      {modeBtn('plan', 'Plan', !!session?.planMode)}
-      {modeBtn('activity', 'Activité', (session?.runningTools.length ?? 0) > 0)}
-      {modeBtn('files', 'Fichiers', false, Object.keys(session?.files ?? {}).length)}
+      {modeBtn('plan', t('Plan'), !!session?.planMode)}
+      {modeBtn('activity', t('Activité'), (session?.runningTools.length ?? 0) > 0)}
+      {modeBtn('files', t('Fichiers'), false, Object.keys(session?.files ?? {}).length)}
     </span>
   )
   const actions = tab ? <span className="session-title">{Icons.sparkle(11)} {tab.title}</span> : null
   return (
     <Island title={title} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
       {!tab || !session ? (
-        <Empty>Sélectionne un onglet Claude, ou tape claude dans un shell</Empty>
+        <Empty>{t('Sélectionne un onglet Claude, ou tape claude dans un shell')}</Empty>
       ) : mode === 'plan' ? <PlanView tab={tab} /> : mode === 'activity' ? <ActivityView tab={tab} /> : <FilesView tab={tab} />}
     </Island>
   )
@@ -56,10 +57,10 @@ function PlanView({ tab }: { tab: Tab }) {
   if (!s.planPath) {
     return (
       <div className="plan-empty">
-        <Empty>Aucun plan lié à cette session</Empty>
+        <Empty>{t('Aucun plan lié à cette session')}</Empty>
         {plans.length > 0 && (
           <div className="plan-pick">
-            <div className="hint">Lier un plan existant :</div>
+            <div className="hint">{t('Lier un plan existant :')}</div>
             {plans.slice(0, 8).map((p) => <button key={p.path} className="linkbtn" onClick={() => window.ct.claude.setPlan(tab.id, p.path)}>{p.title}</button>)}
           </div>
         )}
@@ -69,13 +70,13 @@ function PlanView({ tab }: { tab: Tab }) {
   return (
     <div className="plan">
       <div className="plan-bar">
-        {s.planMode && <span className="badge accent">mode plan</span>}
+        {s.planMode && <span className="badge accent">{t('mode plan')}</span>}
         <span className="path" title={s.planPath}>{short(s.planPath)}</span>
         {boxes > 0 && <span className="progress"><span style={{ width: `${(done / boxes) * 100}%` }} /></span>}
         {boxes > 0 && <span className="muted">{done}/{boxes}</span>}
         <span className="spacer" />
-        <button className="linkbtn" onClick={() => window.ct.app.openExternal(s.planPath!)}>Ouvrir</button>
-        <button className="linkbtn" onClick={() => window.ct.claude.setPlan(tab.id, null)}>Détacher</button>
+        <button className="linkbtn" onClick={() => window.ct.app.openExternal(s.planPath!)}>{t('Ouvrir')}</button>
+        <button className="linkbtn" onClick={() => window.ct.claude.setPlan(tab.id, null)}>{t('Détacher')}</button>
       </div>
       <div className="md" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
@@ -100,12 +101,12 @@ function ActivityView({ tab }: { tab: Tab }) {
   return (
     <div className="activity-list">
       <div className="act-bar">
-        {s.runningTools.length > 0 ? <span className="item"><span className="spin" /> {s.runningTools.map((t) => t.name).join(', ')}</span> : <span className="muted">{s.sessionId ? 'en attente' : 'en attente du transcript…'}</span>}
+        {s.runningTools.length > 0 ? <span className="item"><span className="spin" /> {s.runningTools.map((t) => t.name).join(', ')}</span> : <span className="muted">{s.sessionId ? t('en attente') : t('en attente du transcript…')}</span>}
         <span className="spacer" />
         <span className="muted">{s.inputTokens.toLocaleString()} ↓ {s.outputTokens.toLocaleString()} ↑</span>
       </div>
       <div className="events">
-        {s.events.length === 0 && <Empty>Rien pour l'instant</Empty>}
+        {s.events.length === 0 && <Empty>{t('Rien pour l\'instant')}</Empty>}
         {s.events.map((e) => (
           <div key={e.id} className={'event ' + (e.kind === 'user' ? 'user' : e.kind === 'text' ? 'text' : 'tool')} onDoubleClick={() => e.file && openFile(projectId, e.file)} title={e.file ?? undefined}>
             <span className="ico">{icon(e.kind)}</span>
@@ -151,7 +152,7 @@ function FilesView({ tab }: { tab: Tab }) {
     load()
     return () => { live = false }
   }, [tab.session, current])
-  if (rows.length === 0) return <Empty>Aucun fichier touché pour l'instant</Empty>
+  if (rows.length === 0) return <Empty>{t('Aucun fichier touché pour l\'instant')}</Empty>
   return (
     <div className="files">
       <div className="files-list" style={{ width: listWidth }}>
@@ -167,7 +168,7 @@ function FilesView({ tab }: { tab: Tab }) {
       </div>
       <Gutter axis="x" className="inner" onDrag={(d) => setListWidth((w) => Math.max(160, Math.min(700, w + d)))} />
       <div className="diff">
-        {current && isModified(current) ? (diff ? diff.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>) : <Empty>Aucune différence</Empty>) : <Empty>Lu, pas modifié dans cette session</Empty>}
+        {current && isModified(current) ? (diff ? diff.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>) : <Empty>{t('Aucune différence')}</Empty>) : <Empty>{t('Lu, pas modifié dans cette session')}</Empty>}
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { t } from '@/i18n'
 import type { ResolvedTheme } from '@shared/theme'
 import type { Settings, TabKind, SessionState, Attention } from '@shared/ipc'
 
@@ -92,7 +93,7 @@ interface Workbench {
 
 let seq = 0
 const nid = () => 'p' + ++seq
-const name = (root: string | null) => (root ? root.split(/[\\/]/).filter(Boolean).pop() ?? root : 'Nouveau projet')
+const name = (root: string | null) => (root ? root.split(/[\\/]/).filter(Boolean).pop() ?? root : t('Nouveau projet'))
 
 export const useWorkbench = create<Workbench>((set, get) => ({
   theme: null,

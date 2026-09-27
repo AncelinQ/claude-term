@@ -4,6 +4,7 @@ import { Icons } from '../icons'
 import { Island, Empty } from '../Island'
 import { FileTree } from '../FileTree'
 import { useWorkbench, type Project } from '@/stores/workbench'
+import { t } from '@/i18n'
 
 /** Linked folders island: list with roles and read-only flag, each expandable into its own tree. */
 export function LinksIsland({ project, collapsed, onCollapse }: { project: Project; collapsed: boolean; onCollapse: (c: boolean) => void }) {
@@ -23,30 +24,30 @@ export function LinksIsland({ project, collapsed, onCollapse }: { project: Proje
   const candidates = settings.recentProjects.filter((d) => d !== root && !links.some((l) => l.path === d))
   const actions = (
     <>
-      <button title="Rôles et accès" onClick={() => setEditing(!editing)} style={{ opacity: links.length ? 1 : 0.4 }}>{Icons.list()}</button>
-      <button title="Lier un dossier…" onClick={async () => { const d = await window.ct.app.pickFolder(); if (d) add(d) }}>{Icons.plus()}</button>
+      <button title={t('Rôles et accès')} onClick={() => setEditing(!editing)} style={{ opacity: links.length ? 1 : 0.4 }}>{Icons.list()}</button>
+      <button title={t('Lier un dossier…')} onClick={async () => { const d = await window.ct.app.pickFolder(); if (d) add(d) }}>{Icons.plus()}</button>
     </>
   )
   return (
-    <Island title="Dossiers liés" icon={Icons.link(14)} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
+    <Island title={t('Dossiers liés')} icon={Icons.link(14)} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
       {error && <div className="error" style={{ padding: '6px 10px' }}>{error}</div>}
       {editing && links.length > 0 && (
         <div className="links-editor">
-          <div className="hint">Écrit dans .claude/settings.local.json du projet. Le rôle est transmis à Claude au lancement.</div>
+          <div className="hint">{t('Écrit dans .claude/settings.local.json du projet. Le rôle est transmis à Claude au lancement.')}</div>
           {links.map((l) => (
             <div key={l.path} className="link-edit">
               <div className="name">{l.path.split(/[\\/]/).pop()}</div>
-              <input placeholder="rôle (API, design system…)" value={l.role} onChange={(e) => save(links.map((x) => (x.path === l.path ? { ...x, role: e.target.value } : x)))} />
-              <label className="check"><input type="checkbox" checked={l.readOnly} onChange={(e) => save(links.map((x) => (x.path === l.path ? { ...x, readOnly: e.target.checked } : x)))} /> lecture seule</label>
-              <button className="linkbtn" onClick={() => save(links.filter((x) => x.path !== l.path))}>Retirer</button>
+              <input placeholder={t('rôle (API, design system…)')} value={l.role} onChange={(e) => save(links.map((x) => (x.path === l.path ? { ...x, role: e.target.value } : x)))} />
+              <label className="check"><input type="checkbox" checked={l.readOnly} onChange={(e) => save(links.map((x) => (x.path === l.path ? { ...x, readOnly: e.target.checked } : x)))} /> {t('lecture seule')}</label>
+              <button className="linkbtn" onClick={() => save(links.filter((x) => x.path !== l.path))}>{t('Retirer')}</button>
             </div>
           ))}
         </div>
       )}
       {links.length === 0 ? (
         <div className="links-empty">
-          <Empty>Lie l'API, le design system… Claude y aura accès sans qu'on lui dise.</Empty>
-          {candidates.length > 0 && <div className="plan-pick"><div className="hint">Récents :</div>{candidates.slice(0, 6).map((d) => <button key={d} className="linkbtn" onClick={() => add(d)}>{d.split(/[\\/]/).pop()}</button>)}</div>}
+          <Empty>{t('Lie l\'API, le design system… Claude y aura accès sans qu\'on lui dise.')}</Empty>
+          {candidates.length > 0 && <div className="plan-pick"><div className="hint">{t('Récents :')}</div>{candidates.slice(0, 6).map((d) => <button key={d} className="linkbtn" onClick={() => add(d)}>{d.split(/[\\/]/).pop()}</button>)}</div>}
         </div>
       ) : (
         <div className="tree">

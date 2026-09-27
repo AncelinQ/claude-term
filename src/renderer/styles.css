@@ -220,7 +220,13 @@ input:focus { border-color: var(--ct-accent); }
 .scontrol .error { color: var(--ct-badge-error); font-size: 11px; }
 .check { display: inline-flex; align-items: center; gap: 6px; }
 select { font: inherit; color: var(--ct-text); background: var(--ct-input-bg); border: 1px solid var(--ct-input-border); border-radius: 6px; padding: 4px 8px; }
-input[type=checkbox] { accent-color: var(--ct-accent); }
+input[type=checkbox] { appearance: none; width: 15px; height: 15px; margin: 0; padding: 0; border: 1px solid var(--ct-input-border); border-radius: 4px; background: var(--ct-input-bg); display: inline-grid; place-items: center; cursor: default; vertical-align: middle; }
+input[type=checkbox]:checked { background: var(--ct-accent); border-color: var(--ct-accent); }
+input[type=checkbox]:checked::after { content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+input[type=checkbox]:focus-visible { outline: 2px solid color-mix(in srgb, var(--ct-accent) 50%, transparent); outline-offset: 1px; }
+input[type=checkbox]:disabled { opacity: .4; }
+.unit-row { display: inline-flex; align-items: center; gap: 6px; }
+.unit-row .unit { color: var(--ct-text-secondary); }
 
 /* editor */
 .term-wrap.editor-bg { background: var(--ct-editor-bg); }

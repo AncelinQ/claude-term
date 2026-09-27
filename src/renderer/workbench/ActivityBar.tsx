@@ -1,6 +1,7 @@
 import type React from "react"
 import { Icons } from './icons'
 import { useWorkbench, type LeftActivity, type RightActivity } from '@/stores/workbench'
+import { t } from '@/i18n'
 
 const LEFT: { id: LeftActivity; title: string; icon: () => React.ReactElement }[] = [
   { id: 'explorer', title: 'Explorateur (⌘1)', icon: () => Icons.files() },
@@ -21,7 +22,7 @@ export function LeftActivityBar() {
   return (
     <div className="activity left">
       {LEFT.map((a) => (
-        <button key={a.id} className={leftActivity === a.id ? 'on' : ''} title={a.title} onClick={() => setLeft(leftActivity === a.id ? null : a.id)}>
+        <button key={a.id} className={leftActivity === a.id ? 'on' : ''} title={t(a.title)} onClick={() => setLeft(leftActivity === a.id ? null : a.id)}>
           {a.icon()}
         </button>
       ))}
@@ -34,7 +35,7 @@ export function RightActivityBar() {
   return (
     <div className="activity right">
       {RIGHT.map((a) => (
-        <button key={a.id} className={rightActivity === a.id ? 'on' : ''} title={a.title} onClick={() => setRight(rightActivity === a.id ? null : a.id)}>
+        <button key={a.id} className={rightActivity === a.id ? 'on' : ''} title={t(a.title)} onClick={() => setRight(rightActivity === a.id ? null : a.id)}>
           {a.icon()}
         </button>
       ))}

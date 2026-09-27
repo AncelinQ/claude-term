@@ -3,6 +3,7 @@ import type { SessionInfo } from '@shared/ipc'
 import { Icons } from '../icons'
 import { Island, Empty } from '../Island'
 import { useWorkbench, useActiveProject } from '@/stores/workbench'
+import { t } from '@/i18n'
 
 /** Past Claude sessions (this project or all), resume in a new Claude tab, open the transcript, delete. */
 export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
@@ -19,9 +20,9 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
   const shown = sessions.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.projectPath.toLowerCase().includes(q.toLowerCase()))
   const resume = (s: SessionInfo) => project && newTab(project.id, 'claude', s.projectPath || undefined, s.id)
   return (
-    <Island title={scope === 'project' ? 'Historique du projet' : 'Historique'} icon={Icons.clock(14)} grow>
-      <div className="search"><input placeholder="filtrer…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-      {shown.length === 0 ? <Empty>Aucune session</Empty> : (
+    <Island title={scope === 'project' ? t('Historique du projet') : t('Historique')} icon={Icons.clock(14)} grow>
+      <div className="search"><input placeholder={t('filtrer…')} value={q} onChange={(e) => setQ(e.target.value)} /></div>
+      {shown.length === 0 ? <Empty>{t('Aucune session')}</Empty> : (
         <div className="list">
           {shown.map((s) => (
             <div key={s.path} className="lrow" title={s.path} onDoubleClick={() => resume(s)}>
@@ -31,9 +32,9 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
                 <div className="desc">{fmt(s.modified)}{s.messageCount ? ` · ${s.messageCount} msg` : ''}{s.gitBranch ? ` · ${s.gitBranch}` : ''}{scope === 'all' && s.projectPath ? ` · ${short(s.projectPath)}` : ''}</div>
               </div>
               <span className="acts">
-                <button title="Reprendre dans un onglet Claude" onClick={() => resume(s)}>{Icons.terminal(12)}</button>
-                <button title="Ouvrir le transcript" onClick={() => project && openFile(project.id, s.path)}>{Icons.file(12)}</button>
-                <button title="Supprimer (corbeille)" onClick={async () => { if (confirm(`Supprimer la session « ${s.title} » ?`)) { await window.ct.claude.deleteSession(s); reload() } }}>{Icons.x(12)}</button>
+                <button title={t('Reprendre dans un onglet Claude')} onClick={() => resume(s)}>{Icons.terminal(12)}</button>
+                <button title={t('Ouvrir le transcript')} onClick={() => project && openFile(project.id, s.path)}>{Icons.file(12)}</button>
+                <button title={t('Supprimer (corbeille)')} onClick={async () => { if (confirm(t('Supprimer la session « {title} » ?', { title: s.title }))) { await window.ct.claude.deleteSession(s); reload() } }}>{Icons.x(12)}</button>
               </span>
             </div>
           ))}

@@ -93,6 +93,7 @@ export interface DirEntry {
 }
 
 export interface Settings {
+  language: 'system' | 'fr' | 'en'
   themeFollowSystem: boolean
   themeDark: string
   themeLight: string
@@ -124,6 +125,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  language: 'system',
   themeFollowSystem: true,
   themeDark: 'claudeterm-dark',
   themeLight: 'claudeterm-light',
