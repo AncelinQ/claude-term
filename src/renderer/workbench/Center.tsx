@@ -1,11 +1,11 @@
 import { Icons } from './icons'
 import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
 import { VStack, useCollapsed } from './Split'
 import { SessionBlock } from './SessionBlock'
 import { Island } from './Island'
-import { MenuButton } from './Menu'
+import { MenuButton, ContextMenu } from './Menu'
 import { EditorHost, ImageView } from '@/editor/EditorHost'
 
 export function attentionColor(a: { kind: string }) {
@@ -24,7 +24,9 @@ function tabColor(t: Tab) {
 }
 
 export function Center({ project }: { project: Project }) {
-  const { newTab, closeTab, setCurrentTab } = useWorkbench()
+  const { newTab, closeTab, closeFiles, setCurrentTab } = useWorkbench()
+  const [ctx, setCtx] = useState<{ x: number; y: number; tab: Tab } | null>(null)
+  const fileCount = project.tabs.filter((t) => t.kind === 'file').length
   const [sessionCollapsed, setSessionCollapsed] = useCollapsed('session')
   const current = project.tabs.find((t) => t.id === project.currentTabId) ?? null
   useEffect(() => { document.querySelector('.tabs .tab.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [project.currentTabId])
@@ -32,11 +34,18 @@ export function Center({ project }: { project: Project }) {
   const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
   return (
     <div className="center">
+      <ContextMenu at={ctx} onClose={() => setCtx(null)} items={ctx ? [
+        { label: 'Fermer', shortcut: '⌘W', onSelect: () => { if (ctx.tab.kind !== 'file') disposeTerminal(ctx.tab.id); closeTab(project.id, ctx.tab.id) } },
+        'sep',
+        { label: 'Fermer les autres fichiers', disabled: fileCount < (ctx.tab.kind === 'file' ? 2 : 1), onSelect: () => closeFiles(project.id, ctx.tab.kind === 'file' ? ctx.tab.id : undefined) },
+        { label: 'Fermer tous les fichiers', disabled: fileCount === 0, onSelect: () => closeFiles(project.id) },
+        ...(ctx.tab.kind === 'file' ? ['sep' as const, { label: 'Afficher dans le Finder', onSelect: () => window.ct.app.revealInFinder(ctx.tab.path!) }, { label: 'Copier le chemin', onSelect: () => navigator.clipboard.writeText(ctx.tab.path!) }] : []),
+      ] : []} />
       <VStack id="session" collapsed={sessionCollapsed} initial={240} min={120}
         top={<Island grow title={
             <div className="tabs">
               {project.tabs.map((t) => (
-                <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
+                <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '')} onClick={() => setCurrentTab(project.id, t.id)} onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, tab: t }) }} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
                   <span style={{ color: t.kind === 'file' ? (t.changedOnDisk ? 'var(--ct-badge-warn)' : 'var(--ct-text-secondary)') : tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
                     {t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
                     {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}

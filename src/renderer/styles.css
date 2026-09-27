@@ -269,4 +269,7 @@ input[type=checkbox] { accent-color: var(--ct-accent); }
 .mi-label { flex: 1; }
 .mi-key { color: var(--ct-text-tertiary); font-size: 11px; }
 .menu-sep { height: 1px; margin: 4px 6px; background: var(--ct-island-border); }
+.menu.ctx { position: fixed; top: auto; z-index: 100; }
+.menu-item:disabled { opacity: .4; }
+.menu-item:disabled:hover { background: none; }
 .island > .hdr .menu-anchor > button.on { background: var(--ct-hover-bg); color: var(--ct-text); }

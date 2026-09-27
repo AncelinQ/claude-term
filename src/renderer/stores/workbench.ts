@@ -72,6 +72,8 @@ interface Workbench {
   /** types text into the current Claude tab of the project (opens one if needed) */
   insertPrompt(projectId: string, text: string): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
+  /** closes every file tab (terminals stay), except `keep` */
+  closeFiles(projectId: string, keep?: string): Promise<void>
   setCurrentTab(projectId: string, tabId: string): void
   tabExited(ptyId: string, code: number): void
   /** "start;<cmd>" | "end;<exit>" from the shell hooks (OSC 7770) */
@@ -219,6 +221,14 @@ export const useWorkbench = create<Workbench>((set, get) => ({
         return { ...x, tabs, currentTabId: current }
       }),
     }))
+  },
+  async closeFiles(projectId, keep) {
+    const p = get().projects.find((x) => x.id === projectId)
+    if (!p) return
+    for (const t of p.tabs.filter((x) => x.kind === 'file' && x.id !== keep)) {
+      await get().closeTab(projectId, t.id)
+      if (get().projects.find((x) => x.id === projectId)?.tabs.some((x) => x.id === t.id)) return   // cancelled in the save dialog
+    }
   },
   setCurrentTab(projectId, tabId) {
     set((s) => {
