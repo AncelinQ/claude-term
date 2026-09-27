@@ -56,7 +56,21 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                   <input type="number" min={300} max={10000} step={100} value={settings.autoSaveDelay} onChange={(e) => set({ autoSaveDelay: Math.max(300, Math.min(10000, +e.target.value || 1000)) })} style={{ width: 80 }} /> ms
                 </Row>
               )}
-              <Row label="Police et taille" hint="L'éditeur utilise la police et la taille du terminal (section Terminal)." />
+              <Row label="Police" hint="Vide = police mono par défaut (JetBrains Mono, SF Mono, Menlo, Consolas…).">
+                <input value={settings.editorFontFamily} placeholder="par défaut" onChange={(e) => set({ editorFontFamily: e.target.value })} style={{ width: 220 }} />
+              </Row>
+              <Row label="Taille">
+                <input type="number" min={9} max={28} value={settings.editorFontSize} onChange={(e) => set({ editorFontSize: Math.max(9, Math.min(28, +e.target.value || 13)) })} style={{ width: 60 }} /> pt
+              </Row>
+              <Row label="Interligne" hint="0 = automatique.">
+                <input type="number" min={0} max={48} value={settings.editorLineHeight} onChange={(e) => set({ editorLineHeight: Math.max(0, Math.min(48, +e.target.value || 0)) })} style={{ width: 60 }} /> px
+              </Row>
+              <Row label="Retour à la ligne">
+                <label className="check"><input type="checkbox" checked={settings.editorWordWrap} onChange={(e) => set({ editorWordWrap: e.target.checked })} /> Replier les lignes longues</label>
+              </Row>
+              <Row label="Minimap">
+                <label className="check"><input type="checkbox" checked={settings.editorMinimap} onChange={(e) => set({ editorMinimap: e.target.checked })} /> Afficher la minimap</label>
+              </Row>
             </>
           )}
           {section === 'terminal' && (

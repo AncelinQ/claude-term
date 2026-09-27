@@ -10,11 +10,18 @@ const viewStates = new Map<string, monaco.editor.ICodeEditorViewState | null>()
 const saved = new Map<string, string>()   // path → text at last load/save (dirty = differs)
 let themedFor: string | null = null
 
-function ensureEditor(fontFamily: string, fontSize: number) {
+function editorOptions(s: { editorFontFamily: string; editorFontSize: number; editorLineHeight: number; editorWordWrap: boolean; editorMinimap: boolean }): monaco.editor.IEditorOptions {
+  return {
+    fontFamily: s.editorFontFamily || undefined, fontSize: s.editorFontSize, lineHeight: s.editorLineHeight || 0,
+    wordWrap: s.editorWordWrap ? 'on' : 'off', minimap: { enabled: s.editorMinimap },
+  }
+}
+
+function ensureEditor(s: Parameters<typeof editorOptions>[0]) {
   if (editor) return editor
   editor = monaco.editor.create(container, {
-    automaticLayout: true, minimap: { enabled: false }, wordWrap: 'off', scrollBeyondLastLine: false,
-    fontFamily: fontFamily || undefined, fontSize, lineNumbersMinChars: 3, renderLineHighlight: 'line',
+    ...editorOptions(s),
+    automaticLayout: true, scrollBeyondLastLine: false, lineNumbersMinChars: 3, renderLineHighlight: 'line',
     tabSize: 2, insertSpaces: true, detectIndentation: true, smoothScrolling: true, padding: { top: 8 },
     scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }, fixedOverflowWidgets: true,
   })
@@ -64,7 +71,7 @@ export function EditorHost({ tab }: { tab: Tab }) {
 
   useEffect(() => {
     const host = ref.current!
-    const e = ensureEditor(settings.fontFamily, settings.fontSize)
+    const e = ensureEditor(settings)
     if (themedFor !== theme.id) { applyMonacoTheme(theme); themedFor = theme.id }
     host.appendChild(container)
     const m = monaco.editor.getModel(monaco.Uri.file(tab.path!))
@@ -87,8 +94,8 @@ export function EditorHost({ tab }: { tab: Tab }) {
   useEffect(() => {
     if (!editor) return
     applyMonacoTheme(theme); themedFor = theme.id
-    editor.updateOptions({ fontFamily: settings.fontFamily || undefined, fontSize: settings.fontSize })
-  }, [theme, settings.fontFamily, settings.fontSize])
+    editor.updateOptions(editorOptions(settings))
+  }, [theme, settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight, settings.editorWordWrap, settings.editorMinimap])
 
   return <div className="editor-wrap" ref={ref} />
 }

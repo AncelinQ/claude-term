@@ -97,8 +97,15 @@ export interface Settings {
   themeDark: string
   themeLight: string
   themeFixed: string
+  /** terminal font (empty = default mono stack) */
   fontFamily: string
   fontSize: number
+  /** editor font, independent from the terminal */
+  editorFontFamily: string
+  editorFontSize: number
+  editorLineHeight: number
+  editorWordWrap: boolean
+  editorMinimap: boolean
   /** editor: write the file after a pause in typing (ms), 0 = off */
   autoSave: boolean
   autoSaveDelay: number
@@ -123,6 +130,11 @@ export const DEFAULT_SETTINGS: Settings = {
   themeFixed: 'claudeterm-dark',
   fontFamily: '',
   fontSize: 13,
+  editorFontFamily: '',
+  editorFontSize: 13,
+  editorLineHeight: 0,
+  editorWordWrap: false,
+  editorMinimap: false,
   autoSave: true,
   autoSaveDelay: 1000,
   openProjects: [],
