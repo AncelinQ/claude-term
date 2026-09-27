@@ -25,18 +25,20 @@ export function App() {
   // shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const st = useWorkbench.getState()
+      if (e.key === 'Escape' && st.showSettings) { st.setShowSettings(false); return }
       const mod = e.metaKey || e.ctrlKey
       if (!mod) return
-      const p = useWorkbench.getState().projects.find((x) => x.id === useWorkbench.getState().activeProjectId)
+      const p = st.projects.find((x) => x.id === st.activeProjectId)
       if (e.key === 't' && !e.shiftKey && p?.root) { e.preventDefault(); newTab(p.id, 'shell') }
       else if (e.key === 't' && e.shiftKey && p?.root) { e.preventDefault(); newTab(p.id, 'claude') }
+      else if (e.key === 'w' && !e.shiftKey && st.showSettings) { e.preventDefault(); st.setShowSettings(false) }
       else if (e.key === 'w' && !e.shiftKey && p?.currentTabId) { e.preventDefault(); closeTab(p.id, p.currentTabId) }
       else if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newProject(null) }
-      else if (e.key === 's' && !e.shiftKey) { e.preventDefault(); useWorkbench.getState().saveCurrentFile() }
-      else if (e.key === ',') { e.preventDefault(); const s = useWorkbench.getState(); s.setShowSettings(!s.showSettings) }
-      else if (e.key === 'w' && !e.shiftKey && useWorkbench.getState().showSettings) { e.preventDefault(); useWorkbench.getState().setShowSettings(false) }
+      else if (e.key === 's' && !e.shiftKey) { e.preventDefault(); st.saveCurrentFile() }
+      else if (e.key === ',') { e.preventDefault(); st.setShowSettings(!st.showSettings) }
       else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }
-      else if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'history', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; useWorkbench.getState().setLeft(useWorkbench.getState().leftActivity === id ? null : id) }
+      else if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'history', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; st.setLeft(st.leftActivity === id ? null : id) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -63,11 +65,16 @@ export function App() {
       <div className="body">
         {project.root && <LeftActivityBar />}
         {project.root && <LeftSidebar project={project} />}
-        {showSettings ? <div className="center"><SettingsPage onClose={() => setShowSettings(false)} /></div> : project.root ? <Center project={project} /> : <Welcome project={project} />}
+        {project.root ? <Center project={project} /> : <Welcome project={project} />}
         <RightSidebar />
         <RightActivityBar />
       </div>
       <StatusBar />
+      {showSettings && (
+        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>
+          <div className="modal"><SettingsPage onClose={() => setShowSettings(false)} /></div>
+        </div>
+      )}
     </div>
   )
 }

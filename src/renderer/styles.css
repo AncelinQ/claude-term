@@ -204,12 +204,13 @@ input:focus { border-color: var(--ct-accent); }
 
 /* settings */
 .title .gear.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
-.settings-body { display: flex; height: 100%; }
+.island > .content.settings-body { display: flex; flex-direction: row; height: 100%; }
 .settings-nav { width: 170px; flex: none; border-right: 1px solid var(--ct-island-border); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .settings-nav button { text-align: left; padding: 6px 10px; border-radius: 6px; color: var(--ct-text-secondary); }
 .settings-nav button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 .settings-nav button.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
-.settings-form { flex: 1; overflow: auto; padding: 16px 24px; max-width: 760px; }
+.settings-form { flex: 1; min-width: 0; overflow: auto; padding: 16px 24px; }
+.settings-form .srow { max-width: 720px; }
 .srow { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ct-island-border); }
 .slabel { font-weight: 600; padding-top: 3px; }
 .scontrol { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
@@ -273,3 +274,8 @@ input[type=checkbox] { accent-color: var(--ct-accent); }
 .menu-item:disabled { opacity: .4; }
 .menu-item:disabled:hover { background: none; }
 .island > .hdr .menu-anchor > button.on { background: var(--ct-hover-bg); color: var(--ct-text); }
+
+/* modal (settings) */
+.modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.45); display: grid; place-items: center; }
+.modal { width: min(860px, calc(100vw - 80px)); height: min(620px, calc(100vh - 80px)); display: flex; }
+.modal > .island { flex: 1; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
