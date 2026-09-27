@@ -446,3 +446,4 @@ input[type=checkbox]:disabled { opacity: .4; }
 .form .hint { color: var(--ct-text-secondary); font-size: 11px; }
 .tabs .tab .badge { margin-left: 2px; }
 .lrow .acts.always { display: inline-flex; }
+.activity button.update { color: var(--ct-accent); }

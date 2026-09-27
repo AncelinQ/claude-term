@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { DEFAULT_REGISTRY } from '@shared/plugin-registry'
+import { useUpdate } from '@/stores/update'
+import type { UpdateState } from '@shared/update'
 import type { ThemeSpec } from '@shared/theme'
 import { Icons } from './icons'
 import { t } from '@/i18n'
@@ -14,6 +16,7 @@ type Section = 'general' | 'apparence' | 'editeur' | 'raccourcis' | 'terminal' |
 export function SettingsPage({ onClose }: { onClose: () => void }) {
   const settings = useWorkbench((s) => s.settings)!
   const [section, setSection] = useState<Section>('general')
+  const update = useUpdate((s) => s.state)
   const [themes, setThemes] = useState<ThemeSpec[]>([])
   const [fonts, setFonts] = useState<string[]>([])
   const [hooks, setHooks] = useState<boolean | null>(null)
@@ -48,6 +51,15 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
         </div>
         <div className="settings-form">
           {section === 'general' && (
+            <>
+            <Group title={t('Mises à jour')}>
+              <Row label={t('Version {v}', { v: update.current ?? '' })} hint={updateText(update)}>
+                {update.status === 'ready'
+                  ? <button className="btn primary" onClick={() => window.ct.update.install()}>{t('Redémarrer et installer')}</button>
+                  : <button className="btn" disabled={update.status === 'unsupported' || update.status === 'checking' || update.status === 'downloading'} onClick={() => window.ct.update.check()}>{update.status === 'checking' ? <span className="spin" /> : t('Rechercher')}</button>}
+              </Row>
+              <Row label={t('Automatiques')} hint={t('Au démarrage puis toutes les 6 h ; le téléchargement se fait en arrière-plan.')}><Toggle checked={settings.autoUpdate} onChange={(v) => set({ autoUpdate: v })} /></Row>
+            </Group>
             <Group title={t('Langue')}>
               <Row label={t('Langue de l\'interface')} hint={t('Système = celle de macOS / Windows.')}>
                 <select value={settings.language} onChange={(e) => set({ language: e.target.value as 'system' | 'fr' | 'en' })}>
@@ -55,6 +67,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                 </select>
               </Row>
             </Group>
+            </>
           )}
           {section === 'apparence' && (
             <Group title={t('Thème')}>
@@ -197,4 +210,16 @@ function Shortcuts({ Group, Row }: { Group: (p: { title: string; children: React
       {group('editor', t('Éditeur'))}
     </>
   )
+}
+
+function updateText(u: UpdateState): string {
+  switch (u.status) {
+    case 'unsupported': return t('Mises à jour indisponibles : {r}.', { r: u.reason ?? '' })
+    case 'checking': return t('Recherche…')
+    case 'none': return t('À jour.')
+    case 'downloading': return t('Téléchargement de la version {v}… {p} %', { v: u.version ?? '', p: u.progress ?? 0 })
+    case 'ready': return t('La version {v} est prête ; elle sera aussi installée à la fermeture de l\'app.', { v: u.version ?? '' })
+    case 'error': return t('Échec : {e}', { e: u.error ?? '' })
+    default: return t('Depuis les versions publiées sur GitHub.')
+  }
 }

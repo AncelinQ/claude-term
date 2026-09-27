@@ -16,6 +16,19 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 const EN: Record<string, string> = {
+  "Version {v} prête : redémarrer pour l'installer (les terminaux seront fermés)": 'Version {v} ready: restart to install it (terminals will close)',
+  'Mises à jour': 'Updates',
+  'Version {v}': 'Version {v}',
+  'Redémarrer et installer': 'Restart and install',
+  'Automatiques': 'Automatic',
+  'Au démarrage puis toutes les 6 h ; le téléchargement se fait en arrière-plan.': 'At startup then every 6 h; downloads happen in the background.',
+  'Mises à jour indisponibles : {r}.': 'Updates unavailable: {r}.',
+  'Recherche…': 'Checking…',
+  'À jour.': 'Up to date.',
+  'Téléchargement de la version {v}… {p} %': 'Downloading version {v}… {p} %',
+  "La version {v} est prête ; elle sera aussi installée à la fermeture de l'app.": 'Version {v} is ready; it is also installed when the app quits.',
+  'Échec : {e}': 'Failed: {e}',
+  'Depuis les versions publiées sur GitHub.': 'From the versions published on GitHub.',
   'Installés': 'Installed',
   'Catalogue': 'Catalogue',
   'Actualiser le catalogue': 'Refresh the catalogue',

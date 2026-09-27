@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { Icons } from './icons'
 import { useWorkbench, type LeftActivity, type RightActivity } from '@/stores/workbench'
 import { usePlugins } from '@/stores/plugins'
+import { useUpdate } from '@/stores/update'
 
 const pluginIcon = (name: string) => { const f = (Icons as Record<string, ((s?: number) => React.ReactElement) | undefined>)[name]; return f ? f() : Icons.puzzle() }
 
@@ -51,6 +52,7 @@ export function LeftActivityBar() {
 
 export function RightActivityBar() {
   const { rightActivity, setRight, showSettings, setShowSettings } = useWorkbench()
+  const update = useUpdate((s) => s.state)
   return (
     <div className="activity right">
       {RIGHT.map((a) => (
@@ -60,6 +62,7 @@ export function RightActivityBar() {
       ))}
       <PluginEntries side="right" current={rightActivity} select={(id) => setRight(id as RightActivity | null)} />
       <span className="spacer" />
+      {update.status === 'ready' && <button className="update" title={t('Version {v} prête : redémarrer pour l\'installer (les terminaux seront fermés)', { v: update.version ?? '' })} onClick={() => window.ct.update.install()}>{Icons.download()}</button>}
       <button className={showSettings ? 'on' : ''} title={t(window.ct.platform === 'darwin' ? 'Réglages (⌘,)' : 'Réglages (Ctrl+,)')} onClick={() => setShowSettings(!showSettings)}>{Icons.gear()}</button>
     </div>
   )

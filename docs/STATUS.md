@@ -33,6 +33,11 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   without restart, approval of pending permissions. `services/tar.ts` (safe .tgz reader), `services/plugin-store.ts`,
   `shared/plugin-registry.ts`, tests in `tests/plugin-store.test.ts`. Checked end to end with a local `file:` catalogue.
 - **Packaging**: electron-builder (dmg / nsis / AppImage), GitHub Actions workflow, `CT_CDP_PORT` test hooks.
+- **Automatic updates**: GitHub releases of `sunstan/claude-term` (v2 on `main` since 2026-09-27, Swift v1 kept in
+  the `v1` branch and `v1-swift` tag). Windows / Linux through electron-updater; macOS through our own updater
+  (unsigned builds): feed, zip sha512, bundle version check, swap after quit + reopen. Checked end to end with a
+  local feed (packaged 2.0.0 → 2.0.1). Settings › Général › Mises à jour; download icon in the right bar when ready.
+  CI workflow `release` on `v*` tags publishes the release (installers + latest*.yml).
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.
@@ -50,7 +55,7 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
 4. Windows: test on a real machine (native and WSL), `hook.cmd`, screen capture, Ctrl shortcuts typed in a
    terminal go to the shell instead of the app.
 5. Formatter beyond Monaco's languages (Prettier); content search (rg) in the search island.
-6. Push the repo to a remote so the CI builds the installers (no remote yet).
+6. Windows and Linux updates are untested on real machines (electron-updater, unsigned NSIS / AppImage).
 
 ## Gotchas
 

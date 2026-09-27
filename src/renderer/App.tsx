@@ -10,6 +10,7 @@ import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
 import { ACTIONS, binding, matches } from '@shared/keymap'
 import { runAppAction } from './actions'
+import { useUpdate } from './stores/update'
 import { usePlugins } from './stores/plugins'
 import { PluginPopover } from './workbench/PluginView'
 import { t } from '@/i18n'
@@ -23,6 +24,7 @@ export function App() {
   useEffect(() => {
     init()
     usePlugins.getState().init()
+    useUpdate.getState().init()
     window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, r.command, r.tab) })
     window.ct.plugins.onNotify((n) => { new Notification(n.title, { body: n.body }) })
     window.ct.plugins.onOpenFile((path) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openFile(s.activeProjectId, path) })

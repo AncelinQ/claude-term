@@ -17,6 +17,7 @@ import { scanClaudeProcesses } from './services/process'
 import { FileIndex } from './services/search'
 import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
+import { Updater } from './services/updater'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
 import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
@@ -232,6 +233,12 @@ async function download(url: string, maxBytes: number): Promise<Buffer> {
   return Buffer.concat(chunks)
 }
 
+// updates (GitHub releases)
+const updater = new Updater((s) => send('update:state', s), () => settings.get().autoUpdate)
+ipcMain.handle('update:state', () => updater.get())
+ipcMain.handle('update:check', () => updater.check())
+ipcMain.on('update:install', () => updater.install())
+
 // app
 ipcMain.handle('app:pickFolder', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory', 'showHiddenFiles'] })
@@ -249,9 +256,9 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = settings.get().themeFollowSystem ? 'system' : themes.current().type
   win = createWindow(themes.current())
   win.on('closed', () => { win = null })
-  win.webContents.once('did-finish-load', () => { pluginStore.cleanStaging(); pluginHost.loadAll() })
+  win.webContents.once('did-finish-load', () => { pluginStore.cleanStaging(); pluginHost.loadAll(); updater.start() })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) win = createWindow(themes.current()) })
 })
 
 app.on('window-all-closed', () => { ptys.killAll(); app.quit() })
-app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose() })
+app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose(); updater.onQuit() })

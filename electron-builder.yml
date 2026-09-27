@@ -20,6 +20,9 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
+    # the zip is what the in-app updater downloads (latest-mac.yml)
+    - target: zip
+      arch: [arm64, x64]
   identity: null
   hardenedRuntime: false
   extendInfo:
@@ -39,3 +42,9 @@ linux:
   target: [AppImage]
   category: Development
 npmRebuild: true
+# releases on GitHub: installers + latest*.yml read by the in-app updater (src/main/services/updater.ts)
+publish:
+  provider: github
+  owner: sunstan
+  repo: claude-term
+  releaseType: release

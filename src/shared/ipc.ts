@@ -2,6 +2,7 @@
 import type { ThemeSpec, ResolvedTheme } from './theme'
 import type { ToolEvent } from './claude-format'
 import { DEFAULT_REGISTRY, type Catalogue } from './plugin-registry'
+import type { UpdateState } from './update'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -133,6 +134,8 @@ export interface Settings {
   disabledPlugins: string[]
   /** permissions approved per user plugin */
   pluginPermissions: Record<string, string[]>
+  /** check the GitHub releases at startup and every 6 h, download in the background */
+  autoUpdate: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -163,6 +166,7 @@ export const DEFAULT_SETTINGS: Settings = {
   pluginRegistry: DEFAULT_REGISTRY,
   disabledPlugins: [],
   pluginPermissions: {},
+  autoUpdate: true,
 }
 
 export interface CtApi {
@@ -288,6 +292,13 @@ export interface CtApi {
     saveDataUrl(dataUrl: string): Promise<string | null>
     clipboardImage(): Promise<string | null>
     captureScreen(): Promise<string | null>
+  }
+  update: {
+    state(): Promise<UpdateState>
+    onState(cb: (s: UpdateState) => void): () => void
+    check(): Promise<UpdateState>
+    /** quits, installs the downloaded version and reopens the app */
+    install(): void
   }
   app: {
     /** "Enregistrer" | "Ne pas enregistrer" | "Annuler" → 'save' | 'discard' | 'cancel' */

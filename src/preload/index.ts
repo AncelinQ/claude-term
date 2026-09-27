@@ -120,6 +120,12 @@ const api: CtApi = {
     clipboardImage: () => ipcRenderer.invoke('att:clipboardImage'),
     captureScreen: () => ipcRenderer.invoke('att:captureScreen'),
   },
+  update: {
+    state: () => ipcRenderer.invoke('update:state'),
+    onState: (cb) => channel('update:state', () => true, (p) => p, cb),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.send('update:install'),
+  },
   app: {
     confirmSave: (name) => ipcRenderer.invoke('app:confirmSave', name),
     pickFolder: () => ipcRenderer.invoke('app:pickFolder'),
