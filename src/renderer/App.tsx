@@ -46,7 +46,7 @@ export function App() {
         <span className="spacer" />
         <button className="gear" title="Réglages (⌘,)">{Icons.gear(16)}</button>
       </div>
-      <div className={'body' + (project.root ? '' : ' noproject')}>
+      <div className="body">
         {project.root && <LeftActivityBar />}
         {project.root && <LeftSidebar project={project} />}
         {project.root ? <Center project={project} /> : <Welcome project={project} />}
