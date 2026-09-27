@@ -3,7 +3,7 @@ import { Icons } from './icons'
 
 /** An independent block with the shared header anatomy: icon, title, actions, collapse. */
 export function Island({ title, icon, actions, children, grow, collapsible, collapsed: controlled, onCollapse }: {
-  title: string; icon?: ReactNode; actions?: ReactNode; children: ReactNode; grow?: boolean; collapsible?: boolean
+  title: ReactNode; icon?: ReactNode; actions?: ReactNode; children: ReactNode; grow?: boolean; collapsible?: boolean
   collapsed?: boolean; onCollapse?: (c: boolean) => void
 }) {
   const [own, setOwn] = useState(false)
@@ -13,7 +13,7 @@ export function Island({ title, icon, actions, children, grow, collapsible, coll
     <div className={'island' + (grow && !collapsed ? ' grow' : '') + (collapsed ? ' collapsed' : '')}>
       <div className="hdr">
         {icon}
-        <span>{title}</span>
+        {typeof title === 'string' ? <span>{title}</span> : title}
         <span className="spacer" />
         {actions}
         {collapsible && (

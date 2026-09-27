@@ -23,23 +23,21 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
     setAutoOpened(key); setMode('plan'); onCollapse(false)
   }, [session?.planMode, session?.planPath])
 
-  const modeBtn = (m: 'plan' | 'activity' | 'files', icon: React.ReactNode, active: boolean, count = 0) => (
-    <button className={'mode' + (mode === m ? ' on' : '')} onClick={() => { setMode(m); onCollapse(false) }} title={m === 'plan' ? 'Plan' : m === 'activity' ? 'Activité' : 'Fichiers'}>
-      {icon}{active ? <span className="live" /> : count > 0 ? <span className="count">{count}</span> : null}
+  const modeBtn = (m: 'plan' | 'activity' | 'files', label: string, active: boolean, count = 0) => (
+    <button className={'mode' + (mode === m ? ' on' : '')} onClick={() => { setMode(m); onCollapse(false) }}>
+      {label}{active ? <span className="live" /> : count > 0 ? <span className="count">{count}</span> : null}
     </button>
   )
-  const actions = (
-    <>
-      <span className="modes">
-        {modeBtn('plan', Icons.list(13), !!session?.planMode)}
-        {modeBtn('activity', Icons.activity(13), (session?.runningTools.length ?? 0) > 0)}
-        {modeBtn('files', Icons.file(13), false, Object.keys(session?.files ?? {}).length)}
-      </span>
-      {tab && <span className="session-title">{Icons.sparkle(11)} {tab.title}</span>}
-    </>
+  const title = (
+    <span className="modes">
+      {modeBtn('plan', 'Plan', !!session?.planMode)}
+      {modeBtn('activity', 'Activité', (session?.runningTools.length ?? 0) > 0)}
+      {modeBtn('files', 'Fichiers', false, Object.keys(session?.files ?? {}).length)}
+    </span>
   )
+  const actions = tab ? <span className="session-title">{Icons.sparkle(11)} {tab.title}</span> : null
   return (
-    <Island title="Session" icon={Icons.activity(14)} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
+    <Island title={title} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
       {!tab || !session ? (
         <Empty>Sélectionne un onglet Claude, ou tape claude dans un shell</Empty>
       ) : mode === 'plan' ? <PlanView tab={tab} /> : mode === 'activity' ? <ActivityView tab={tab} /> : <FilesView tab={tab} />}
