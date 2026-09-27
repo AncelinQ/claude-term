@@ -6,7 +6,7 @@ import { VStack, useCollapsed } from './Split'
 import { SessionBlock } from './SessionBlock'
 import { Island } from './Island'
 import { MenuButton, ContextMenu } from './Menu'
-import { EditorHost, ImageView } from '@/editor/EditorHost'
+import { EditorHost, ImageView, DiffHost } from '@/editor/EditorHost'
 import { MarkdownPreview } from '@/editor/MarkdownPreview'
 import { Gutter, useStoredSize } from './Split'
 import { t as tr } from '@/i18n'
@@ -80,11 +80,11 @@ export function Center({ project }: { project: Project }) {
               {project.tabs.map((t) => (
                 <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '')} onClick={() => setCurrentTab(project.id, t.id)} onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, tab: t }) }} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
                   <span style={{ color: t.kind === 'file' ? (t.changedOnDisk ? 'var(--ct-badge-warn)' : 'var(--ct-text-secondary)') : tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
-                    {t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
+                    {t.kind === 'diff' ? Icons.columns(12) : t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
                     {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
                   </span>
                   <span style={{ fontStyle: t.dirty ? 'italic' : undefined }}>{t.title}</span>
-                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? tr('Modifications non enregistrées (⌘S)') : tr('Fermer (⌘W)')}>
+                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file' && t.kind !== 'diff') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? tr('Modifications non enregistrées (⌘S)') : tr('Fermer (⌘W)')}>
                     {t.dirty ? <span className="dirty-dot" /> : Icons.x(10)}
                   </button>
                 </div>
@@ -98,7 +98,8 @@ export function Center({ project }: { project: Project }) {
               ...(window.ct.platform === 'darwin' ? ['sep' as const, { label: tr("Capture d'écran → prompt"), icon: Icons.camera(13), shortcut: '⌥⌘S', onSelect: () => useWorkbench.getState().captureScreen(project.id) }] : []),
             ]}>{Icons.plus()}</MenuButton>
           </>}>
-          {current && current.kind === 'file' ? (
+          {current && current.kind === 'diff' ? <div className="term-wrap editor-bg"><DiffHost key={current.id} tab={current} /></div>
+          : current && current.kind === 'file' ? (
             current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
             : current.fileKind === 'image' ? <div className="term-wrap"><ImageView src={current.imageUrl ?? ''} /></div>
             : /\.(md|markdown)$/i.test(current.path ?? '') ? (

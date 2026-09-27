@@ -3,7 +3,7 @@ import { Icons } from './icons'
 import { FileTree } from './FileTree'
 import { useMemo } from 'react'
 import { useWorkbench, type Project } from '@/stores/workbench'
-import { Gutter, VStack, useStoredSize, useCollapsed } from './Split'
+import { Gutter, VStack, PStack, useStoredSize, useCollapsed } from './Split'
 import { LinksIsland } from './islands/Links'
 import { SearchIsland } from './islands/Search'
 import { SkillsIsland } from './islands/Skills'
@@ -18,7 +18,7 @@ function PluginViews({ activity }: { activity: string }) {
   const plugins = usePlugins((s) => s.plugins)
   const views = useMemo(() => usePlugins.getState().viewsOf(activity), [plugins, activity])
   if (!views.length) return <Island title={activity} grow><Empty>—</Empty></Island>
-  return <div className="pstack">{views.map((v) => <PluginViewIsland key={v.id} viewId={v.id} title={v.title} grow />)}</div>
+  return <PStack ids={views.map((v) => v.id)}>{views.map((v) => <PluginViewIsland key={v.id} viewId={v.id} title={v.title} grow />)}</PStack>
 }
 import { t } from '@/i18n'
 

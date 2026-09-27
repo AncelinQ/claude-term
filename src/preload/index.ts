@@ -105,6 +105,9 @@ const api: CtApi = {
     onPrompt: (cb) => channel('plugins:prompt', () => true, (p) => p, cb),
     promptReply: (id, value) => ipcRenderer.send('plugins:promptReply', { id, value }),
     onOpenFile: (cb) => channel('plugins:openFile', () => true, (p) => p.path as string, cb),
+    onOpenDiff: (cb) => channel('plugins:openDiff', () => true, (p) => p, cb),
+    onPopover: (cb) => channel('plugins:popover', () => true, (p) => p, cb),
+    onPopoverClose: (cb) => channel('plugins:popoverClose', () => true, (p) => p.id as string, cb),
   },
   attachments: {
     pathForFile: (file) => webUtils.getPathForFile(file),

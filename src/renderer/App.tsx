@@ -9,12 +9,15 @@ import { Welcome } from './workbench/Welcome'
 import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
 import { usePlugins } from './stores/plugins'
+import { PluginPopover } from './workbench/PluginView'
 import { t } from '@/i18n'
 
 export function App() {
   const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab, showSettings, setShowSettings } = useWorkbench()
   const project = useActiveProject()
   const [prompt, setPrompt] = useState<import('@shared/plugins').PromptRequest | null>(null)
+  const popovers = usePlugins((s) => s.popovers)
+  const closePopover = usePlugins((s) => s.closePopover)
   useEffect(() => {
     init()
     usePlugins.getState().init()
@@ -22,6 +25,7 @@ export function App() {
     window.ct.plugins.onNotify((n) => { new Notification(n.title, { body: n.body }) })
     window.ct.plugins.onOpenFile((path) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openFile(s.activeProjectId, path) })
     window.ct.plugins.onPrompt((r) => setPrompt(r))
+    window.ct.plugins.onOpenDiff((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openDiff(s.activeProjectId, r) })
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
@@ -84,6 +88,7 @@ export function App() {
         <RightSidebar />
         <RightActivityBar />
       </div>
+      {popovers.map((p) => <PluginPopover key={p.id} id={p.id} anchorViewId={p.anchorViewId} model={p.model} onClose={() => closePopover(p.id)} />)}
       {prompt && <PromptModal req={prompt} onDone={(v) => { window.ct.plugins.promptReply(prompt.id, v); setPrompt(null) }} />}
       {showSettings && (
         <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>

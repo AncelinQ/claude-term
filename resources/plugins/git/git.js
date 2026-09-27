@@ -17,17 +17,18 @@ function parseStatus(text) {
       const m = line.match(/^1 (.)(.) \S+ \S+ \S+ \S+ \S+ \S+ (.+)$/)
       if (m) out.entries.push({ path: m[3], staged: m[1] === '.' ? null : m[1], unstaged: m[2] === '.' ? null : m[2], untracked: false, conflict: false })
     } else if (kind === '2') {
-      // renamed/copied: "2 XY sub mH mI mW hH hI Xscore path\0origPath"
+      // "2 XY sub mH mI mW hH hI Xscore path\0origPath"
       const m = line.match(/^2 (.)(.) \S+ \S+ \S+ \S+ \S+ \S+ \S+ (.+)$/)
       const orig = records[++i]
-      if (m) out.entries.push({ path: m[3], from: orig, staged: m[1] === '.' ? null : m[1], unstaged: m[2] === '.' ? null : m[2], untracked: false, conflict: false })
+      // renames are index-only in porcelain v2, so X is never "."
+      if (m) out.entries.push({ path: m[3], from: orig, staged: m[1], unstaged: m[2] === '.' ? null : m[2], untracked: false, conflict: false })
     } else if (kind === 'u') {
+      // "u XY sub m1 m2 m3 mW h1 h2 h3 path"
       const m = line.match(/^u (.)(.) \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ (.+)$/)
       if (m) out.entries.push({ path: m[3], staged: null, unstaged: m[1] + m[2], untracked: false, conflict: true })
     } else if (kind === '?') {
       out.entries.push({ path: line.slice(2), staged: null, unstaged: null, untracked: true, conflict: false })
     }
-    // '!' ignored entries are not requested
   }
   return out
 }
@@ -41,11 +42,25 @@ function parseLog(text) {
   })
 }
 
-/** `git branch --format=%(HEAD)%(refname:short)` ("*" marks the current branch, a space otherwise) */
-function parseBranches(text) {
-  return text.split('\n').filter((l) => l.trim()).map((l) => ({ name: l.slice(1), current: l[0] === '*' }))
+const REF_FORMAT = '%(refname)%09%(objectname:short)%09%(upstream:short)%09%(upstream:track)%09%(HEAD)%09%(committerdate:unix)'
+/** `git for-each-ref --format=<REF_FORMAT> refs/heads refs/remotes` → { local: [...], remote: [...] } */
+function parseRefs(text) {
+  const local = [], remote = []
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue
+    const [refname, short, upstream, track, head, date] = line.split('\t')
+    const ahead = +(track.match(/ahead (\d+)/) || [0, 0])[1], behind = +(track.match(/behind (\d+)/) || [0, 0])[1]
+    if (refname.startsWith('refs/heads/')) local.push({ name: refname.slice(11), hash: short, upstream: upstream || null, ahead, behind, gone: /gone/.test(track), current: head === '*', date: +date || 0 })
+    else if (refname.startsWith('refs/remotes/')) {
+      const full = refname.slice(13)
+      if (full.endsWith('/HEAD')) continue
+      const slash = full.indexOf('/')
+      remote.push({ remote: full.slice(0, slash), name: full.slice(slash + 1), full, hash: short, date: +date || 0 })
+    }
+  }
+  return { local, remote }
 }
 
 const LABELS = { M: 'modifié', A: 'ajouté', D: 'supprimé', R: 'renommé', C: 'copié', T: 'type', U: 'conflit' }
 
-module.exports = { parseStatus, parseLog, parseBranches, LOG_FORMAT, LABELS }
+module.exports = { parseStatus, parseLog, parseRefs, LOG_FORMAT, REF_FORMAT, LABELS }

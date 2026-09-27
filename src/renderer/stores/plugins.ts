@@ -1,10 +1,14 @@
 import { create } from 'zustand'
-import type { PluginInfo, ViewModel } from '@shared/plugins'
+import type { PluginInfo, ViewModel, PopoverRequest } from '@shared/plugins'
 
 interface PluginStore {
   plugins: PluginInfo[]
   views: Record<string, ViewModel>
+  popovers: PopoverRequest[]
+  closePopover(id: string): void
   init(): void
+  /** views placed in the center bottom block */
+  bottomViews(): { id: string; title: string; pluginId: string }[]
   /** activity entries contributed for a side */
   activities(side: 'left' | 'right'): { id: string; title: string; icon: string; pluginId: string }[]
   viewsOf(activityId: string): { id: string; title: string; pluginId: string }[]
@@ -13,10 +17,17 @@ interface PluginStore {
 export const usePlugins = create<PluginStore>((set, get) => ({
   plugins: [],
   views: {},
+  popovers: [],
+  closePopover(id) { set((s) => ({ popovers: s.popovers.filter((p) => p.id !== id) })) },
+  bottomViews() {
+    return get().plugins.filter((p) => p.enabled).flatMap((p) => (p.manifest.contributes?.views ?? []).filter((v) => v.placement === 'bottom').map((v) => ({ id: `${p.manifest.id}:${v.id}`, title: v.title, pluginId: p.manifest.id })))
+  },
   init() {
     window.ct.plugins.list().then((plugins) => set({ plugins }))
     window.ct.plugins.onChanged((plugins) => set({ plugins }))
     window.ct.plugins.onView(({ viewId, model }) => set((s) => ({ views: { ...s.views, [viewId]: model } })))
+    window.ct.plugins.onPopover((r) => set((s) => ({ popovers: [...s.popovers.filter((p) => p.id !== r.id), r] })))
+    window.ct.plugins.onPopoverClose((id) => set((s) => ({ popovers: s.popovers.filter((p) => p.id !== id) })))
   },
   activities(side) {
     return get().plugins.filter((p) => p.enabled).flatMap((p) => (p.manifest.contributes?.activity ?? []).filter((a) => a.side === side).map((a) => ({ id: `${p.manifest.id}:${a.id}`, title: a.title, icon: a.icon, pluginId: p.manifest.id })))
@@ -24,6 +35,6 @@ export const usePlugins = create<PluginStore>((set, get) => ({
   viewsOf(activityId) {
     const [pluginId, aid] = activityId.split(':')
     const p = get().plugins.find((x) => x.manifest.id === pluginId)
-    return (p?.manifest.contributes?.views ?? []).filter((v) => v.activity === aid).map((v) => ({ id: `${pluginId}:${v.id}`, title: v.title, pluginId }))
+    return (p?.manifest.contributes?.views ?? []).filter((v) => v.activity === aid && v.placement !== 'bottom').map((v) => ({ id: `${pluginId}:${v.id}`, title: v.title, pluginId }))
   },
 }))

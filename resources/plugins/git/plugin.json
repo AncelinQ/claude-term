@@ -2,15 +2,36 @@
   "id": "claudeterm.git",
   "name": "Git",
   "version": "1.0.0",
-  "description": "Statut, diffs, index, commits et branches du projet. Chaque écriture passe par une commande git visible dans un shell ; rien de destructif.",
+  "description": "Modifications à committer (cases à cocher), branches, commits. Chaque écriture est une commande git visible dans un shell ; rien de destructif.",
   "main": "main.js",
-  "permissions": ["process"],
+  "permissions": [
+    "process"
+  ],
   "contributes": {
-    "activity": [{ "id": "git", "side": "left", "title": "Git", "icon": "git" }],
+    "activity": [
+      {
+        "id": "git",
+        "side": "left",
+        "title": "Git",
+        "icon": "git"
+      }
+    ],
     "views": [
-      { "id": "changes", "activity": "git", "title": "Modifications" },
-      { "id": "detail", "activity": "git", "title": "Diff" },
-      { "id": "log", "activity": "git", "title": "Commits" }
+      {
+        "id": "changes",
+        "activity": "git",
+        "title": "Modifications"
+      },
+      {
+        "id": "branches",
+        "activity": "git",
+        "title": "Branches"
+      },
+      {
+        "id": "commits",
+        "placement": "bottom",
+        "title": "Commits"
+      }
     ]
   }
 }

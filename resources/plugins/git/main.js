@@ -1,101 +1,62 @@
-// Git plugin. Reads through git's porcelain outputs; writes are plain git commands run in a visible shell tab.
-const { parseStatus, parseLog, parseBranches, LOG_FORMAT, LABELS } = require('./git')
+// Git plugin glue: runs git (read), executes the model's effects (writes go through a visible shell tab).
+const { parseStatus, parseLog, parseRefs, LOG_FORMAT, REF_FORMAT } = require('./git')
+const M = require('./model')
 
 exports.activate = (ctx) => {
-  const changes = ctx.ui.view('changes'), detail = ctx.ui.view('detail'), log = ctx.ui.view('log')
-  let root = null, status = null, selected = null, unwatch = [], timer = null
-  const git = (args) => ctx.process.exec('git', args, { cwd: root })
-  const q = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'"
-  const run = (args) => ctx.terminal.run({ cwd: root, command: 'git ' + args.map(q).join(' '), tab: 'reuse' })
+  const changes = ctx.ui.view('changes'), branches = ctx.ui.view('branches'), commits = ctx.ui.view('commits')
+  let s = M.initialState(), popover = null, unwatch = [], timer = null
+  const git = (args) => ctx.process.exec('git', args, { cwd: s.root || ctx.workspace.project || undefined })
+  const q = (x) => "'" + String(x).replace(/'/g, "'\\''") + "'"
+  const render = () => { changes.set(M.changesView(s)); branches.set(M.branchesView(s)); commits.set(M.commitsView(s)) }
 
   async function refresh() {
-    root = ctx.workspace.project
-    if (!root) { status = null; changes.set({ kind: 'empty', text: 'Ouvre un projet' }); detail.set({ kind: 'empty', text: '' }); log.set({ kind: 'empty', text: '' }); return }
+    const root = ctx.workspace.project
+    if (!root) { s = M.withData(s, null, null, [], { local: [], remote: [] }); return render() }
     const top = await git(['rev-parse', '--show-toplevel'])
-    if (top.code !== 0) { status = null; changes.set({ kind: 'empty', text: 'Pas un dépôt git' }); detail.set({ kind: 'empty', text: '' }); log.set({ kind: 'empty', text: '' }); return }
-    const st = await git(['status', '--porcelain=v2', '--branch', '-z'])
+    if (top.code !== 0) { s = M.withData(s, root, null, [], { local: [], remote: [] }); return render() }
+    const [st, lg, rf] = await Promise.all([git(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all']), git(['log', '-n', '100', '--format=' + LOG_FORMAT]), git(['for-each-ref', '--format=' + REF_FORMAT, 'refs/heads', 'refs/remotes'])])
     if (st.code !== 0) { changes.set({ kind: 'empty', text: 'git status a échoué : ' + st.stderr.trim() }); return }
-    status = parseStatus(st.stdout)
-    const staged = status.entries.filter((e) => e.staged && !e.conflict)
-    const unstaged = status.entries.filter((e) => e.unstaged && !e.untracked && !e.conflict)
-    const untracked = status.entries.filter((e) => e.untracked)
-    const conflicts = status.entries.filter((e) => e.conflict)
-    const item = (e, kind) => ({
-      id: kind + ':' + e.path, label: e.path.split('/').pop(), detail: e.path, icon: 'file',
-      badges: [LABELS[(kind === 'staged' ? e.staged : e.unstaged) || (e.untracked ? 'A' : 'M')] || ''].filter(Boolean),
-      actions: kind === 'staged' ? [{ id: 'unstage', title: 'Retirer de l’index (git restore --staged)', icon: 'minus' }]
-        : [{ id: 'stage', title: 'Ajouter à l’index (git add)', icon: 'plus' }],
-    })
-    const groups = []
-    if (conflicts.length) groups.push({ id: 'g:conflicts', label: `Conflits (${conflicts.length})`, children: conflicts.map((e) => ({ id: 'conflict:' + e.path, label: e.path.split('/').pop(), detail: e.path, icon: 'file', badges: ['conflit'] })) })
-    groups.push({ id: 'g:staged', label: `Indexés (${staged.length})`, children: staged.map((e) => item(e, 'staged')) })
-    groups.push({ id: 'g:unstaged', label: `Modifiés (${unstaged.length})`, children: unstaged.map((e) => item(e, 'unstaged')) })
-    if (untracked.length) groups.push({ id: 'g:untracked', label: `Non suivis (${untracked.length})`, children: untracked.map((e) => item(e, 'untracked')) })
-    const head = status.detached ? 'HEAD détachée' : (status.branch || '?')
-    const ab = (status.ahead ? ` ↑${status.ahead}` : '') + (status.behind ? ` ↓${status.behind}` : '')
-    changes.set({ kind: 'tree', items: groups, toolbar: [
-      { id: 'branch', title: `Branche : ${head}${ab} — changer`, icon: 'git' },
-      { id: 'stageAll', title: 'Tout indexer (git add -A)', icon: 'plus' },
-      { id: 'commit', title: 'Commit (git commit -m …)', icon: 'check' },
-      { id: 'refresh', title: 'Actualiser', icon: 'activity' },
-    ] })
-    const lg = await git(['log', '-n', '60', '--format=' + LOG_FORMAT])
-    const commits = lg.code === 0 ? parseLog(lg.stdout) : []
-    log.set({ kind: 'list', items: commits.map((c) => ({ id: 'commit:' + c.hash, label: c.subject, detail: `${c.short} · ${c.author} · ${c.when}`, icon: 'clock' })) })
-    if (!commits.length) log.set({ kind: 'empty', text: 'Aucun commit' })
-    if (selected) showDetail(selected)
-    else detail.set({ kind: 'empty', text: 'Sélectionne un fichier ou un commit' })
+    s = M.withData(s, root, parseStatus(st.stdout), lg.code === 0 ? parseLog(lg.stdout) : [], rf.code === 0 ? parseRefs(rf.stdout) : { local: [], remote: [] })
+    render()
   }
 
-  async function showDetail(id) {
-    selected = id
-    const [kind, ...rest] = id.split(':'); const target = rest.join(':')
-    let r
-    if (kind === 'staged') r = await git(['diff', '--cached', '--', target])
-    else if (kind === 'unstaged' || kind === 'conflict') r = await git(['diff', '--', target])
-    else if (kind === 'untracked') r = await git(['diff', '--no-index', '--', '/dev/null', target])
-    else if (kind === 'commit') r = await git(['show', '--stat', '--format=%H%n%an <%ae>%n%ad%n%n%s%n%n%b', target])
-    else return
-    const text = (r.stdout || '').trim()
-    detail.set(text ? { kind: 'diff', text } : { kind: 'empty', text: 'Aucune différence' })
+  async function effect(f) {
+    if (f.type === 'run') return ctx.terminal.run({ cwd: s.root, command: 'git ' + f.args.map(q).join(' '), tab: 'reuse' })
+    if (f.type === 'refresh') return refresh()
+    if (f.type === 'notify') return ctx.ui.notify(f.title, f.body)
+    if (f.type === 'copy') return ctx.ui.notify('Git', f.text)
+    if (f.type === 'openFile') return ctx.workspace.openFile(s.root + '/' + f.path)
+    if (f.type === 'closePopover') { if (popover) { popover.close(); popover = null } return }
+    if (f.type === 'popover') { popover = ctx.ui.popover(f.view, f.model); popover.onEvent(dispatch); return }
+    if (f.type === 'prompt') { const v = await ctx.ui.prompt(f.req); return dispatch({ ...f.then, value: v }) }
+    if (f.type === 'detailFile') { const r = await git(['diff', 'HEAD', '--', f.path]); const alt = r.stdout.trim() ? r.stdout : (await git(['diff', '--no-index', '--', '/dev/null', f.path])).stdout; s = { ...s, detail: alt.trim() }; return commits.set(M.commitsView(s)) }
+    if (f.type === 'detailCommit') { const r = await git(['show', '--stat', '--format=%H%n%an <%ae>%n%ad%n%n%s%n%n%b', f.hash]); s = { ...s, detail: r.stdout.trim() }; return commits.set(M.commitsView(s)) }
+    if (f.type === 'diffFile') {
+      const head = await git(['show', 'HEAD:' + f.path])
+      let modified = ''
+      try { modified = ctx.workspace.fs.read(s.root + '/' + f.path) } catch { modified = '' }
+      return ctx.workspace.openDiff({ title: f.path.split('/').pop() + ' (diff)', path: s.root + '/' + f.path, original: head.code === 0 ? head.stdout : '', modified })
+    }
+    if (f.type === 'diffRef') { const r = await git(['diff', f.ref]); return ctx.workspace.openDiff({ title: `diff ${f.ref}`, unified: r.stdout || '(aucune différence)' }) }
+    if (f.type === 'diffCommit') { const r = await git(['show', f.hash]); return ctx.workspace.openDiff({ title: `commit ${f.hash.slice(0, 7)}`, unified: r.stdout }) }
   }
 
-  changes.onEvent(async (e) => {
-    if (!root) return
-    if (e.type === 'toolbar') {
-      if (e.actionId === 'refresh') return refresh()
-      if (e.actionId === 'stageAll') return run(['add', '-A'])
-      if (e.actionId === 'commit') {
-        if (!status || !status.entries.some((x) => x.staged)) return ctx.ui.notify('Git', 'Rien dans l’index : ajoute des fichiers avant de committer.')
-        const msg = await ctx.ui.prompt({ title: 'Message du commit', placeholder: 'Résumé en une ligne' })
-        if (msg && msg.trim()) run(['commit', '-m', msg.trim()])
-        return
-      }
-      if (e.actionId === 'branch') {
-        const br = await git(['branch', '--format=%(HEAD)%(refname:short)'])
-        const branches = br.code === 0 ? parseBranches(br.stdout) : []
-        const name = await ctx.ui.prompt({ title: 'Changer de branche (git checkout)', placeholder: 'nom de branche', options: branches.filter((b) => !b.current).map((b) => b.name) })
-        if (name && branches.some((b) => b.name === name)) run(['checkout', name])
-        return
-      }
-    }
-    if (e.type === 'select' && e.itemId) return showDetail(e.itemId)
-    if (e.type === 'open' && e.itemId) { const p = e.itemId.split(':').slice(1).join(':'); if (p) ctx.workspace.openFile(root + '/' + p); return }
-    if (e.type === 'action' && e.itemId) {
-      const p = e.itemId.split(':').slice(1).join(':')
-      if (e.actionId === 'stage') return run(['add', '--', p])
-      if (e.actionId === 'unstage') return run(['restore', '--staged', '--', p])
-    }
-  })
-  log.onEvent((e) => { if ((e.type === 'select' || e.type === 'open') && e.itemId) showDetail(e.itemId) })
+  async function dispatch(e) {
+    const { state, effects } = M.reduce(s, e)
+    s = state
+    if (e.type === 'check' || e.type === 'input' || (e.type === 'toolbar' && e.actionId === 'toggleAll')) changes.set(M.changesView(s))
+    if (e.type === 'button') render()
+    for (const f of effects) await effect(f)
+  }
 
+  changes.onEvent(dispatch); branches.onEvent(dispatch); commits.onEvent(dispatch)
   function watchRepo() {
     unwatch.forEach((u) => u()); unwatch = []
-    if (!root) return
+    if (!s.root) return
     const bump = () => { clearTimeout(timer); timer = setTimeout(refresh, 500) }
-    for (const p of [root, root + '/.git', root + '/.git/refs/heads']) if (ctx.workspace.fs.exists(p)) unwatch.push(ctx.workspace.fs.watch(p, bump))
+    for (const p of [s.root, s.root + '/.git', s.root + '/.git/refs/heads']) if (ctx.workspace.fs.exists(p)) unwatch.push(ctx.workspace.fs.watch(p, bump))
   }
-  ctx.workspace.onDidChangeProject(async () => { selected = null; await refresh(); watchRepo() })
-  ctx.terminal.onCommandEnd(() => { if (root) { clearTimeout(timer); timer = setTimeout(refresh, 300) } })
+  ctx.workspace.onDidChangeProject(async () => { s = M.initialState(); await refresh(); watchRepo() })
+  ctx.terminal.onCommandEnd(() => { if (s.root) { clearTimeout(timer); timer = setTimeout(refresh, 300) } })
   refresh().then(watchRepo)
 }

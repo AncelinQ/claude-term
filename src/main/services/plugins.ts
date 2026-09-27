@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSy
 import { join, resolve, dirname, relative } from 'node:path'
 import { execFile } from 'node:child_process'
 import vm from 'node:vm'
-import type { PluginManifest, PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest } from '@shared/plugins'
+import type { PluginManifest, PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, DiffRequest } from '@shared/plugins'
 
 export interface HostBridge {
   send(channel: string, payload: unknown): void
@@ -23,6 +23,7 @@ export class PluginHost {
   private views = new Map<string, ViewModel>()
   private prompts = new Map<number, (v: string | null) => void>()
   private promptSeq = 0
+  private popoverSeq = 0
   private watchers: FSWatcher[] = []
 
   constructor(private builtinDir: string, private bridge: HostBridge, userDir = join(app.getPath('userData'), 'plugins')) {
@@ -96,6 +97,8 @@ export class PluginHost {
         get project() { return host.bridge.projectRoot() },
         onDidChangeProject: (cb: (root: string | null) => void) => on('project', cb),
         openFile: (path: string) => host.bridge.send('plugins:openFile', { path }),
+        /** side-by-side (original/modified) or unified diff in a center tab */
+        openDiff: (req: DiffRequest) => host.bridge.send('plugins:openDiff', req),
         fs: {
           exists: (path: string) => existsSync(path),
           read: (path: string) => readFileSync(path, 'utf8'),
@@ -112,6 +115,17 @@ export class PluginHost {
           }
         },
         notify: (title: string, body?: string) => host.bridge.send('plugins:notify', { title, body }),
+        /** popover under a view's header: a searchable list/tree; events arrive on onEvent with the popover id */
+        popover: (localViewId: string, model: ViewModel) => {
+          const pid = `popover:${++host.popoverSeq}`
+          host.bridge.send('plugins:popover', { id: pid, anchorViewId: `${id}:${localViewId}`, model })
+          return {
+            id: pid,
+            update: (m: ViewModel) => host.bridge.send('plugins:popover', { id: pid, anchorViewId: `${id}:${localViewId}`, model: m }),
+            close: () => host.bridge.send('plugins:popoverClose', { id: pid }),
+            onEvent: (cb: (e: ViewEvent) => void) => on('view:' + pid, cb),
+          }
+        },
         /** modal text prompt; resolves null when cancelled */
         prompt: (req: Omit<PromptRequest, 'id'>) => new Promise<string | null>((res) => { const pid = ++host.promptSeq; host.prompts.set(pid, res); host.bridge.send('plugins:prompt', { id: pid, ...req }) }),
       },
@@ -156,7 +170,7 @@ export function validateManifest(m: any): string | null {
   if (typeof m.name !== 'string' || !m.name) return 'name manquant'
   if (typeof m.main !== 'string' || !m.main) return 'main manquant'
   for (const a of m.contributes?.activity ?? []) if (!a.id || !a.title || (a.side !== 'left' && a.side !== 'right')) return 'contributes.activity invalide'
-  for (const v of m.contributes?.views ?? []) if (!v.id || !v.activity) return 'contributes.views invalide'
+  for (const v of m.contributes?.views ?? []) if (!v.id || (!v.activity && v.placement !== 'bottom')) return 'contributes.views invalide'
   return null
 }
 

@@ -60,3 +60,24 @@ export function VStack({ id, top, bottom, collapsed, min = 100, initial = 220 }:
 export function useWindowResize(cb: () => void) {
   useEffect(() => { window.addEventListener('resize', cb); return () => window.removeEventListener('resize', cb) }, [cb])
 }
+
+/** N stacked islands: the first grows, the others keep a remembered height, gutters in between. */
+export function PStack({ ids, children }: { ids: string[]; children: ReactNode[] }) {
+  const layout = useWorkbench((s) => s.layout)
+  const setLayout = useWorkbench((s) => s.setLayout)
+  const kids = Array.isArray(children) ? children : [children]
+  return (
+    <div className="pstack">
+      {kids.map((child, i) => {
+        const key = 'pstack:' + ids[i]
+        const h = typeof layout[key] === 'number' ? (layout[key] as number) : 220
+        return (
+          <div key={ids[i]} className={'pstack-item' + (i === 0 ? ' first' : '')} style={i === 0 ? undefined : { height: h }}>
+            {i > 0 && <Gutter axis="y" onDrag={(d) => setLayout(key, (prev) => Math.max(90, (prev || 220) - d))} />}
+            {child}
+          </div>
+        )
+      })}
+    </div>
+  )
+}

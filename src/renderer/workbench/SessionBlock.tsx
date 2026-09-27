@@ -5,6 +5,8 @@ import { Icons } from './icons'
 import { Island, Empty } from './Island'
 import { diffStats } from '@shared/claude-format'
 import { useWorkbench, sessionTab, type Project, type Tab } from '@/stores/workbench'
+import { usePlugins } from '@/stores/plugins'
+import { PluginViewBody } from './PluginView'
 import { Gutter, useStoredSize } from './Split'
 import { t } from '@/i18n'
 
@@ -14,6 +16,10 @@ const short = (p: string) => { const h = window.ct.home; return p.startsWith(h) 
 export function SessionBlock({ project, collapsed, onCollapse }: { project: Project; collapsed: boolean; onCollapse: (c: boolean) => void }) {
   const mode = useWorkbench((s) => s.sessionMode)
   const setMode = useWorkbench((s) => s.setSessionMode)
+  const plugins = usePlugins((s) => s.plugins)
+  const bottomViews = useMemo(() => usePlugins.getState().bottomViews(), [plugins])
+  const pluginModel = usePlugins((s) => (mode.includes(':') ? s.views[mode] : undefined))
+  useEffect(() => { if (mode.includes(':') && !pluginModel) window.ct.plugins.view(mode).then((m) => { if (m) usePlugins.setState((s) => ({ views: { ...s.views, [mode]: m } })) }) }, [mode, pluginModel])
   const tab = useWorkbench((s) => sessionTab(s, project))
   const session = tab?.session
   // plan mode opens the block on the plan, once per plan file
@@ -25,7 +31,7 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
     setAutoOpened(key); setMode('plan'); onCollapse(false)
   }, [session?.planMode, session?.planPath])
 
-  const modeBtn = (m: 'plan' | 'activity' | 'files', label: string, active: boolean, count = 0) => (
+  const modeBtn = (m: string, label: string, active: boolean, count = 0) => (
     <button className={'mode' + (mode === m ? ' on' : '')} onClick={() => { setMode(m); onCollapse(false) }}>
       {label}{active ? <span className="live" /> : count > 0 ? <span className="count">{count}</span> : null}
     </button>
@@ -35,12 +41,16 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
       {modeBtn('plan', t('Plan'), !!session?.planMode)}
       {modeBtn('activity', t('Activité'), (session?.runningTools.length ?? 0) > 0)}
       {modeBtn('files', t('Fichiers'), false, Object.keys(session?.files ?? {}).length)}
+      {bottomViews.length > 0 && <span className="vsep" />}
+      {bottomViews.map((v) => <span key={v.id} style={{ display: 'contents' }}>{modeBtn(v.id, v.title, false)}</span>)}
     </span>
   )
   const actions = tab ? <span className="session-title">{Icons.sparkle(11)} {tab.title}</span> : null
   return (
     <Island title={title} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
-      {!tab || !session ? (
+      {mode.includes(':') ? (
+        <PluginViewBody model={pluginModel} wide send={(type, extra) => window.ct.plugins.event({ viewId: mode, type, ...extra })} />
+      ) : !tab || !session ? (
         <Empty>{t('Sélectionne un onglet Claude, ou tape claude dans un shell')}</Empty>
       ) : mode === 'plan' ? <PlanView tab={tab} /> : mode === 'activity' ? <ActivityView tab={tab} /> : <FilesView tab={tab} />}
     </Island>

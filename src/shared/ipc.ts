@@ -1,7 +1,7 @@
 /** Typed contract between renderer (`window.ct`) and main. */
 import type { ThemeSpec, ResolvedTheme } from './theme'
 import type { ToolEvent } from './claude-format'
-import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest } from './plugins'
+import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
 
@@ -254,6 +254,9 @@ export interface CtApi {
     onPrompt(cb: (r: PromptRequest) => void): () => void
     promptReply(id: number, value: string | null): void
     onOpenFile(cb: (path: string) => void): () => void
+    onOpenDiff(cb: (r: DiffRequest) => void): () => void
+    onPopover(cb: (r: PopoverRequest) => void): () => void
+    onPopoverClose(cb: (id: string) => void): () => void
   }
   attachments: {
     /** absolute path of a dropped File (Electron webUtils) */

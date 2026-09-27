@@ -112,3 +112,31 @@ export function EditorHost({ tab }: { tab: Tab }) {
 export function ImageView({ src }: { src: string }) {
   return <div className="image-wrap"><img src={src} alt="" /></div>
 }
+
+/** Read-only Monaco diff (side by side) or a unified diff in a plain editor. */
+export function DiffHost({ tab }: { tab: Tab }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const theme = useWorkbench((s) => s.theme)!
+  const settings = useWorkbench((s) => s.settings)!
+  useEffect(() => {
+    const host = ref.current!
+    applyMonacoTheme(theme)
+    const d = tab.diff!
+    const opts = { readOnly: true, automaticLayout: true, fontFamily: settings.editorFontFamily || undefined, fontSize: settings.editorFontSize, minimap: { enabled: false }, scrollBeyondLastLine: false, renderSideBySide: true, padding: { top: 8 } }
+    let dispose: () => void
+    if (d.unified !== undefined) {
+      const m = monaco.editor.createModel(d.unified, 'diff')
+      const e = monaco.editor.create(host, { ...opts, model: m, wordWrap: 'off' })
+      dispose = () => { e.dispose(); m.dispose() }
+    } else {
+      const lang = tab.path ? undefined : d.language
+      const o = monaco.editor.createModel(d.original ?? '', lang, tab.path ? monaco.Uri.parse(`diff-original:${tab.id}${tab.path}`) : undefined)
+      const m = monaco.editor.createModel(d.modified ?? '', lang, tab.path ? monaco.Uri.parse(`diff-modified:${tab.id}${tab.path}`) : undefined)
+      const e = monaco.editor.createDiffEditor(host, opts)
+      e.setModel({ original: o, modified: m })
+      dispose = () => { e.dispose(); o.dispose(); m.dispose() }
+    }
+    return () => dispose()
+  }, [tab.id])
+  return <div className="editor-wrap" ref={ref} />
+}

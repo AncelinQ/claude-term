@@ -99,6 +99,7 @@ const EN: Record<string, string> = {
   'Arrêter le process {pid} ?': 'Stop process {pid}?',
   'Plugins': 'Plugins',
   'Chargement…': 'Loading…',
+  'Aucun résultat': 'No result',
   'Aucun plugin installé': 'No plugin installed',
   'intégré': 'built-in',
   'Dossier des plugins': 'Plugins folder',

@@ -6,7 +6,7 @@ import type { Settings, TabKind, SessionState, Attention } from '@shared/ipc'
 
 export interface Tab {
   id: string
-  kind: TabKind | 'file'
+  kind: TabKind | 'file' | 'diff'
   title: string
   cwd: string
   ptyId?: string
@@ -31,6 +31,8 @@ export interface Tab {
   error?: string
   /** markdown files: code | split | preview */
   mdMode?: 'code' | 'split' | 'preview'
+  /** diff tabs */
+  diff?: { original?: string; modified?: string; unified?: string; language?: string }
 }
 
 export const isClaude = (t: Tab) => t.kind === 'claude' || t.claudeRunning
@@ -54,8 +56,8 @@ interface Workbench {
   activeProjectId: string | null
   /** last Claude tab shown per project: the session block keeps following it */
   lastClaudeTab: Record<string, string>
-  sessionMode: 'plan' | 'activity' | 'files'
-  setSessionMode(m: 'plan' | 'activity' | 'files'): void
+  sessionMode: 'plan' | 'activity' | 'files' | (string & {})
+  setSessionMode(m: 'plan' | 'activity' | 'files' | (string & {})): void
   showSettings: boolean
   setShowSettings(v: boolean): void
   leftActivity: LeftActivity | null
@@ -95,6 +97,7 @@ interface Workbench {
   saveFile(path: string): Promise<void>
   setFileDirty(path: string, dirty: boolean): void
   setMdMode(tabId: string, mode: 'code' | 'split' | 'preview'): void
+  openDiff(projectId: string, req: { title: string; path?: string; original?: string; modified?: string; unified?: string }): void
   autoSaveAll(): Promise<void>
   /** tells main which tab is in front and clears its attention */
   visibleChanged(): void
@@ -340,6 +343,12 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     if (r.ok) ed.markSaved(path)
   },
   setMdMode(tabId, mode) { patchTab(set, tabId, () => ({ mdMode: mode })) },
+  openDiff(projectId, req) {
+    const tab: Tab = { id: 't' + ++seq, kind: 'diff', title: req.title, cwd: req.path?.replace(/[\\/][^\\/]*$/, '') ?? '', path: req.path, alive: true, busy: false, lastCommand: '', lastExit: null, claudeRunning: false,
+      diff: { original: req.original, modified: req.modified, unified: req.unified, language: req.path ? undefined : 'diff' } }
+    set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs.filter((t) => !(t.kind === 'diff' && t.title === req.title)), tab], currentTabId: tab.id } : x)) }))
+    get().visibleChanged()
+  },
   setFileDirty(path, dirty) {
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path && t.dirty !== dirty ? { ...t, dirty } : t)) })) }))
   },
