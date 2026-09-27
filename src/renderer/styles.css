@@ -178,7 +178,8 @@ input:focus { border-color: var(--ct-accent); }
 .event .kind { color: var(--ct-accent); font-weight: 600; flex: none; }
 .event .detail { overflow: hidden; text-overflow: ellipsis; }
 .files { display: flex; height: 100%; }
-.files-list { width: 280px; flex: none; overflow: auto; border-right: 1px solid var(--ct-island-border); padding: 4px 0; }
+.files-list { flex: none; overflow: auto; border-right: 1px solid var(--ct-island-border); padding: 4px 0; }
+.gutter.x.inner { margin: 0 calc(var(--ct-gutter) * -1) 0 calc(var(--ct-gutter) * -1 + 1px); }
 .frow { display: flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 11.5px; white-space: nowrap; }
 .frow:hover { background: var(--ct-hover-bg); }
 .frow.sel { background: var(--ct-selection-bg); }

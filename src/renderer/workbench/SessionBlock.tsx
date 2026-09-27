@@ -5,6 +5,7 @@ import { Icons } from './icons'
 import { Island, Empty } from './Island'
 import { diffStats } from '@shared/claude-format'
 import { useWorkbench, sessionTab, type Project, type Tab } from '@/stores/workbench'
+import { Gutter, useStoredSize } from './Split'
 
 const short = (p: string) => { const h = window.ct.home; return p.startsWith(h) ? '~' + p.slice(h.length) : p }
 
@@ -130,6 +131,7 @@ function FilesView({ tab }: { tab: Tab }) {
   const current = selected && s.files[selected] !== undefined ? selected : rows.find(isModified) ?? rows[0] ?? null
   const [diff, setDiff] = useState('')
   const [stats, setStats] = useState<Record<string, [number, number]>>({})
+  const [listWidth, setListWidth] = useStoredSize('files-list', 280)
   useEffect(() => {
     let live = true
     const load = async () => {
@@ -148,7 +150,7 @@ function FilesView({ tab }: { tab: Tab }) {
   if (rows.length === 0) return <Empty>Aucun fichier touché pour l'instant</Empty>
   return (
     <div className="files">
-      <div className="files-list">
+      <div className="files-list" style={{ width: listWidth }}>
         {rows.map((p) => (
           <div key={p} className={'frow' + (p === current ? ' sel' : '')} onClick={() => setSelected(p)} onDoubleClick={() => window.ct.app.openExternal(p)} title={p}>
             <span className="ico" style={{ color: isModified(p) ? 'var(--ct-accent)' : 'var(--ct-text-tertiary)' }}>{isModified(p) ? Icons.file(12) : Icons.file(12)}</span>
@@ -159,6 +161,7 @@ function FilesView({ tab }: { tab: Tab }) {
           </div>
         ))}
       </div>
+      <Gutter axis="x" className="inner" onDrag={(d) => setListWidth((w) => Math.max(160, Math.min(700, w + d)))} />
       <div className="diff">
         {current && isModified(current) ? (diff ? diff.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>) : <Empty>Aucune différence</Empty>) : <Empty>Lu, pas modifié dans cette session</Empty>}
       </div>
