@@ -1,15 +1,14 @@
 import { Island, Empty } from './Island'
 import { Icons } from './icons'
 import { FileTree } from './FileTree'
-import { useState } from 'react'
 import { useWorkbench, type Project } from '@/stores/workbench'
-import { Gutter, VStack, useStoredSize } from './Split'
+import { Gutter, VStack, useStoredSize, useCollapsed } from './Split'
 
 export function LeftSidebar({ project }: { project: Project }) {
   const activity = useWorkbench((s) => s.leftActivity)
   const [width, setWidth] = useStoredSize('left', 260)
-  const [linksCollapsed, setLinksCollapsed] = useState(false)
-  const [mcpCollapsed, setMcpCollapsed] = useState(false)
+  const [linksCollapsed, setLinksCollapsed] = useCollapsed('links')
+  const [mcpCollapsed, setMcpCollapsed] = useCollapsed('mcp-user')
   if (!activity) return null
   const name = project.root?.split(/[\\/]/).filter(Boolean).pop() ?? ''
   return (
@@ -47,7 +46,7 @@ export function LeftSidebar({ project }: { project: Project }) {
 export function RightSidebar() {
   const activity = useWorkbench((s) => s.rightActivity)
   const [width, setWidth] = useStoredSize('right', 320)
-  const [pluginsCollapsed, setPluginsCollapsed] = useState(false)
+  const [pluginsCollapsed, setPluginsCollapsed] = useCollapsed('skills-plugins')
   if (!activity) return null
   return (
     <>

@@ -28,6 +28,8 @@ export interface Settings {
   recentProjects: string[]
   leftActivity: string | null
   rightActivity: string | null
+  /** sizes (px) and collapsed flags of the workbench, by element id */
+  layout: Record<string, number | boolean>
   /** Windows: run claude natively or inside WSL */
   windowsMode: 'native' | 'wsl'
   wslDistro: string
@@ -44,6 +46,7 @@ export const DEFAULT_SETTINGS: Settings = {
   recentProjects: [],
   leftActivity: 'explorer',
   rightActivity: null,
+  layout: {},
   windowsMode: 'native',
   wslDistro: '',
 }

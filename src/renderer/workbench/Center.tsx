@@ -2,10 +2,11 @@ import { Icons } from './icons'
 import { Island, Empty } from './Island'
 import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
 import { useWorkbench, type Project } from '@/stores/workbench'
-import { VStack } from './Split'
+import { VStack, useCollapsed } from './Split'
 
 export function Center({ project }: { project: Project }) {
-  const { newTab, closeTab, setCurrentTab, sessionCollapsed, toggleSession } = useWorkbench()
+  const { newTab, closeTab, setCurrentTab } = useWorkbench()
+  const [sessionCollapsed, setSessionCollapsed] = useCollapsed('session')
   const current = project.tabs.find((t) => t.id === project.currentTabId) ?? null
   const home = window.ct.home
   const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
@@ -44,7 +45,7 @@ export function Center({ project }: { project: Project }) {
           </div>
         )}
       </div>}
-        bottom={<Island title="Session" icon={Icons.activity(14)} collapsible collapsed={sessionCollapsed} onCollapse={toggleSession}>
+        bottom={<Island title="Session" icon={Icons.activity(14)} collapsible collapsed={sessionCollapsed} onCollapse={setSessionCollapsed}>
           <Empty>Phase 2 : plan, activité et fichiers de la session Claude</Empty>
         </Island>}
       />

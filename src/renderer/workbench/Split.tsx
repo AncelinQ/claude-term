@@ -1,16 +1,22 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useWorkbench } from '@/stores/workbench'
 
-/** Layout metrics remembered per viewer (localStorage), not in settings.json. */
+/** A size (px) kept in settings.json under `layout`. */
 export function useStoredSize(key: string, initial: number): [number, (v: number | ((prev: number) => number)) => void] {
-  const [v, setV] = useState(() => { try { const s = localStorage.getItem('layout:' + key); return s ? +s : initial } catch { return initial } })
+  const v = useWorkbench((s) => s.layout[key])
+  const setLayout = useWorkbench((s) => s.setLayout)
+  const value = typeof v === 'number' ? v : initial
   const set = useCallback((n: number | ((prev: number) => number)) => {
-    setV((prev) => {
-      const next = typeof n === 'function' ? n(prev) : n
-      try { localStorage.setItem('layout:' + key, String(next)) } catch {}
-      return next
-    })
-  }, [key])
-  return [v, set]
+    setLayout(key, typeof n === 'function' ? (prev) => n(prev || initial) : n)
+  }, [key, initial, setLayout])
+  return [value, set]
+}
+
+/** A collapsed flag kept in settings.json under `layout`. */
+export function useCollapsed(key: string): [boolean, (c: boolean) => void] {
+  const v = useWorkbench((s) => s.layout['collapsed:' + key])
+  const setLayout = useWorkbench((s) => s.setLayout)
+  return [v === true, useCallback((c: boolean) => setLayout('collapsed:' + key, c), [key, setLayout])]
 }
 
 /** Drag handle. `axis` x resizes a width, y a height; `sign` −1 when the resized box is after the handle. */

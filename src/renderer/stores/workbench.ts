@@ -32,12 +32,13 @@ interface Workbench {
   activeProjectId: string | null
   leftActivity: LeftActivity | null
   rightActivity: RightActivity | null
-  sessionCollapsed: boolean
+  layout: Record<string, number | boolean>
+  /** Updates a layout value; the settings file is written after a short delay (drags). */
+  setLayout(key: string, value: number | boolean | ((prev: number) => number)): void
 
   init(): Promise<void>
   setLeft(a: LeftActivity | null): void
   setRight(a: RightActivity | null): void
-  toggleSession(): void
   newProject(root?: string | null): Project
   setRoot(id: string, root: string): void
   closeProject(id: string): void
@@ -60,7 +61,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
   activeProjectId: null,
   leftActivity: 'explorer',
   rightActivity: null,
-  sessionCollapsed: false,
+  layout: {},
 
   async init() {
     const [theme, settings] = await Promise.all([window.ct.themes.current(), window.ct.settings.get()])
@@ -69,14 +70,21 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       if (await window.ct.fs.exists(root)) projects.push({ id: nid(), root, tabs: [], currentTabId: null, selectedPath: null, selectedFolder: root })
     }
     if (projects.length === 0) projects.push({ id: nid(), root: null, tabs: [], currentTabId: null, selectedPath: null, selectedFolder: window.ct.home })
-    set({ theme, settings, projects, activeProjectId: projects[0].id, leftActivity: settings.leftActivity as LeftActivity | null, rightActivity: settings.rightActivity as RightActivity | null })
+    set({ theme, settings, projects, activeProjectId: projects[0].id, leftActivity: settings.leftActivity as LeftActivity | null, rightActivity: settings.rightActivity as RightActivity | null, layout: settings.layout ?? {} })
     window.ct.themes.onChange((theme) => set({ theme }))
     window.ct.settings.onChange((settings) => set({ settings }))
   },
 
   setLeft(a) { set({ leftActivity: a }); window.ct.settings.set({ leftActivity: a }) },
   setRight(a) { set({ rightActivity: a }); window.ct.settings.set({ rightActivity: a }) },
-  toggleSession() { set((s) => ({ sessionCollapsed: !s.sessionCollapsed })) },
+  setLayout(key, value) {
+    set((s) => {
+      const prev = s.layout[key]
+      const next = typeof value === 'function' ? value(typeof prev === 'number' ? prev : 0) : value
+      return { layout: { ...s.layout, [key]: next } }
+    })
+    scheduleLayoutSave(get)
+  },
 
   newProject(root = null) {
     const p: Project = { id: nid(), root, tabs: [], currentTabId: null, selectedPath: null, selectedFolder: root ?? window.ct.home }
@@ -139,6 +147,12 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code } : t)) })) }))
   },
 }))
+
+let layoutTimer: ReturnType<typeof setTimeout> | undefined
+function scheduleLayoutSave(get: () => Workbench) {
+  clearTimeout(layoutTimer)
+  layoutTimer = setTimeout(() => window.ct.settings.set({ layout: get().layout }), 400)
+}
 
 function persistProjects(get: () => Workbench) {
   window.ct.settings.set({ openProjects: get().projects.map((p) => p.root).filter((r): r is string => !!r) })
