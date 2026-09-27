@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { ResolvedTheme } from '@shared/theme'
-import type { Settings, TabKind } from '@shared/ipc'
+import type { Settings, TabKind, SessionState } from '@shared/ipc'
 
 export interface Tab {
   id: string
@@ -17,6 +17,8 @@ export interface Tab {
   lastExit: number | null
   /** `claude` typed in a shell tab */
   claudeRunning: boolean
+  /** derived Claude session state (main's SessionTracker) */
+  session?: SessionState
 }
 
 export const isClaude = (t: Tab) => t.kind === 'claude' || t.claudeRunning
@@ -38,6 +40,10 @@ interface Workbench {
   settings: Settings | null
   projects: Project[]
   activeProjectId: string | null
+  /** last Claude tab shown per project: the session block keeps following it */
+  lastClaudeTab: Record<string, string>
+  sessionMode: 'plan' | 'activity' | 'files'
+  setSessionMode(m: 'plan' | 'activity' | 'files'): void
   leftActivity: LeftActivity | null
   rightActivity: RightActivity | null
   layout: Record<string, number | boolean>
@@ -70,6 +76,9 @@ export const useWorkbench = create<Workbench>((set, get) => ({
   settings: null,
   projects: [],
   activeProjectId: null,
+  lastClaudeTab: {},
+  sessionMode: 'plan',
+  setSessionMode(m) { set({ sessionMode: m }) },
   leftActivity: 'explorer',
   rightActivity: null,
   layout: {},
@@ -84,6 +93,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set({ theme, settings, projects, activeProjectId: projects[0].id, leftActivity: settings.leftActivity as LeftActivity | null, rightActivity: settings.rightActivity as RightActivity | null, layout: settings.layout ?? {} })
     window.ct.themes.onChange((theme) => set({ theme }))
     window.ct.settings.onChange((settings) => set({ settings }))
+    window.ct.claude.onUpdate(({ tabId, state }) => patchTab(set, tabId, () => ({ session: state, title: state.title ?? undefined })))
   },
 
   setLeft(a) { set({ leftActivity: a }); window.ct.settings.set({ leftActivity: a }) },
@@ -134,13 +144,15 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind, projectRoot: p.root ?? undefined })
     const tab: Tab = { id: 't' + ++seq, kind, title: name(dir), cwd: dir, ptyId, alive: !error, busy: false, lastCommand: '', lastExit: null, claudeRunning: false }
     if (error) tab.title += ' (erreur)'
-    set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)) }))
+    set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)), lastClaudeTab: kind === 'claude' ? { ...s.lastClaudeTab, [projectId]: tab.id } : s.lastClaudeTab }))
     if (error) console.error(error)
+    else if (kind === 'claude') window.ct.claude.track(tab.id, dir)
   },
   closeTab(projectId, tabId) {
     const p = get().projects.find((x) => x.id === projectId)
     const t = p?.tabs.find((x) => x.id === tabId)
     if (t?.ptyId) window.ct.pty.kill(t.ptyId)
+    window.ct.claude.untrack(tabId)
     set((s) => ({
       projects: s.projects.map((x) => {
         if (x.id !== projectId) return x
@@ -152,7 +164,10 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     }))
   },
   setCurrentTab(projectId, tabId) {
-    set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId } : x)) }))
+    set((s) => {
+      const t = s.projects.find((p) => p.id === projectId)?.tabs.find((x) => x.id === tabId)
+      return { projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId } : x)), lastClaudeTab: t && isClaude(t) ? { ...s.lastClaudeTab, [projectId]: tabId } : s.lastClaudeTab }
+    })
   },
   tabExited(ptyId, code) {
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code, busy: false, claudeRunning: false } : t)) })) }))
@@ -162,14 +177,28 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     patchTab(set, tabId, (t) => {
       if (kind === 'start') {
         const claude = /^\s*claude(\s|$)/.test(rest)
-        return { busy: true, lastCommand: rest, lastExit: null, claudeRunning: claude || t.claudeRunning }
+        if (claude) {
+          const resume = rest.match(/(?:--resume|-r)\s+(\S+)/)?.[1]
+          const reuse = /--continue|--resume|\s-c\b|\s-r\b/.test(rest)
+          window.ct.claude.track(t.id, t.cwd, { resume, reuse })
+          set((s) => ({ lastClaudeTab: { ...s.lastClaudeTab, [projectOf(s, t.id)]: t.id } }))
+          return { busy: true, lastCommand: rest, lastExit: null, claudeRunning: true, session: undefined }
+        }
+        return { busy: true, lastCommand: rest, lastExit: null }
       }
-      if (kind === 'end') return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false }
+      if (kind === 'end') {
+        if (t.claudeRunning) window.ct.claude.untrack(t.id)
+        return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false, title: name(t.cwd) }
+      }
       return {}
     })
   },
   setCwd(tabId, cwd) { patchTab(set, tabId, (t) => (t.cwd === cwd ? {} : { cwd, title: name(cwd) })) },
 }))
+
+function projectOf(s: Workbench, tabId: string): string {
+  return s.projects.find((p) => p.tabs.some((t) => t.id === tabId))?.id ?? ''
+}
 
 function patchTab(set: (fn: (s: Workbench) => Partial<Workbench>) => void, tabId: string, patch: (t: Tab) => Partial<Tab>) {
   set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.id === tabId ? { ...t, ...patch(t) } : t)) })) }))
@@ -186,3 +215,11 @@ function persistProjects(get: () => Workbench) {
 }
 
 export const useActiveProject = () => useWorkbench((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? null)
+
+/** The Claude tab the session block shows: the current tab if it is Claude, else the last Claude tab used. */
+export function sessionTab(s: Workbench, p: Project): Tab | null {
+  const cur = p.tabs.find((t) => t.id === p.currentTabId)
+  if (cur && isClaude(cur)) return cur
+  const last = p.tabs.find((t) => t.id === s.lastClaudeTab[p.id])
+  return last && isClaude(last) ? last : null
+}

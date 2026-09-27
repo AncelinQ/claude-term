@@ -1,8 +1,8 @@
 import { Icons } from './icons'
-import { Island, Empty } from './Island'
 import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
 import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
 import { VStack, useCollapsed } from './Split'
+import { SessionBlock } from './SessionBlock'
 
 function tabColor(t: Tab) {
   if (!t.alive) return 'var(--ct-text-tertiary)'
@@ -53,9 +53,7 @@ export function Center({ project }: { project: Project }) {
           </div>
         )}
       </div>}
-        bottom={<Island title="Session" icon={Icons.activity(14)} collapsible collapsed={sessionCollapsed} onCollapse={setSessionCollapsed}>
-          <Empty>Phase 2 : plan, activité et fichiers de la session Claude</Empty>
-        </Island>}
+        bottom={<SessionBlock project={project} collapsed={sessionCollapsed} onCollapse={setSessionCollapsed} />}
       />
     </div>
   )

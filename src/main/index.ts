@@ -5,6 +5,8 @@ import { SettingsService } from './services/settings'
 import { ThemeService } from './services/themes'
 import { PtyService } from './services/pty'
 import { createWindow } from './window'
+import { ClaudeData } from './services/claude-data'
+import { SessionTracker } from './services/session-tracker'
 import type { DirEntry } from '@shared/ipc'
 
 const settings = new SettingsService()
@@ -43,6 +45,24 @@ themes.onChange((t) => send('themes:changed', t))
 ipcMain.handle('settings:get', () => settings.get())
 ipcMain.handle('settings:set', (_e, patch) => settings.set(patch))
 settings.onChange((s) => send('settings:changed', s))
+
+// claude sessions
+const claudeData = new ClaudeData()
+const trackers = new Map<string, SessionTracker>()
+const claimed = new Set<string>()
+ipcMain.on('claude:track', (_e, { tabId, cwd, opts }) => {
+  trackers.get(tabId)?.stop()
+  trackers.set(tabId, new SessionTracker(tabId, cwd, claudeData, claimed, (id, state, newEvents) => send('claude:update', { tabId: id, state, newEvents }), opts ?? {}))
+})
+ipcMain.on('claude:untrack', (_e, { tabId }) => { trackers.get(tabId)?.stop(); trackers.delete(tabId) })
+ipcMain.on('claude:setPlan', (_e, { tabId, path }) => trackers.get(tabId)?.setPlan(path))
+ipcMain.handle('claude:plans', () => claudeData.plans())
+ipcMain.handle('claude:sessions', (_e, cwd: string) => claudeData.sessions(cwd))
+ipcMain.handle('claude:allSessions', () => claudeData.allSessions())
+ipcMain.handle('claude:hasSessions', (_e, cwd: string) => claudeData.hasSessions(cwd))
+ipcMain.handle('claude:deleteSession', (_e, s) => claudeData.deleteSession(s, (p) => shell.trashItem(p)))
+ipcMain.handle('claude:sessionDiff', (_e, { path, backupName, sessionId }) => claudeData.sessionDiff(path, backupName, sessionId))
+ipcMain.handle('claude:readText', (_e, path: string) => claudeData.readText(path))
 
 // app
 ipcMain.handle('app:pickFolder', async () => {

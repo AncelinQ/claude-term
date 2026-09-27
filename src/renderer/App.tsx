@@ -67,6 +67,8 @@ function StatusBar() {
     <div className="status">
       {project?.root && <span className="item">{Icons.folder(12)} {short(project.root)}</span>}
       {tab && <span className="item">{isClaude(tab) ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
+      {tab && isClaude(tab) && tab.session?.permissionMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>{tab.session.permissionMode}</span>}
+      {tab && isClaude(tab) && tab.session?.planMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>plan</span>}
       {tab && !isClaude(tab) && tab.busy && <span className="item"><span className="spin" /> <span style={{ color: 'var(--ct-text-tertiary)' }}>{tab.lastCommand}</span></span>}
       {tab && !isClaude(tab) && !tab.busy && tab.lastExit !== null && (
         <span className="item">
@@ -75,6 +77,7 @@ function StatusBar() {
         </span>
       )}
       <span className="spacer" />
+      {tab && isClaude(tab) && tab.session && <span className="item muted">{tab.session.inputTokens.toLocaleString()} ↓ {tab.session.outputTokens.toLocaleString()} ↑</span>}
       {tab && <span className="item"><span className="dot" style={{ width: 7, height: 7, borderRadius: 4, background: tab.alive ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }} /> {tab.alive ? 'actif' : 'terminé'}</span>}
     </div>
   )

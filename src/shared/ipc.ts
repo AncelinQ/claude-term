@@ -1,5 +1,6 @@
 /** Typed contract between renderer (`window.ct`) and main. */
 import type { ThemeSpec, ResolvedTheme } from './theme'
+import type { ToolEvent } from './claude-format'
 
 export type TabKind = 'claude' | 'shell'
 
@@ -14,6 +15,36 @@ export interface PtyCreate {
 
 /** Shell-integration and cwd events parsed from OSC sequences in the renderer. */
 export const OSC_SHELL = 7770
+
+/** Derived state of one Claude session, kept in main by the SessionTracker. */
+export interface SessionState {
+  sessionId?: string
+  title?: string
+  events: ToolEvent[]
+  /** absolute path → number of accesses */
+  files: Record<string, number>
+  backups: Record<string, { name: string; version: number }>
+  bashDiffs: Record<string, string[]>
+  inputTokens: number
+  outputTokens: number
+  planPath?: string
+  planText: string
+  planMode: boolean
+  permissionMode?: string
+  runningTools: { id: string; name: string; detail: string }[]
+}
+
+export interface SessionInfo {
+  id: string
+  path: string
+  title: string
+  modified: number
+  projectPath: string
+  messageCount: number
+  gitBranch: string
+}
+
+export interface PlanInfo { path: string; title: string; modified: number }
 
 export interface DirEntry {
   name: string
@@ -80,6 +111,20 @@ export interface CtApi {
     get(): Promise<Settings>
     set(patch: Partial<Settings>): Promise<Settings>
     onChange(cb: (s: Settings) => void): () => void
+  }
+  claude: {
+    /** Follows the Claude session of a tab (claude tab, or `claude` typed in a shell). */
+    track(tabId: string, cwd: string, opts?: { resume?: string; reuse?: boolean }): void
+    untrack(tabId: string): void
+    onUpdate(cb: (u: { tabId: string; state: SessionState; newEvents: ToolEvent[] }) => void): () => void
+    setPlan(tabId: string, path: string | null): void
+    plans(): Promise<PlanInfo[]>
+    sessions(cwd: string): Promise<SessionInfo[]>
+    allSessions(): Promise<SessionInfo[]>
+    hasSessions(cwd: string): Promise<boolean>
+    deleteSession(s: SessionInfo): Promise<void>
+    sessionDiff(path: string, backupName: string | null, sessionId: string): Promise<string>
+    readText(path: string): Promise<string>
   }
   app: {
     pickFolder(): Promise<string | null>
