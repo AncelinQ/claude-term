@@ -1,7 +1,8 @@
 // Detects what a project can run. Pure: takes an fs-like object { exists, read, list }.
 const FAVORITES = ['dev', 'start', 'build', 'test', 'lint', 'preview', 'typecheck', 'check']
 
-function join(a, b) { return a.replace(/[\\/]+$/, '') + '/' + b }
+// keeps the separator of `a` (backslashes on Windows)
+function join(a, b) { const sep = a.includes('\\') && !a.includes('/') ? '\\' : '/'; return a.replace(/[\\/]+$/, '') + sep + b.split('/').join(sep) }
 
 function npm(fs, dir, label) {
   if (!fs.exists(join(dir, 'package.json'))) return null
@@ -70,7 +71,7 @@ function detect(fs, root) {
     groups.push(rootNpm)
     for (const ws of rootNpm.workspaces || []) {
       const dirs = ws.endsWith('/*') ? fs.list(join(root, ws.slice(0, -2))).filter((e) => e.dir).map((e) => join(join(root, ws.slice(0, -2)), e.name)) : [join(root, ws)]
-      for (const d of dirs) { const g = npm(fs, d, d.split('/').pop()); if (g) groups.push(g) }
+      for (const d of dirs) { const g = npm(fs, d, d.split(/[\\/]/).pop()); if (g) groups.push(g) }
     }
   }
   for (const f of [make, cargo, go, python, shell]) { const g = f(fs, root); if (g) groups.push(g) }

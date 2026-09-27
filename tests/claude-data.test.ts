@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { join } from 'node:path'
 import { utimesSync } from 'node:fs'
-import { TempDir, jsonl } from './helpers'
+import { TempDir, jsonl, sleep } from './helpers'
 import { ClaudeData } from '../src/main/services/claude-data'
 import { encodeProjectPath } from '../src/shared/claude-format'
 
@@ -35,16 +35,18 @@ describe('ClaudeData', () => {
     expect(data.allSessions().length).toBe(3)
     t.dispose()
   })
-  it('newestTranscript picks files created after the tab, skipping claimed ones', () => {
+  it('newestTranscript picks files created after the tab, skipping claimed ones', async () => {
     const { t, cwd, dir, data } = home()
+    // real creation times on every OS (utimes moves the birth time back on macOS only)
     const old = t.write(join(dir, 'old.jsonl'), '{}\n')
-    utimesSync(old, new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+    await sleep(30)
+    const after = Date.now()
+    await sleep(30)
     const fresh = t.write(join(dir, 'new.jsonl'), '{}\n')
-    const after = Date.now() - 5_000
     expect(data.newestTranscript(cwd, after, false, new Set())).toBe(fresh)
     expect(data.newestTranscript(cwd, after, false, new Set([fresh]))).toBeNull()
     // reuse (--continue): the modified one counts even if created long ago
-    utimesSync(old, new Date(), new Date())
+    utimesSync(old, new Date(Date.now() + 1000), new Date(Date.now() + 1000))
     expect(data.newestTranscript(cwd, after, true, new Set([fresh]))).toBe(old)
     t.dispose()
   })

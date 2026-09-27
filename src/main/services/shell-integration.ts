@@ -43,7 +43,7 @@ ${claudeFunction()}
 
   /** Spawn spec and env additions for an integrated interactive shell. */
   shell(userShell: string): { file: string; args: string[]; env: Record<string, string> } {
-    const name = userShell.split('/').pop() ?? ''
+    const name = userShell.split(/[\\/]/).pop() ?? ''
     if (name === 'bash') return { file: userShell, args: ['--rcfile', join(this.dir, 'bash.rc'), '-i'], env: {} }
     if (name === 'zsh' || name === '') return { file: userShell || '/bin/zsh', args: ['-il'], env: { ZDOTDIR: join(this.dir, 'zsh') } }
     return { file: userShell, args: ['-il'], env: {} }   // fish & co: no hooks yet

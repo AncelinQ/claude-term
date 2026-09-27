@@ -1,5 +1,5 @@
 import { readdirSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 
 const IGNORE = new Set(['.git', 'node_modules', '.build', 'dist', 'out', '.next', '.cache', 'DerivedData', '.venv', '__pycache__', 'target', '.gradle'])
 const MAX = 40_000
@@ -19,7 +19,7 @@ export class FileIndex {
       for (const e of entries) {
         if (files.length >= MAX) return
         if (e.isDirectory()) { if (!IGNORE.has(e.name)) walk(join(dir, e.name), depth + 1) }
-        else if (e.isFile()) files.push(relative(root, join(dir, e.name)))
+        else if (e.isFile()) files.push(relative(root, join(dir, e.name)).split(sep).join('/'))  // '/' on every OS: queries and the renderer use it
       }
     }
     walk(root, 0)

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { TempDir } from './helpers'
 import { readTarGz, safePath, stripTopFolder } from '../src/main/services/tar'
 import { PluginStore, type ApprovalRequest, type StoreHost } from '../src/main/services/plugin-store'
@@ -187,7 +187,7 @@ describe('plugin store', () => {
       approve: async (r) => { asked.push(r); return opts.approve ?? true },
       setApproved: (id, p) => { if (p) approved[id] = p; else delete approved[id]; log.push(`approved ${id} ${p?.join(',') ?? 'null'}`) },
       unload: (id) => log.push(`unload ${id}`),
-      load: (dir) => { log.push(`load ${dir.slice(userDir.length)}`); installed[JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8')).id] = JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8')).version },
+      load: (dir) => { log.push(`load /${basename(dir)}`); installed[JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8')).id] = JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8')).version },
     }
     const store = new PluginStore(userDir, '2.0.0', host)
     return { t, userDir, store, log, asked, approved }

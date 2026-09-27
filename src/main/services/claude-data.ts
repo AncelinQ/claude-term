@@ -86,7 +86,7 @@ export class ClaudeData {
     try { dirs = readdirSync(this.root) } catch { return [] }
     return dirs.filter((d) => d === prefix || d.startsWith(prefix + '-'))
       .flatMap((d) => this.sessionsIn(join(this.root, d), d === prefix ? cwd : null))
-      .filter((s) => s.projectPath === cwd || s.projectPath.startsWith(cwd + '/'))
+      .filter((s) => s.projectPath === cwd || s.projectPath.startsWith(cwd + '/') || s.projectPath.startsWith(cwd + '\\'))
       .sort((a, b) => b.modified - a.modified)
   }
 

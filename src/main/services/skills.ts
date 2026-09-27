@@ -32,7 +32,7 @@ export class Skills {
       for (const e of entries) {
         const p = join(dir, e.name)
         if (e.isDirectory()) walk(p, depth + 1, depth === 1 ? e.name : plugin)
-        else if (e.name === 'SKILL.md' && p.includes('/skills/')) {
+        else if (e.name === 'SKILL.md' && /[\\/]skills[\\/]/.test(p)) {
           const fm = read(p)
           out.push(info(`${plugin ?? 'plugin'}:${fm['name'] ?? basename(dirname(p))}`, fm, p, 'plugin', false))
         }
