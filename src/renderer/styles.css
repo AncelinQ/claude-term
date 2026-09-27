@@ -26,7 +26,7 @@ input:focus { border-color: var(--ct-accent); }
 
 /* window */
 .wb { display: grid; grid-template-rows: var(--ct-title-h) 1fr var(--ct-status-h); height: 100%; }
-.title { display: flex; align-items: center; gap: 6px; padding: 0 8px; -webkit-app-region: drag; background: var(--ct-activity-bg); }
+.title { display: flex; align-items: center; gap: 6px; padding: 0 2px 0 8px; -webkit-app-region: drag; background: var(--ct-activity-bg); }
 .title.mac { padding-left: 84px; }
 .title.win { padding-right: 140px; }
 .title > * { -webkit-app-region: no-drag; }
@@ -44,16 +44,16 @@ input:focus { border-color: var(--ct-accent); }
 
 /* activity bars */
 .activity { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; background: var(--ct-activity-bg); }
-.activity.right { padding-top: 8px; }
+.activity.right { padding-top: 4px; gap: 2px; }
 .activity .spacer { flex: 1; }
 .activity button { position: relative; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: var(--ct-activity-fg); }
-.activity.right button { width: 24px; height: 24px; border-radius: 6px; }
+.activity.right button { width: 26px; height: 26px; border-radius: 7px; }
 .activity button:hover { color: var(--ct-activity-active); background: var(--ct-hover-bg); }
 .activity button.on { color: var(--ct-activity-active); }
 .activity button.on::before { content: ""; position: absolute; left: -5px; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--ct-activity-indicator); }
 .activity.right button.on::before { left: auto; right: -3px; top: 4px; bottom: 4px; }
 .activity svg { width: 20px; height: 20px; }
-.activity.right svg { width: 15px; height: 15px; }
+.activity.right svg { width: 16px; height: 16px; }
 
 /* sidebars and islands */
 .sidebar { display: flex; flex-direction: column; gap: var(--ct-gutter); padding: var(--ct-gutter) 0 var(--ct-gutter) 0; min-width: 0; overflow: hidden; }
