@@ -33,4 +33,4 @@ PolyForm Noncommercial 1.0.0.
 
 ## Third-party assets
 
-File and folder icons: [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme) (MIT).
+File and folder icons: [Catppuccin Icons](https://github.com/catppuccin/vscode-icons) (MIT), Mocha and Latte flavors, vendored in `src/renderer/assets/catppuccin`.

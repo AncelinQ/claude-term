@@ -8,7 +8,7 @@ import { useWorkbench, type Project } from '@/stores/workbench'
 export function FileTree({ project, root }: { project: Project; root: string }) {
   return (
     <div className="tree">
-      <Dir project={project} path={root} depth={0} open />
+      <Dir key={root} project={project} path={root} depth={0} open />
     </div>
   )
 }
