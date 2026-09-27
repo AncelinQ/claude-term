@@ -26,4 +26,7 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
 - Language: code, comments, commit messages, README.md and docs in English; UI strings in French
   (i18n later). README.fr.md mirrors README.md when it exists.
 - Windows: `windowsMode` setting (`native` | `wsl`) decides how `claude` and shells are spawned.
+- Packaging: `electron-builder.yml`; `npm run dist:mac|win|linux`. Themes ship as `extraResources/themes`,
+  node-pty is unpacked from the asar. A packaged app started with `CT_CDP_PORT=9444` exposes CDP and the
+  test hooks, so `CT_CDP_PORT=9444 npx tsx scripts/ui.ts …` drives it like the dev app. Icons in `build/`.
 - License: PolyForm Noncommercial 1.0.0.

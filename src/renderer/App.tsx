@@ -15,8 +15,8 @@ export function App() {
   const project = useActiveProject()
   useEffect(() => {
     init()
-    if (import.meta.env.DEV) (window as any).__ct = useWorkbench
-    if (import.meta.env.DEV) (window as any).__ct_state = () => {
+    if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
+    if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
       return { activeProjectId: s.activeProjectId, leftActivity: s.leftActivity, rightActivity: s.rightActivity, showSettings: s.showSettings, sessionMode: s.sessionMode,
         projects: s.projects.map((p) => ({ id: p.id, root: p.root, currentTabId: p.currentTabId, selectedPath: p.selectedPath, tabs: p.tabs.map((t) => ({ id: t.id, kind: t.kind, title: t.title, cwd: t.cwd, alive: t.alive, busy: t.busy, lastCommand: t.lastCommand, lastExit: t.lastExit, claudeRunning: t.claudeRunning, attention: t.attention, path: t.path, dirty: t.dirty, changedOnDisk: t.changedOnDisk, session: t.session && { id: t.session.sessionId, events: t.session.events.length, files: Object.keys(t.session.files).length, planMode: t.session.planMode, tokens: [t.session.inputTokens, t.session.outputTokens] } })) })) }

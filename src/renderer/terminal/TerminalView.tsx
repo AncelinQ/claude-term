@@ -10,7 +10,7 @@ import { useWorkbench, type Tab } from '@/stores/workbench'
 
 /** Terminals live outside React (one xterm per tab), attached to the visible container. */
 const terminals = new Map<string, { term: Terminal; fit: FitAddon; el: HTMLDivElement; dispose: () => void }>()
-if (import.meta.env.DEV) (window as any).__ct_termText = (tabId: string) => {
+if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_termText = (tabId: string) => {
   const t = terminals.get(tabId)?.term; if (!t) return null
   const b = t.buffer.active; const lines: string[] = []
   for (let i = Math.max(0, b.baseY + b.cursorY - 5); i <= b.baseY + b.cursorY; i++) lines.push(b.getLine(i)?.translateToString(true) ?? '')

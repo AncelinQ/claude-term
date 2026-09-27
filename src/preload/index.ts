@@ -9,6 +9,7 @@ function channel<T>(name: string, filter: (payload: any) => boolean, map: (paylo
 
 const api: CtApi = {
   platform: process.platform,
+  debug: !!process.env.CT_CDP_PORT || !!process.env.ELECTRON_RENDERER_URL,
   home: process.env.HOME || process.env.USERPROFILE || '',
   pty: {
     create: (opts) => ipcRenderer.invoke('pty:create', opts),

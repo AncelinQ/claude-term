@@ -1,7 +1,7 @@
 {
   "name": "claude-term",
   "productName": "ClaudeTerm",
-  "version": "2.0.0-dev",
+  "version": "2.0.0",
   "description": "Workbench for Claude Code",
   "main": "./out/main/index.js",
   "private": true,
@@ -12,6 +12,10 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64",
+    "dist:mac-all": "npm run build && electron-builder --mac dmg --arm64 --x64",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {

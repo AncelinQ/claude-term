@@ -1,0 +1,39 @@
+appId: fr.jerome.claudeterm
+productName: ClaudeTerm
+copyright: PolyForm Noncommercial 1.0.0
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  - "!**/*.map"
+extraResources:
+  - from: resources/themes
+    to: themes
+asarUnpack:
+  - "**/node_modules/node-pty/**"
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  identity: null
+  hardenedRuntime: false
+  extendInfo:
+    LSMinimumSystemVersion: "12.0"
+dmg:
+  title: ClaudeTerm
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  language: 1036
+linux:
+  target: [AppImage]
+  category: Development
+npmRebuild: true

@@ -150,6 +150,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export interface CtApi {
   platform: NodeJS.Platform
+  /** test hooks (window.__ct…) enabled: dev, or CT_CDP_PORT set on a packaged app */
+  debug: boolean
   home: string
   pty: {
     create(opts: PtyCreate): Promise<{ id: string; error?: string }>

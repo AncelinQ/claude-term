@@ -18,8 +18,8 @@ import { FileIndex } from './services/search'
 import { Attachments } from './services/attachments'
 import type { DirEntry } from '@shared/ipc'
 
-// dev: Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts)
-if (!app.isPackaged) app.commandLine.appendSwitch('remote-debugging-port', process.env.CT_CDP_PORT || '9333')
+// Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts): always in dev, on demand (CT_CDP_PORT) when packaged
+if (!app.isPackaged || process.env.CT_CDP_PORT) app.commandLine.appendSwitch('remote-debugging-port', process.env.CT_CDP_PORT || '9333')
 
 const settings = new SettingsService()
 const builtinThemes = app.isPackaged ? join(process.resourcesPath, 'themes') : join(app.getAppPath(), 'resources', 'themes')
