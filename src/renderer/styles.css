@@ -355,6 +355,8 @@ input[type=checkbox]:disabled { opacity: .4; }
 .island > .content > .pv-main, .island > .content > .pv-split { flex: 1; min-height: 0; }
 .pv-main > .list { flex: 1; min-height: 0; overflow: auto; }
 .pv-row { align-items: center; gap: 6px; padding-top: 3px; padding-bottom: 3px; }
+.pv-row .chev { width: 14px; flex: none; }
+.pv-row .chev.placeholder { visibility: hidden; }
 .pv-row.muted { opacity: .55; }
 .pv-row .pv-label { flex: 1; min-width: 0; display: inline-flex; align-items: baseline; gap: 6px; overflow: hidden; white-space: nowrap; }
 .pv-row .pv-label .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
