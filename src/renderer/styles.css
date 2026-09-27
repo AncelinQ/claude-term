@@ -102,7 +102,7 @@ input:focus { border-color: var(--ct-accent); }
 /* project tabs (title strip) */
 .ptab { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 12px; border-radius: 13px; color: var(--ct-text-secondary); }
 .ptab:hover { background: var(--ct-hover-bg); }
-.ptab.on { background: var(--ct-accent-bg); color: var(--ct-text); font-weight: 600; }
+.ptab.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); font-weight: 600; }
 .ptab .close { opacity: 0; }
 .ptab:hover .close, .ptab.on .close { opacity: .7; }
 
@@ -140,7 +140,7 @@ input:focus { border-color: var(--ct-accent); }
 .island > .hdr .modes { display: inline-flex; gap: 2px; margin-left: -4px; }
 .island > .hdr .mode { height: 22px; display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; border-radius: 5px; color: var(--ct-text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; width: auto; }
 .island > .hdr .mode:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
-.island > .hdr .mode.on { background: var(--ct-accent-bg); color: var(--ct-accent); }
+.island > .hdr .mode.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
 .island > .hdr .mode .live { width: 6px; height: 6px; border-radius: 3px; background: var(--ct-accent); }
 .island > .hdr .mode .count { font-size: 9px; font-weight: 700; }
 .island > .hdr .session-title { display: inline-flex; align-items: center; gap: 4px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ct-text-secondary); margin-left: 6px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
