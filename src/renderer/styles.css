@@ -138,7 +138,7 @@ input:focus { border-color: var(--ct-accent); }
 
 /* session block */
 .island > .hdr .modes { display: inline-flex; gap: 2px; margin-left: -4px; }
-.island > .hdr .mode { height: 22px; display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; border-radius: 5px; color: var(--ct-text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; width: auto; }
+.island > .hdr .mode { height: 20px; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border-radius: 5px; color: var(--ct-text-secondary); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .02em; width: auto; }
 .island > .hdr .mode:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 .island > .hdr .mode.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
 .island > .hdr .mode .live { width: 6px; height: 6px; border-radius: 3px; background: var(--ct-accent); }
