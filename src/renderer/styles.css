@@ -311,3 +311,21 @@ input[type=checkbox]:disabled { opacity: .4; }
 .cc-hook { display: flex; align-items: center; gap: 6px; padding: 3px 14px; }
 .ibtn { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 4px; color: var(--ct-text-secondary); flex: none; }
 .ibtn:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
+
+/* markdown files: code / split / preview */
+.md-host { display: flex; }
+.md-panes { position: absolute; inset: 0; display: flex; }
+.md-pane { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.md-pane .editor-wrap { position: absolute; inset: 0; }
+.md-panes .gutter.x.inner { margin: 0; width: 1px; background: var(--ct-island-border); position: relative; z-index: 3; }
+.md-panes .gutter.x.inner::before { content: ""; position: absolute; inset: 0 -4px; cursor: col-resize; }
+.md-preview { position: absolute; inset: 0; overflow: auto; padding: 16px 28px; max-width: none; font-size: 13px; line-height: 1.6; user-select: text; }
+.md-preview h1 { font-size: 22px; margin: 6px 0 12px; } .md-preview h2 { font-size: 17px; margin: 18px 0 8px; } .md-preview h3 { font-size: 14px; }
+.md-preview pre { background: var(--ct-window-bg); }
+.md-preview table { border-collapse: collapse; margin: 8px 0; } .md-preview th, .md-preview td { border: 1px solid var(--ct-island-border); padding: 4px 8px; }
+.md-preview img { max-width: 100%; }
+.md-preview blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--ct-island-border); color: var(--ct-text-secondary); }
+.md-modes { position: absolute; top: 8px; right: 14px; z-index: 5; display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--ct-island-header-bg); border: 1px solid var(--ct-island-border); }
+.md-modes button { width: 24px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: var(--ct-text-secondary); }
+.md-modes button:hover { color: var(--ct-text); background: var(--ct-hover-bg); }
+.md-modes button.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }

@@ -7,6 +7,8 @@ import { SessionBlock } from './SessionBlock'
 import { Island } from './Island'
 import { MenuButton, ContextMenu } from './Menu'
 import { EditorHost, ImageView } from '@/editor/EditorHost'
+import { MarkdownPreview } from '@/editor/MarkdownPreview'
+import { Gutter, useStoredSize } from './Split'
 import { t as tr } from '@/i18n'
 
 export function attentionColor(a: { kind: string }) {
@@ -27,6 +29,8 @@ function tabColor(t: Tab) {
 export function Center({ project }: { project: Project }) {
   const { newTab, closeTab, closeFiles, setCurrentTab } = useWorkbench()
   const [ctx, setCtx] = useState<{ x: number; y: number; tab: Tab } | null>(null)
+  const setMdMode = useWorkbench((s) => s.setMdMode)
+  const [splitWidth, setSplitWidth] = useStoredSize('md-split', 50)   // % of the editor area
   const fileCount = project.tabs.filter((t) => t.kind === 'file').length
   const [sessionCollapsed, setSessionCollapsed] = useCollapsed('session')
   const current = project.tabs.find((t) => t.id === project.currentTabId) ?? null
@@ -66,7 +70,22 @@ export function Center({ project }: { project: Project }) {
           {current && current.kind === 'file' ? (
             current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
             : current.fileKind === 'image' ? <div className="term-wrap"><ImageView src={current.imageUrl ?? ''} /></div>
-            : <div className="term-wrap editor-bg"><EditorHost tab={current} /></div>
+            : /\.(md|markdown)$/i.test(current.path ?? '') ? (
+              <div className="term-wrap editor-bg md-host">
+                <div className={'md-panes mode-' + (current.mdMode ?? 'code')}>
+                  {(current.mdMode ?? 'code') !== 'preview' && <div className="md-pane" style={{ flex: current.mdMode === 'split' ? `0 0 ${splitWidth}%` : '1' }}><EditorHost tab={current} /></div>}
+                  {current.mdMode === 'split' && <Gutter axis="x" className="inner" onDrag={(d) => setSplitWidth((w) => Math.max(20, Math.min(80, w + (d / (document.querySelector('.md-panes')?.clientWidth || 1000)) * 100)))} />}
+                  {(current.mdMode ?? 'code') !== 'code' && <div className="md-pane"><MarkdownPreview path={current.path!} /></div>}
+                </div>
+                <div className="md-modes">
+                  {(['code', 'split', 'preview'] as const).map((m) => (
+                    <button key={m} className={(current.mdMode ?? 'code') === m ? 'on' : ''} title={m === 'code' ? tr('Code') : m === 'split' ? tr('Côte à côte') : tr('Rendu')} onClick={() => setMdMode(current.id, m)}>
+                      {m === 'code' ? Icons.code(13) : m === 'split' ? Icons.columns(13) : Icons.eye(13)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : <div className="term-wrap editor-bg"><EditorHost tab={current} /></div>
           ) : current ? (
             <TerminalHost key={current.id} tab={current} />
           ) : (

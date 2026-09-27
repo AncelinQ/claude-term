@@ -121,6 +121,9 @@ const EN: Record<string, string> = {
   'Recharger': 'Reload',
   'Enregistrer (⌘S)': 'Save (⌘S)',
   'Image illisible': 'Unreadable image',
+  'Code': 'Code',
+  'Côte à côte': 'Side by side',
+  'Rendu': 'Preview',
   // session block
   'Plan': 'Plan',
   'Activité': 'Activity',

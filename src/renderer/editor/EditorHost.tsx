@@ -53,6 +53,14 @@ export function setFileText(path: string, text: string) {
   }
 }
 
+/** Calls `cb` with the model text after each change (the model must exist). */
+export function subscribeFileText(path: string, cb: (text: string) => void): () => void {
+  const m = monaco.editor.getModel(monaco.Uri.file(path))
+  if (!m) return () => {}
+  const d = m.onDidChangeContent(() => cb(m.getValue()))
+  return () => d.dispose()
+}
+
 export function fileText(path: string): string | null {
   return monaco.editor.getModel(monaco.Uri.file(path))?.getValue() ?? null
 }

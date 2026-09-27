@@ -28,6 +28,8 @@ export interface Tab {
   changedOnDisk?: boolean
   imageUrl?: string
   error?: string
+  /** markdown files: code | split | preview */
+  mdMode?: 'code' | 'split' | 'preview'
 }
 
 export const isClaude = (t: Tab) => t.kind === 'claude' || t.claudeRunning
@@ -86,6 +88,7 @@ interface Workbench {
   saveCurrentFile(): Promise<void>
   saveFile(path: string): Promise<void>
   setFileDirty(path: string, dirty: boolean): void
+  setMdMode(tabId: string, mode: 'code' | 'split' | 'preview'): void
   autoSaveAll(): Promise<void>
   /** tells main which tab is in front and clears its attention */
   visibleChanged(): void
@@ -301,6 +304,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path ? (r.ok ? { ...t, dirty: false, changedOnDisk: false, error: undefined } : { ...t, error: r.error }) : t)) })) }))
     if (r.ok) ed.markSaved(path)
   },
+  setMdMode(tabId, mode) { patchTab(set, tabId, () => ({ mdMode: mode })) },
   setFileDirty(path, dirty) {
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path && t.dirty !== dirty ? { ...t, dirty } : t)) })) }))
   },
