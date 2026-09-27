@@ -7,6 +7,8 @@ import { PtyService } from './services/pty'
 import { createWindow } from './window'
 import { ClaudeData } from './services/claude-data'
 import { SessionTracker } from './services/session-tracker'
+import { ClaudeSettings } from './services/claude-settings'
+import { HookHub } from './services/hooks'
 import type { DirEntry } from '@shared/ipc'
 
 const settings = new SettingsService()
@@ -63,6 +65,16 @@ ipcMain.handle('claude:hasSessions', (_e, cwd: string) => claudeData.hasSessions
 ipcMain.handle('claude:deleteSession', (_e, s) => claudeData.deleteSession(s, (p) => shell.trashItem(p)))
 ipcMain.handle('claude:sessionDiff', (_e, { path, backupName, sessionId }) => claudeData.sessionDiff(path, backupName, sessionId))
 ipcMain.handle('claude:readText', (_e, path: string) => claudeData.readText(path))
+
+// hooks → attention, notifications, dock badge
+let visibleTab: string | null = null
+ipcMain.on('ui:visibleTab', (_e, { tabId }) => { visibleTab = tabId })
+const hooks = new HookHub(new ClaudeSettings(claudeData.settingsPath), () => trackers, send, (id) => id === visibleTab,
+  () => { const s = settings.get(); return { notifyOS: s.notifyOS, dockBadge: s.dockBadge } }, (tabId) => send('claude:focusTab', { tabId }))
+ipcMain.on('claude:clearAttention', (_e, { tabId }) => hooks.clear(tabId))
+ipcMain.on('claude:untrack', (_e, { tabId }) => hooks.clear(tabId))
+ipcMain.handle('hooks:installed', () => hooks.installed())
+ipcMain.handle('hooks:set', (_e, on: boolean) => hooks.setInstalled(on))
 
 // app
 ipcMain.handle('app:pickFolder', async () => {

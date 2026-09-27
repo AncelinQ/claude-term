@@ -23,9 +23,12 @@ export class SessionTracker {
   private planMtime = -1
   private stopped = false
 
+  get transcriptPath() { return this.transcript }
+  attachTranscript(path: string) { if (!this.transcript && existsSync(path)) { this.attach(path); this.poll() } }
+
   constructor(
     readonly tabId: string,
-    private cwd: string,
+    readonly cwd: string,
     private data: ClaudeData,
     private claimed: Set<string>,
     private emit: (tabId: string, state: SessionState, newEvents: ToolEvent[]) => void,

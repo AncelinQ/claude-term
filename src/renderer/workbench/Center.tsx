@@ -4,6 +4,13 @@ import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workben
 import { VStack, useCollapsed } from './Split'
 import { SessionBlock } from './SessionBlock'
 
+export function attentionColor(a: { kind: string }) {
+  return a.kind === 'permission' ? 'var(--ct-accent)' : a.kind === 'idle' ? 'var(--ct-badge-warn)' : 'var(--ct-badge-info)'
+}
+export function attentionLabel(a: { kind: string; message: string }) {
+  return a.kind === 'permission' ? (a.message || 'Permission en attente') : a.kind === 'idle' ? 'Claude attend une réponse' : 'Claude a terminé'
+}
+
 function tabColor(t: Tab) {
   if (!t.alive) return 'var(--ct-text-tertiary)'
   if (isClaude(t)) return 'var(--ct-accent)'
@@ -25,8 +32,9 @@ export function Center({ project }: { project: Project }) {
         <div className="tabs">
           {project.tabs.map((t) => (
             <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.busy ? t.lastCommand : t.cwd}>
-              <span style={{ color: tabColor(t), display: 'inline-flex' }}>
+              <span style={{ color: tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
                 {isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
+                {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
               </span>
               <span>{t.title}</span>
               <button className="close" onClick={(e) => { e.stopPropagation(); disposeTerminal(t.id); closeTab(project.id, t.id) }} title="Fermer (⌘W)">{Icons.x(10)}</button>

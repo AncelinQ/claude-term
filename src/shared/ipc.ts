@@ -34,6 +34,9 @@ export interface SessionState {
   runningTools: { id: string; name: string; detail: string }[]
 }
 
+/** What a Claude tab is waiting for, as reported by Claude Code hooks. */
+export interface Attention { kind: 'permission' | 'idle' | 'done'; message: string }
+
 export interface SessionInfo {
   id: string
   path: string
@@ -66,6 +69,9 @@ export interface Settings {
   rightActivity: string | null
   /** sizes (px) and collapsed flags of the workbench, by element id */
   layout: Record<string, number | boolean>
+  /** OS notifications when the tab is not visible */
+  notifyOS: boolean
+  dockBadge: boolean
   /** Windows: run claude natively or inside WSL */
   windowsMode: 'native' | 'wsl'
   wslDistro: string
@@ -83,6 +89,8 @@ export const DEFAULT_SETTINGS: Settings = {
   leftActivity: 'explorer',
   rightActivity: null,
   layout: {},
+  notifyOS: true,
+  dockBadge: true,
   windowsMode: 'native',
   wslDistro: '',
 }
@@ -125,7 +133,15 @@ export interface CtApi {
     deleteSession(s: SessionInfo): Promise<void>
     sessionDiff(path: string, backupName: string | null, sessionId: string): Promise<string>
     readText(path: string): Promise<string>
+    onAttention(cb: (u: { tabId: string; attention: Attention | null }) => void): () => void
+    clearAttention(tabId: string): void
+    /** the tab currently visible (for notification and attention decisions) */
+    visibleTab(tabId: string | null): void
+    onFocusTab(cb: (tabId: string) => void): () => void
+    hooksInstalled(): Promise<boolean>
+    setHooksInstalled(on: boolean): Promise<{ ok: boolean; error?: string }>
   }
+  setHooks(on: boolean): Promise<{ ok: boolean; error?: string }>
   app: {
     pickFolder(): Promise<string | null>
     openExternal(path: string): void

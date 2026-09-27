@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { ResolvedTheme } from '@shared/theme'
-import type { Settings, TabKind, SessionState } from '@shared/ipc'
+import type { Settings, TabKind, SessionState, Attention } from '@shared/ipc'
 
 export interface Tab {
   id: string
@@ -19,6 +19,7 @@ export interface Tab {
   claudeRunning: boolean
   /** derived Claude session state (main's SessionTracker) */
   session?: SessionState
+  attention?: Attention | null
 }
 
 export const isClaude = (t: Tab) => t.kind === 'claude' || t.claudeRunning
@@ -44,6 +45,8 @@ interface Workbench {
   lastClaudeTab: Record<string, string>
   sessionMode: 'plan' | 'activity' | 'files'
   setSessionMode(m: 'plan' | 'activity' | 'files'): void
+  showSettings: boolean
+  setShowSettings(v: boolean): void
   leftActivity: LeftActivity | null
   rightActivity: RightActivity | null
   layout: Record<string, number | boolean>
@@ -64,6 +67,9 @@ interface Workbench {
   tabExited(ptyId: string, code: number): void
   /** "start;<cmd>" | "end;<exit>" from the shell hooks (OSC 7770) */
   shellEvent(tabId: string, msg: string): void
+  clearAttention(tabId: string): void
+  /** tells main which tab is in front and clears its attention */
+  visibleChanged(): void
   setCwd(tabId: string, cwd: string): void
 }
 
@@ -79,6 +85,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
   lastClaudeTab: {},
   sessionMode: 'plan',
   setSessionMode(m) { set({ sessionMode: m }) },
+  showSettings: false,
+  setShowSettings(v) { set({ showSettings: v }) },
   leftActivity: 'explorer',
   rightActivity: null,
   layout: {},
@@ -93,7 +101,16 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set({ theme, settings, projects, activeProjectId: projects[0].id, leftActivity: settings.leftActivity as LeftActivity | null, rightActivity: settings.rightActivity as RightActivity | null, layout: settings.layout ?? {} })
     window.ct.themes.onChange((theme) => set({ theme }))
     window.ct.settings.onChange((settings) => set({ settings }))
-    window.ct.claude.onUpdate(({ tabId, state }) => patchTab(set, tabId, () => ({ session: state, title: state.title ?? undefined })))
+    window.ct.claude.onUpdate(({ tabId, state, newEvents }) => {
+      patchTab(set, tabId, () => ({ session: state, title: state.title ?? undefined }))
+      if (newEvents.length) get().clearAttention(tabId)
+    })
+    window.ct.claude.onAttention(({ tabId, attention }) => patchTab(set, tabId, () => ({ attention })))
+    window.ct.claude.onFocusTab((tabId) => {
+      const p = get().projects.find((x) => x.tabs.some((t) => t.id === tabId))
+      if (p) { set({ activeProjectId: p.id }); get().setCurrentTab(p.id, tabId) }
+    })
+    window.addEventListener('focus', () => get().visibleChanged())
   },
 
   setLeft(a) { set({ leftActivity: a }); window.ct.settings.set({ leftActivity: a }) },
@@ -130,7 +147,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     if (get().projects.length === 0) get().newProject(null)
     persistProjects(get)
   },
-  setActiveProject(id) { set({ activeProjectId: id }) },
+  setActiveProject(id) { set({ activeProjectId: id }); get().visibleChanged() },
 
   select(projectId, path, isDir) {
     const folder = isDir ? path : path.replace(/[\\/][^\\/]*$/, '')
@@ -147,6 +164,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)), lastClaudeTab: kind === 'claude' ? { ...s.lastClaudeTab, [projectId]: tab.id } : s.lastClaudeTab }))
     if (error) console.error(error)
     else if (kind === 'claude') window.ct.claude.track(tab.id, dir)
+    get().visibleChanged()
   },
   closeTab(projectId, tabId) {
     const p = get().projects.find((x) => x.id === projectId)
@@ -168,6 +186,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       const t = s.projects.find((p) => p.id === projectId)?.tabs.find((x) => x.id === tabId)
       return { projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId } : x)), lastClaudeTab: t && isClaude(t) ? { ...s.lastClaudeTab, [projectId]: tabId } : s.lastClaudeTab }
     })
+    get().visibleChanged()
   },
   tabExited(ptyId, code) {
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code, busy: false, claudeRunning: false } : t)) })) }))
@@ -192,6 +211,17 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       }
       return {}
     })
+  },
+  clearAttention(tabId) {
+    const t = get().projects.flatMap((p) => p.tabs).find((x) => x.id === tabId)
+    if (t?.attention) { patchTab(set, tabId, () => ({ attention: null })); window.ct.claude.clearAttention(tabId) }
+  },
+  visibleChanged() {
+    const s = get()
+    const p = s.projects.find((x) => x.id === s.activeProjectId)
+    const id = p?.currentTabId ?? null
+    window.ct.claude.visibleTab(id)
+    if (id && document.hasFocus()) s.clearAttention(id)
   },
   setCwd(tabId, cwd) { patchTab(set, tabId, (t) => (t.cwd === cwd ? {} : { cwd, title: name(cwd) })) },
 }))

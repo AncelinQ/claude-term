@@ -4,11 +4,12 @@ import { applyTheme } from './theme/apply'
 import { Icons } from './workbench/icons'
 import { LeftActivityBar, RightActivityBar } from './workbench/ActivityBar'
 import { LeftSidebar, RightSidebar } from './workbench/Sidebars'
-import { Center } from './workbench/Center'
+import { Center, attentionColor, attentionLabel } from './workbench/Center'
 import { Welcome } from './workbench/Welcome'
+import { SettingsPage } from './workbench/SettingsPage'
 
 export function App() {
-  const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab } = useWorkbench()
+  const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab, showSettings, setShowSettings } = useWorkbench()
   const project = useActiveProject()
   useEffect(() => { init() }, [])
   useEffect(() => { if (theme) applyTheme(theme) }, [theme])
@@ -23,6 +24,8 @@ export function App() {
       else if (e.key === 't' && e.shiftKey && p?.root) { e.preventDefault(); newTab(p.id, 'claude') }
       else if (e.key === 'w' && !e.shiftKey && p?.currentTabId) { e.preventDefault(); closeTab(p.id, p.currentTabId) }
       else if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newProject(null) }
+      else if (e.key === ',') { e.preventDefault(); const s = useWorkbench.getState(); s.setShowSettings(!s.showSettings) }
+      else if (e.key === 'w' && !e.shiftKey && useWorkbench.getState().showSettings) { e.preventDefault(); useWorkbench.getState().setShowSettings(false) }
       else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }
       else if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'scripts', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; useWorkbench.getState().setLeft(useWorkbench.getState().leftActivity === id ? null : id) }
     }
@@ -39,17 +42,19 @@ export function App() {
           <div key={p.id} className={'ptab' + (p.id === activeProjectId ? ' on' : '')} onClick={() => setActiveProject(p.id)}>
             <span style={{ display: 'inline-flex', color: p.id === activeProjectId ? 'var(--ct-accent)' : undefined }}>{Icons.folder(12)}</span>
             <span>{p.root ? p.root.split(/[\\/]/).filter(Boolean).pop() : 'Nouveau projet'}</span>
+            {p.tabs.some((t) => t.attention) && <span className="pcount attn">{p.tabs.filter((t) => t.attention).length}</span>}
+            {!p.tabs.some((t) => t.attention) && p.tabs.some((t) => t.alive && (t.busy || isClaude(t))) && <span className="pcount busy">{p.tabs.filter((t) => t.alive && (t.busy || isClaude(t))).length}</span>}
             <button className="close" onClick={(e) => { e.stopPropagation(); closeProject(p.id) }} title="Fermer le projet (⇧⌘W)">{Icons.x(10)}</button>
           </div>
         ))}
         <button className="plus" title="Nouveau projet (⌘N)" onClick={() => newProject(null)} style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 12, color: 'var(--ct-text-secondary)' }}>{Icons.plus(12)}</button>
         <span className="spacer" />
-        <button className="gear" title="Réglages (⌘,)">{Icons.gear(16)}</button>
+        <button className={'gear' + (showSettings ? ' on' : '')} title="Réglages (⌘,)" onClick={() => setShowSettings(!showSettings)}>{Icons.gear(16)}</button>
       </div>
       <div className="body">
         {project.root && <LeftActivityBar />}
         {project.root && <LeftSidebar project={project} />}
-        {project.root ? <Center project={project} /> : <Welcome project={project} />}
+        {showSettings ? <div className="center"><SettingsPage onClose={() => setShowSettings(false)} /></div> : project.root ? <Center project={project} /> : <Welcome project={project} />}
         <RightSidebar />
         <RightActivityBar />
       </div>
@@ -67,6 +72,7 @@ function StatusBar() {
     <div className="status">
       {project?.root && <span className="item">{Icons.folder(12)} {short(project.root)}</span>}
       {tab && <span className="item">{isClaude(tab) ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
+      {tab && tab.attention && <span className="badge" style={{ background: `color-mix(in srgb, ${attentionColor(tab.attention)} 20%, transparent)`, color: attentionColor(tab.attention) }}>{attentionLabel(tab.attention)}</span>}
       {tab && isClaude(tab) && tab.session?.permissionMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>{tab.session.permissionMode}</span>}
       {tab && isClaude(tab) && tab.session?.planMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>plan</span>}
       {tab && !isClaude(tab) && tab.busy && <span className="item"><span className="spin" /> <span style={{ color: 'var(--ct-text-tertiary)' }}>{tab.lastCommand}</span></span>}

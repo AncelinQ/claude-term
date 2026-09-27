@@ -96,6 +96,7 @@ input:focus { border-color: var(--ct-accent); }
 .tab:hover .close, .tab.on .close { opacity: .7; }
 .tab .close:hover { opacity: 1; background: var(--ct-hover-bg); }
 .tab .dot { width: 7px; height: 7px; border-radius: 4px; }
+.tab .attn { position: absolute; right: -4px; top: -4px; width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid var(--ct-island-bg); }
 .tabs .plus { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px; color: var(--ct-text-secondary); }
 .tabs .plus:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 
@@ -104,6 +105,9 @@ input:focus { border-color: var(--ct-accent); }
 .ptab:hover { background: var(--ct-hover-bg); }
 .ptab.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
 .ptab .close { opacity: 0; }
+.pcount { font-size: 9px; font-weight: 700; padding: 0 5px; border-radius: 7px; line-height: 14px; }
+.pcount.attn { background: var(--ct-accent-bg); color: var(--ct-accent); }
+.pcount.busy { background: color-mix(in srgb, var(--ct-badge-ok) 20%, transparent); color: var(--ct-badge-ok); }
 .ptab:hover .close, .ptab.on .close { opacity: .7; }
 
 /* terminal */
@@ -192,3 +196,20 @@ input:focus { border-color: var(--ct-accent); }
 .dl.add { background: color-mix(in srgb, var(--ct-badge-ok) 14%, transparent); color: var(--ct-badge-ok); }
 .dl.del { background: color-mix(in srgb, var(--ct-badge-error) 14%, transparent); color: var(--ct-badge-error); }
 .dl.hunk { color: var(--ct-badge-info); margin-top: 6px; }
+
+/* settings */
+.title .gear.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
+.settings-body { display: flex; height: 100%; }
+.settings-nav { width: 170px; flex: none; border-right: 1px solid var(--ct-island-border); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.settings-nav button { text-align: left; padding: 6px 10px; border-radius: 6px; color: var(--ct-text-secondary); }
+.settings-nav button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
+.settings-nav button.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
+.settings-form { flex: 1; overflow: auto; padding: 16px 24px; max-width: 760px; }
+.srow { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ct-island-border); }
+.slabel { font-weight: 600; padding-top: 3px; }
+.scontrol { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.scontrol .hint { color: var(--ct-text-secondary); font-size: 11px; line-height: 1.5; max-width: 520px; }
+.scontrol .error { color: var(--ct-badge-error); font-size: 11px; }
+.check { display: inline-flex; align-items: center; gap: 6px; }
+select { font: inherit; color: var(--ct-text); background: var(--ct-input-bg); border: 1px solid var(--ct-input-border); border-radius: 6px; padding: 4px 8px; }
+input[type=checkbox] { accent-color: var(--ct-accent); }
