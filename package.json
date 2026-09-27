@@ -8,6 +8,7 @@
   "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "dev": "electron-vite dev --watch",
+    "dev2": "electron-vite dev --watch",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
@@ -26,6 +27,7 @@
     "dompurify": "^3.4.16",
     "lucide-react": "^1.48.0",
     "marked": "^18.0.14",
+    "material-icon-theme": "^5.38.1",
     "monaco-editor": "^0.57.0",
     "node-pty": "^1.1.0",
     "react": "^19.0.0",

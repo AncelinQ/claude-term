@@ -383,3 +383,7 @@ input[type=checkbox]:disabled { opacity: .4; }
 .menu.popover { width: 360px; max-height: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .menu.popover .pv-main { max-height: 480px; }
 .menu.popover .list { padding: 4px 0; }
+
+/* file type icons (material-icon-theme) */
+.ficon { flex: none; display: block; }
+.tree .row .ficon { width: 16px; height: 16px; }

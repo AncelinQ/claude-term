@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { DirEntry } from '@shared/ipc'
 import { Icons } from './icons'
+import { FileIcon } from './FileIcon'
 import { useWorkbench, type Project } from '@/stores/workbench'
 
 /** Lazy directory tree bounded to `root`. Single click selects (sets the cwd for new tabs), double click opens. */
@@ -39,7 +40,7 @@ function DirRow({ project, entry, depth }: { project: Project; entry: DirEntry; 
         draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', entry.path); e.dataTransfer.effectAllowed = 'copy' }}
         title={entry.path}>
         <span className={'chev' + (open ? ' open' : '')} onClick={(e) => { e.stopPropagation(); setOpen(!open) }}>{Icons.chevron(10)}</span>
-        <span className="ico">{Icons.folder(14)}</span>
+        <FileIcon path={entry.path} isDir open={open} />
         <span style={{ opacity: entry.hidden ? 0.6 : 1 }}>{entry.name}</span>
       </div>
       {open && <Dir project={project} path={entry.path} depth={depth + 1} open />}
@@ -57,7 +58,7 @@ function FileRow({ project, entry, depth }: { project: Project; entry: DirEntry;
       onDoubleClick={() => openFile(project.id, entry.path)}
       draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', entry.path); e.dataTransfer.effectAllowed = 'copy' }}
       title={entry.path}>
-      <span className="ico">{Icons.file(14)}</span>
+      <FileIcon path={entry.path} />
       <span style={{ opacity: entry.hidden ? 0.6 : 1 }}>{entry.name}</span>
     </div>
   )

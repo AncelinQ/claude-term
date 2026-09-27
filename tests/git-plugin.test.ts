@@ -327,7 +327,7 @@ describe('model: group by directory', () => {
     const un = v.items.find((g: any) => g.id === 'g:untracked')
     expect(un.children.map((c: any) => c.label)).toEqual(['src', 'README.md'])
     const src = un.children[0]
-    expect(src).toMatchObject({ id: 'dir:untracked:src', icon: 'folder', checked: false, expanded: true })
+    expect(src).toMatchObject({ id: 'dir:untracked:src', folder: 'src', checked: false, expanded: true })
     expect(src.children.map((c: any) => c.label)).toEqual(['main/services', 'renderer'])
     expect(src.children[0]).toMatchObject({ id: 'dir:untracked:src/main/services' })
     expect(src.children[0].children.map((c: any) => c.id)).toEqual(['file:src/main/services/a.ts', 'file:src/main/services/b.ts'])

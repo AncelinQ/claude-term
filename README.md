@@ -30,3 +30,7 @@ Requirements on every platform: Node is not needed at runtime; `claude` must be 
 ## License
 
 PolyForm Noncommercial 1.0.0.
+
+## Third-party assets
+
+File and folder icons: [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme) (MIT).

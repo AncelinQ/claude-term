@@ -19,7 +19,7 @@ function dirTree(entries, checked, group, collapsed) {
       let label = name, child = node.dirs[name], path = prefix ? `${prefix}/${name}` : name
       while (child.files.length === 0 && Object.keys(child.dirs).length === 1) { const only = Object.keys(child.dirs)[0]; label += '/' + only; path += '/' + only; child = child.dirs[only] }
       const id = `dir:${group}:${path}`
-      items.push({ id, label, icon: 'folder', color: 'accent', expanded: !collapsed[id], checked: false, children: build(child, path) })
+      items.push({ id, label, folder: path, expanded: !collapsed[id], checked: false, children: build(child, path) })
     }
     for (const e of node.files) items.push({ ...fileItem(e, checked, group), label: e.path.split('/').pop(), detail: '' })
     return items

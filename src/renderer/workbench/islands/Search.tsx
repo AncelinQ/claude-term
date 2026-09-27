@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icons } from '../icons'
+import { FileIcon } from '../FileIcon'
 import { Island, Empty } from '../Island'
 import { useWorkbench, type Project } from '@/stores/workbench'
 import { t } from '@/i18n'
@@ -33,7 +34,7 @@ export function SearchIsland({ project }: { project: Project }) {
       <div className="results">
         {results.map((r, i) => (
           <div key={r} className={'frow' + (i === sel ? ' sel' : '')} onClick={() => setSel(i)} onDoubleClick={() => open(r)} title={r}>
-            <span className="ico">{Icons.file(12)}</span>
+            <FileIcon path={r} size={14} />
             <span className="name">{r.split('/').pop()}</span>
             <span className="rel">{r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : ''}</span>
           </div>

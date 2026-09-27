@@ -31,8 +31,10 @@ export interface ViewItem {
   /** right-aligned text (e.g. "↑26") */
   extra?: string
   icon?: string
-  /** a file path: the icon becomes a colored extension chip */
+  /** a file path: shown with the file-type icon */
   file?: string
+  /** a folder path: shown with the folder icon (open/closed follows the node) */
+  folder?: string
   /** icon color: a token name (accent, badge.ok…) or a hex */
   color?: string
   badges?: string[]

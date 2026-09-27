@@ -7,6 +7,7 @@ import { diffStats } from '@shared/claude-format'
 import { useWorkbench, sessionTab, type Project, type Tab } from '@/stores/workbench'
 import { usePlugins } from '@/stores/plugins'
 import { PluginViewBody } from './PluginView'
+import { FileIcon } from './FileIcon'
 import { Gutter, useStoredSize } from './Split'
 import { t } from '@/i18n'
 
@@ -168,7 +169,7 @@ function FilesView({ tab }: { tab: Tab }) {
       <div className="files-list" style={{ width: listWidth }}>
         {rows.map((p) => (
           <div key={p} className={'frow' + (p === current ? ' sel' : '')} onClick={() => setSelected(p)} onDoubleClick={() => openFile(projectId, p)} title={p}>
-            <span className="ico" style={{ color: isModified(p) ? 'var(--ct-accent)' : 'var(--ct-text-tertiary)' }}>{isModified(p) ? Icons.file(12) : Icons.file(12)}</span>
+            <FileIcon path={p} size={14} />
             <span className="name">{p.split(/[\\/]/).pop()}</span>
             <span className="rel">{short(p).replace(/[^/]*$/, '')}</span>
             {stats[p] && <span className="stat"><b className="add">+{stats[p][0]}</b> <b className="del">−{stats[p][1]}</b></span>}

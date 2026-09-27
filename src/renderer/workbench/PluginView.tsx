@@ -4,6 +4,7 @@ import { FILE_COLORS } from '@shared/plugins'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { Icons } from './icons'
+import { FileIcon } from './FileIcon'
 import { Island, Empty } from './Island'
 import { ContextMenu, type MenuItem } from './Menu'
 import { usePlugins } from '@/stores/plugins'
@@ -122,12 +123,12 @@ function Node({ item, depth, tree, send, onMenu }: { item: ViewItem; depth: numb
   useEffect(() => { if (cbRef.current) cbRef.current.indeterminate = cs === 'mixed' }, [cs])
   return (
     <>
-      <div className={'lrow pv-row' + (hasChildren ? ' group' : '') + (item.muted ? ' muted' : '')} style={{ paddingLeft: 8 + depth * 20 }}
+      <div className={'lrow pv-row' + (hasChildren && !item.folder ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '')} style={{ paddingLeft: 8 + depth * 20 }}
         onClick={() => (hasChildren ? setOpen(!open) : send('select', { itemId: item.id }))} onDoubleClick={() => !hasChildren && send('open', { itemId: item.id })}
         onContextMenu={(e) => item.contextMenu?.length && onMenu(e, item)} title={item.detail}>
         {hasChildren ? <span className={'chev' + (open ? ' open' : '')}>{Icons.chevron(10)}</span> : tree ? <span className="chev placeholder" /> : null}
         {cs !== undefined && <input ref={cbRef} type="checkbox" className="pv-check" checked={cs === true} onClick={(e) => e.stopPropagation()} onChange={(e) => send('check', { itemId: item.id, value: e.target.checked })} />}
-        {!hasChildren && (item.file ? <FileChip path={item.file} /> : <span className="ico" style={{ color: colorOf(item.color) }}>{icon(item.icon)}</span>)}
+        {item.folder ? <FileIcon path={item.folder} isDir open={open} size={16} /> : !hasChildren && (item.file ? <FileIcon path={item.file} size={16} /> : <span className="ico" style={{ color: colorOf(item.color) }}>{icon(item.icon)}</span>)}
         <span className="pv-label"><span className="name">{item.label}</span>{item.detail && <span className="pv-detail-inline">{item.detail}</span>}{item.badges?.map((b) => <span key={b} className="badge dim">{b}</span>)}</span>
         {item.extra && <span className="pv-extra">{item.extra}</span>}
         {item.actions?.length ? (

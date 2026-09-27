@@ -1,6 +1,11 @@
 /** ClaudeTerm plugin API (phase 5.0). A plugin is a folder with plugin.json and main.js exporting activate(ctx). */
 export interface ViewAction { id: string; title: string; icon?: string; primary?: boolean }
-export interface ViewItem { id: string; label: string; detail?: string; icon?: string; badges?: string[]; actions?: ViewAction[]; children?: ViewItem[]; expanded?: boolean }
+export interface ViewItem {
+  id: string; label: string; detail?: string; extra?: string; icon?: string; color?: string
+  /** file path → file-type icon; folder path → folder icon */
+  file?: string; folder?: string
+  badges?: string[]; actions?: ViewAction[]; contextMenu?: (ViewAction | 'sep')[]; children?: ViewItem[]; expanded?: boolean; checked?: boolean; muted?: boolean
+}
 export type ViewModel =
   | { kind: 'empty'; text: string }
   | { kind: 'list'; items: ViewItem[]; toolbar?: ViewAction[] }
