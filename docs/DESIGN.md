@@ -98,7 +98,8 @@ Center tab (⌘,), sections + search: Général, Apparence, Éditeur, Terminal, 
 (`~/.claude/settings.json` form), Notifications, Plugins, Raccourcis, **Windows** (`claude`
 location: native or WSL distro; in WSL mode the pty runs `wsl.exe -d <distro>` and `~/.claude`
 is read through `\\wsl$\<distro>\home\<user>\.claude`).
-Stored in `userData/settings.json`; plugins declare a schema (`contributes.settings`) and the form
+Stored in `userData/settings.json` (which also keeps the workbench `layout`: sidebar widths, island
+heights, collapsed states, so the app reopens as it was left); plugins declare a schema (`contributes.settings`) and the form
 is generated.
 
 ## 7. Plugins
