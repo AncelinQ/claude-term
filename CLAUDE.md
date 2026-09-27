@@ -6,8 +6,11 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
 - Run: `npm run dev` (electron-vite --watch: HMR for the renderer, main/preload rebuilt and Electron restarted on change). Build: `npm run build`.
   Typecheck: `npm run typecheck`. Tests: `npm test` (vitest, `tests/`). Run all three before a commit.
 - Tests cover `src/shared` (pure) and the main services that touch files: `ClaudeSettings`, `ClaudeData`,
-  `SessionTracker` (temp dirs via `tests/helpers.ts`). Add a test whenever these change; renderer
-  components are checked by hand in `npm run dev`.
+  `SessionTracker` (temp dirs via `tests/helpers.ts`). Add a test whenever these change.
+- UI checks without the user: the dev app exposes CDP on port 9333; `npx tsx scripts/ui.ts` drives it
+  (Playwright over CDP): `shot <name>` (screenshot in `scratch/`, then Read it), `click "<selector>"`,
+  `type`, `key`, `text`, `eval`, `state` (store dump via `window.__ct_state`), chained with `--`.
+  Use it after every visible change instead of asking for a screenshot.
 - Layout: `src/main` (services + IPC, Node), `src/preload` (contextBridge → `window.ct`, typed by
   `src/shared/ipc.ts`), `src/renderer` (React, zustand store in `stores/workbench.ts`),
   `src/shared` (pure code, tested). No Node in the renderer; every capability goes through `window.ct`.

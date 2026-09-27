@@ -11,6 +11,9 @@ import { ClaudeSettings } from './services/claude-settings'
 import { HookHub } from './services/hooks'
 import type { DirEntry } from '@shared/ipc'
 
+// dev: Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts)
+if (!app.isPackaged) app.commandLine.appendSwitch('remote-debugging-port', process.env.CT_CDP_PORT || '9333')
+
 const settings = new SettingsService()
 const builtinThemes = app.isPackaged ? join(process.resourcesPath, 'themes') : join(app.getAppPath(), 'resources', 'themes')
 const themes = new ThemeService(settings, builtinThemes)
