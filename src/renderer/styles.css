@@ -204,7 +204,9 @@ input:focus { border-color: var(--ct-accent); }
 
 /* settings */
 .title .gear.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
-.island > .content.settings-body { display: flex; flex-direction: row; height: 100%; }
+.island > .content.settings-body { display: flex; flex-direction: row; height: 100%; overflow: hidden; }
+.island > .content.settings-body > .settings-nav { flex: none; }
+.island > .content.settings-body > .settings-form { flex: 1 1 0; min-width: 0; overflow: auto; }
 .settings-nav { width: 170px; flex: none; border-right: 1px solid var(--ct-island-border); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .settings-nav button { text-align: left; padding: 6px 10px; border-radius: 6px; color: var(--ct-text-secondary); }
 .settings-nav button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
