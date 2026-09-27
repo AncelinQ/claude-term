@@ -59,11 +59,6 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
               <Row label={t('Enregistrement automatique')} hint={t('Écrit le fichier après une pause de frappe. Désactivé, ⌘S enregistre. Un fichier modifié sur le disque entre-temps n\'est jamais écrasé automatiquement.')}>
                 <label className="check"><input type="checkbox" checked={settings.autoSave} onChange={(e) => set({ autoSave: e.target.checked })} /> {t('Activer')}</label>
               </Row>
-              {settings.autoSave && (
-                <Row label={t('Délai')}>
-                  <span className="unit-row"><input type="number" min={300} max={10000} step={100} value={settings.autoSaveDelay} onChange={(e) => set({ autoSaveDelay: Math.max(300, Math.min(10000, +e.target.value || 1000)) })} style={{ width: 80 }} /><span className="unit">ms</span></span>
-                </Row>
-              )}
               <Row label={t('Police')} hint={t('Vide = police mono par défaut (JetBrains Mono, SF Mono, Menlo, Consolas…).')}>
                 <input value={settings.editorFontFamily} placeholder={t('par défaut')} onChange={(e) => set({ editorFontFamily: e.target.value })} style={{ width: 220 }} />
               </Row>

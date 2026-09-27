@@ -86,6 +86,7 @@ interface Workbench {
   saveCurrentFile(): Promise<void>
   saveFile(path: string): Promise<void>
   setFileDirty(path: string, dirty: boolean): void
+  autoSaveAll(): Promise<void>
   /** tells main which tab is in front and clears its attention */
   visibleChanged(): void
   setCwd(tabId: string, cwd: string): void
@@ -129,6 +130,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       if (p) { set({ activeProjectId: p.id }); get().setCurrentTab(p.id, tabId) }
     })
     window.addEventListener('focus', () => get().visibleChanged())
+    window.addEventListener('blur', () => get().autoSaveAll())
     window.ct.fs.onChanged((path) => {
       const tabs = get().projects.flatMap((p) => p.tabs).filter((t) => t.kind === 'file' && t.path === path)
       if (!tabs.length) return
@@ -233,6 +235,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     }
   },
   setCurrentTab(projectId, tabId) {
+    get().autoSaveAll()
     set((s) => {
       const t = s.projects.find((p) => p.id === projectId)?.tabs.find((x) => x.id === tabId)
       return { projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId } : x)), lastClaudeTab: t && isClaude(t) ? { ...s.lastClaudeTab, [projectId]: tabId } : s.lastClaudeTab }
@@ -300,15 +303,12 @@ export const useWorkbench = create<Workbench>((set, get) => ({
   },
   setFileDirty(path, dirty) {
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path && t.dirty !== dirty ? { ...t, dirty } : t)) })) }))
-    // auto save after a pause in typing (never over a file that changed on disk meanwhile)
-    clearTimeout(autoSaveTimers.get(path))
-    const st = get().settings
-    if (dirty && st?.autoSave) {
-      autoSaveTimers.set(path, setTimeout(() => {
-        const t = get().projects.flatMap((p) => p.tabs).find((x) => x.kind === 'file' && x.path === path)
-        if (t?.dirty && !t.changedOnDisk) get().saveFile(path)
-      }, Math.max(300, st.autoSaveDelay || 1000)))
-    }
+  },
+  /** auto save on focus loss: every dirty file, never over one that changed on disk meanwhile */
+  async autoSaveAll() {
+    if (!get().settings?.autoSave) return
+    const dirty = get().projects.flatMap((p) => p.tabs).filter((t) => t.kind === 'file' && t.dirty && !t.changedOnDisk && t.path)
+    for (const t of dirty) await get().saveFile(t.path!)
   },
   clearAttention(tabId) {
     const t = get().projects.flatMap((p) => p.tabs).find((x) => x.id === tabId)
@@ -331,8 +331,6 @@ function projectOf(s: Workbench, tabId: string): string {
 function patchTab(set: (fn: (s: Workbench) => Partial<Workbench>) => void, tabId: string, patch: (t: Tab) => Partial<Tab>) {
   set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.id === tabId ? { ...t, ...patch(t) } : t)) })) }))
 }
-
-const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 let layoutTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleLayoutSave(get: () => Workbench) {

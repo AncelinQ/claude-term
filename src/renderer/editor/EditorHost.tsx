@@ -26,6 +26,7 @@ function ensureEditor(s: Parameters<typeof editorOptions>[0]) {
     scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }, fixedOverflowWidgets: true,
   })
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => useWorkbench.getState().saveCurrentFile())
+  editor.onDidBlurEditorWidget(() => useWorkbench.getState().autoSaveAll())
   editor.onDidChangeModelContent(() => {
     const m = editor!.getModel()
     if (!m) return

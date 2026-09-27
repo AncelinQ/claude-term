@@ -107,9 +107,8 @@ export interface Settings {
   editorLineHeight: number
   editorWordWrap: boolean
   editorMinimap: boolean
-  /** editor: write the file after a pause in typing (ms), 0 = off */
+  /** editor: save dirty files when the editor loses focus (tab switch, window blur) */
   autoSave: boolean
-  autoSaveDelay: number
   openProjects: string[]
   recentProjects: string[]
   leftActivity: string | null
@@ -138,7 +137,6 @@ export const DEFAULT_SETTINGS: Settings = {
   editorWordWrap: false,
   editorMinimap: false,
   autoSave: true,
-  autoSaveDelay: 1000,
   openProjects: [],
   recentProjects: [],
   leftActivity: 'explorer',
