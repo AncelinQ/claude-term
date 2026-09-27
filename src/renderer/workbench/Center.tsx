@@ -18,6 +18,34 @@ export function attentionLabel(a: { kind: string; message: string }) {
   return a.kind === 'permission' ? (a.message || tr('Permission en attente')) : a.kind === 'idle' ? tr('Claude attend une réponse') : tr('Claude a terminé')
 }
 
+/** Compact state of the current tab, in the island header: attention, plan/permission, running command, tokens, file state. */
+function TabStatus({ tab }: { tab: Tab }) {
+  const { reloadFile, saveFile } = useWorkbench()
+  const badge = (text: string, color: string) => <span className="badge" style={{ background: `color-mix(in srgb, ${color} 20%, transparent)`, color }}>{text}</span>
+  if (tab.kind === 'file') {
+    return (
+      <span className="tstatus">
+        {tab.error && <span style={{ color: 'var(--ct-badge-error)' }}>{tab.error}</span>}
+        {tab.changedOnDisk && <span className="item">{badge(tr('modifié sur le disque'), 'var(--ct-badge-warn)')}<button className="linkbtn" onClick={() => reloadFile(tab.path!)}>{tr('Recharger')}</button></span>}
+        {tab.dirty && !tab.changedOnDisk && <button className="linkbtn" onClick={() => saveFile(tab.path!)}>{tr('Enregistrer (⌘S)')}</button>}
+      </span>
+    )
+  }
+  const s = tab.session
+  return (
+    <span className="tstatus">
+      {tab.attention && badge(attentionLabel(tab.attention), attentionColor(tab.attention))}
+      {isClaude(tab) && s?.permissionMode && badge(s.permissionMode, 'var(--ct-accent)')}
+      {isClaude(tab) && s?.planMode && badge(tr('plan'), 'var(--ct-accent)')}
+      {isClaude(tab) && s && (s.runningTools.length > 0 ? <span className="item"><span className="spin" /><span className="cmd">{s.runningTools.map((r) => r.name).join(', ')}</span></span> : null)}
+      {isClaude(tab) && s && <span className="item">{s.inputTokens.toLocaleString()} ↓ {s.outputTokens.toLocaleString()} ↑</span>}
+      {!isClaude(tab) && tab.busy && <span className="item"><span className="spin" /><span className="cmd">{tab.lastCommand}</span></span>}
+      {!isClaude(tab) && !tab.busy && tab.lastExit !== null && <span className="item">{badge(tab.lastExit === 0 ? 'ok' : 'exit ' + tab.lastExit, tab.lastExit === 0 ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)')}<span className="cmd">{tab.lastCommand}</span></span>}
+      {!tab.alive && badge(tr('terminé'), 'var(--ct-badge-error)')}
+    </span>
+  )
+}
+
 function tabColor(t: Tab) {
   if (!t.alive) return 'var(--ct-text-tertiary)'
   if (isClaude(t)) return 'var(--ct-accent)'
@@ -62,12 +90,14 @@ export function Center({ project }: { project: Project }) {
                 </div>
               ))}
             </div>}
-          actions={
+          actions={<>
+            {current && <TabStatus tab={current} />}
             <MenuButton title={tr('Nouvel onglet')} items={[
               { label: tr('Claude'), icon: <span style={{ color: 'var(--ct-accent)', display: 'inline-flex' }}>{Icons.sparkle(13)}</span>, shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
               { label: tr('Shell'), icon: Icons.terminal(13), shortcut: '⌘T', onSelect: () => newTab(project.id, 'shell') },
               ...(window.ct.platform === 'darwin' ? ['sep' as const, { label: tr("Capture d'écran → prompt"), icon: Icons.camera(13), shortcut: '⌥⌘S', onSelect: () => useWorkbench.getState().captureScreen(project.id) }] : []),
-            ]}>{Icons.plus()}</MenuButton>}>
+            ]}>{Icons.plus()}</MenuButton>
+          </>}>
           {current && current.kind === 'file' ? (
             current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
             : current.fileKind === 'image' ? <div className="term-wrap"><ImageView src={current.imageUrl ?? ''} /></div>

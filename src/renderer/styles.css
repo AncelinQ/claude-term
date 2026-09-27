@@ -25,7 +25,7 @@ input:focus { border-color: var(--ct-accent); }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* window */
-.wb { display: grid; grid-template-rows: var(--ct-title-h) 1fr var(--ct-status-h); grid-template-columns: minmax(0, 1fr); height: 100%; width: 100%; }
+.wb { display: grid; grid-template-rows: var(--ct-title-h) 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; width: 100%; }
 .title { display: flex; align-items: center; justify-content: center; padding: 0 8px; -webkit-app-region: drag; background: var(--ct-activity-bg); }
 .title.mac { padding-left: 84px; }
 .title.win { padding-right: 140px; }
@@ -36,9 +36,6 @@ input:focus { border-color: var(--ct-accent); }
 .body > .activity.right { width: var(--ct-activity2-w); flex: none; }
 .body > .sidebar { flex: none; }
 .body > .center { flex: 1; min-width: 0; }
-.status { display: flex; align-items: center; gap: 12px; padding: 0 12px; background: var(--ct-status-bg); color: var(--ct-status-fg); font-size: 11px; white-space: nowrap; overflow: hidden; }
-.status .spacer { flex: 1; }
-.status .item { display: inline-flex; align-items: center; gap: 5px; }
 
 /* activity bars */
 .activity { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; background: var(--ct-activity-bg); }
@@ -327,3 +324,8 @@ input[type=checkbox]:disabled { opacity: .4; }
 .md-modes button { width: 24px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: var(--ct-text-secondary); }
 .md-modes button:hover { color: var(--ct-text); background: var(--ct-hover-bg); }
 .md-modes button.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
+
+/* tab status in the center island header */
+.tstatus { display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ct-text-secondary); white-space: nowrap; }
+.tstatus .item { display: inline-flex; align-items: center; gap: 5px; }
+.tstatus .cmd { max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: var(--ct-text-tertiary); }

@@ -56,8 +56,6 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
 │t │ island: links  │──────────────────────────────────│              │t│
 │  │                │ session block (plan/activity/    │              │ │
 │  │                │ files), collapsible              │              │ │
-├──┴────────────────┴──────────────────────────────────┴──────────────┴─┤
-│ status bar                                                            │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -77,7 +75,9 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
   project: always visible and usable, welcome screen included.
 - **Center**: tab bar (terminal + editor tabs interleaved), terminal/editor on top, session
   block below.
-- **Status bar**: full width; core items + plugin items.
+- **No status bar** (removed 2026-09-27): the current tab's state (attention, plan / permission
+  mode, running command or exit code, tokens, unsaved file) sits in the center island header, right
+  of the tabs. Plugin status items will go there too.
 - **Welcome screen** (project without a folder): "Open a folder…" and the **recent projects** list
   (name, path, Claude sessions badge), one click opens. On first launch the recents of the Swift v1
   are imported from its preferences (macOS only).

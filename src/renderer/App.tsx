@@ -4,7 +4,7 @@ import { applyTheme } from './theme/apply'
 import { Icons } from './workbench/icons'
 import { LeftActivityBar, RightActivityBar } from './workbench/ActivityBar'
 import { LeftSidebar, RightSidebar } from './workbench/Sidebars'
-import { Center, attentionColor, attentionLabel } from './workbench/Center'
+import { Center } from './workbench/Center'
 import { Welcome } from './workbench/Welcome'
 import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
@@ -75,55 +75,11 @@ export function App() {
         <RightSidebar />
         <RightActivityBar />
       </div>
-      <StatusBar />
       {showSettings && (
         <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>
           <div className="modal"><SettingsPage onClose={() => setShowSettings(false)} /></div>
         </div>
       )}
-    </div>
-  )
-}
-
-function FileStatus({ tab }: { tab: import('./stores/workbench').Tab }) {
-  const reload = useWorkbench((s) => s.reloadFile)
-  const save = useWorkbench((s) => s.saveCurrentFile)
-  const home = window.ct.home
-  const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
-  return (
-    <>
-      <span className="item">{Icons.file(12)} {short(tab.path!)}</span>
-      {tab.dirty && <span className="badge" style={{ background: 'var(--ct-tab-active-bg)', color: 'var(--ct-text)' }}>{t('modifié')}</span>}
-      {tab.changedOnDisk && <span className="item"><span className="badge" style={{ background: 'color-mix(in srgb, var(--ct-badge-warn) 20%, transparent)', color: 'var(--ct-badge-warn)' }}>{t('modifié sur le disque')}</span><button className="linkbtn" onClick={() => reload(tab.path!)}>{t('Recharger')}</button></span>}
-      {tab.error && <span className="item" style={{ color: 'var(--ct-badge-error)' }}>{tab.error}</span>}
-      {tab.dirty && <button className="linkbtn" onClick={() => save()}>{t('Enregistrer (⌘S)')}</button>}
-    </>
-  )
-}
-
-function StatusBar() {
-  const project = useActiveProject()
-  const tab = project?.tabs.find((t) => t.id === project.currentTabId)
-  const home = window.ct.home
-  const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
-  return (
-    <div className="status">
-      {project?.root && <span className="item">{Icons.folder(12)} {short(project.root)}</span>}
-      {tab && tab.kind === 'file' && <FileStatus tab={tab} />}
-      {tab && tab.kind !== 'file' && <span className="item">{isClaude(tab) ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
-      {tab && tab.attention && <span className="badge" style={{ background: `color-mix(in srgb, ${attentionColor(tab.attention)} 20%, transparent)`, color: attentionColor(tab.attention) }}>{attentionLabel(tab.attention)}</span>}
-      {tab && isClaude(tab) && tab.session?.permissionMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>{tab.session.permissionMode}</span>}
-      {tab && isClaude(tab) && tab.session?.planMode && <span className="badge" style={{ background: 'var(--ct-accent-bg)', color: 'var(--ct-accent)' }}>{t('plan')}</span>}
-      {tab && !isClaude(tab) && tab.busy && <span className="item"><span className="spin" /> <span style={{ color: 'var(--ct-text-tertiary)' }}>{tab.lastCommand}</span></span>}
-      {tab && !isClaude(tab) && !tab.busy && tab.lastExit !== null && (
-        <span className="item">
-          <span className="badge" style={{ background: tab.lastExit === 0 ? 'color-mix(in srgb, var(--ct-badge-ok) 20%, transparent)' : 'color-mix(in srgb, var(--ct-badge-error) 20%, transparent)', color: tab.lastExit === 0 ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }}>{tab.lastExit === 0 ? 'ok' : 'exit ' + tab.lastExit}</span>
-          <span style={{ color: 'var(--ct-text-tertiary)' }}>{tab.lastCommand}</span>
-        </span>
-      )}
-      <span className="spacer" />
-      {tab && isClaude(tab) && tab.session && <span className="item muted">{tab.session.inputTokens.toLocaleString()} ↓ {tab.session.outputTokens.toLocaleString()} ↑</span>}
-      {tab && tab.kind !== 'file' && <span className="item"><span className="dot" style={{ width: 7, height: 7, borderRadius: 4, background: tab.alive ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }} /> {tab.alive ? t('actif') : t('terminé')}</span>}
     </div>
   )
 }
