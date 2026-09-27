@@ -213,11 +213,22 @@ input:focus { border-color: var(--ct-accent); }
 .settings-nav button.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
 .settings-form { flex: 1; min-width: 0; overflow: auto; padding: 16px 24px; }
 .settings-form .srow { max-width: 720px; }
-.srow { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ct-island-border); }
-.slabel { font-weight: 600; padding-top: 3px; }
-.scontrol { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.scontrol .hint { color: var(--ct-text-secondary); font-size: 11px; line-height: 1.5; max-width: 520px; }
-.scontrol .error { color: var(--ct-badge-error); font-size: 11px; }
+.sgroup { margin-bottom: 18px; }
+.sgroup-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ct-text-secondary); margin: 0 0 6px 2px; }
+.sgroup-body { background: var(--ct-window-bg); border: 1px solid var(--ct-island-border); border-radius: 8px; }
+.srow { display: flex; align-items: center; gap: 16px; padding: 10px 14px; border-bottom: 1px solid var(--ct-island-border); }
+.srow:last-child { border-bottom: 0; }
+.slabel { flex: 1; min-width: 0; }
+.slabel .hint { color: var(--ct-text-secondary); font-size: 11px; line-height: 1.45; margin-top: 2px; }
+.scontrol { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.scontrol .error { color: var(--ct-badge-error); font-size: 11px; max-width: 260px; text-align: right; }
+.scontrol input[type=number] { width: 64px; text-align: right; }
+.scontrol select { min-width: 160px; }
+.toggle { width: 34px; height: 20px; border-radius: 10px; background: var(--ct-selection-bg); border: 1px solid var(--ct-input-border); position: relative; transition: background .15s; }
+.toggle span { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 7px; background: var(--ct-text-secondary); transition: transform .15s, background .15s; }
+.toggle.on { background: var(--ct-accent); border-color: var(--ct-accent); }
+.toggle.on span { transform: translateX(14px); background: #fff; }
+.toggle:disabled { opacity: .4; }
 .check { display: inline-flex; align-items: center; gap: 6px; }
 select { font: inherit; color: var(--ct-text); background: var(--ct-input-bg); border: 1px solid var(--ct-input-border); border-radius: 6px; padding: 4px 8px; }
 input[type=checkbox] { appearance: none; width: 15px; height: 15px; margin: 0; padding: 0; border: 1px solid var(--ct-input-border); border-radius: 4px; background: var(--ct-input-bg); display: inline-grid; place-items: center; cursor: default; vertical-align: middle; }
