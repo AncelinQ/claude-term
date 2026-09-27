@@ -27,7 +27,7 @@
     "activityBar.foreground": "#2b2c33",
     "activityBar.inactiveForeground": "#8c8e99",
     "activityBar.activeBorder": "#e5731a",
-    "tab.activeBackground": "#e1e1e8",
+    "tab.activeBackground": "#d6d6df",
     "tab.activeForeground": "#1f2027",
     "tab.inactiveForeground": "#6b6d78",
     "statusBar.background": "#ebebf0",

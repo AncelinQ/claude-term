@@ -88,10 +88,10 @@ input:focus { border-color: var(--ct-accent); }
 /* tabs */
 .tabs { display: flex; align-items: center; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; margin-left: -4px; font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 12px; }
 .tabs::-webkit-scrollbar { height: 0; }
-.tab { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 5px 0 9px; border-radius: 12px; color: var(--ct-tab-fg); white-space: nowrap; flex: none; }
+.tab { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 5px 0 8px; border-radius: 5px; color: var(--ct-tab-fg); white-space: nowrap; flex: none; }
 .tab:hover { background: var(--ct-hover-bg); }
 .tab.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
-.tab .close { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 8px; opacity: 0; }
+.tab .close { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 4px; opacity: 0; }
 .tab:hover .close, .tab.on .close { opacity: .7; }
 .tab .close:hover { opacity: 1; background: var(--ct-hover-bg); }
 .tab .dot { width: 7px; height: 7px; border-radius: 4px; }
@@ -142,7 +142,7 @@ input:focus { border-color: var(--ct-accent); }
 
 /* session block */
 .island > .hdr .modes { display: inline-flex; gap: 2px; margin-left: -4px; }
-.island > .hdr .mode { height: 20px; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border-radius: 5px; color: var(--ct-text-secondary); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .02em; width: auto; }
+.island > .hdr .mode { height: 22px; display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; border-radius: 5px; color: var(--ct-text-secondary); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .02em; width: auto; }
 .island > .hdr .mode:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 .island > .hdr .mode.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
 .island > .hdr .mode .live { width: 6px; height: 6px; border-radius: 3px; background: var(--ct-accent); }
