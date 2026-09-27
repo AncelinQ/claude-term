@@ -317,3 +317,34 @@ describe('model and parsers: remaining branches', () => {
     t.dispose()
   })
 })
+
+describe('model: group by directory', () => {
+  it('builds a compacted directory tree, checks whole directories, toggles and persists the mode', () => {
+    const { t, r } = repo()
+    for (const f of ['src/main/services/a.ts', 'src/main/services/b.ts', 'src/renderer/c.tsx', 'README.md']) t.write('work/' + f, 'x')
+    let s = { ...stateOf(r), groupByDir: true }
+    const v = M.changesView(s)
+    const un = v.items.find((g: any) => g.id === 'g:untracked')
+    expect(un.children.map((c: any) => c.label)).toEqual(['src', 'README.md'])
+    const src = un.children[0]
+    expect(src).toMatchObject({ id: 'dir:untracked:src', icon: 'folder', checked: false, expanded: true })
+    expect(src.children.map((c: any) => c.label)).toEqual(['main/services', 'renderer'])
+    expect(src.children[0]).toMatchObject({ id: 'dir:untracked:src/main/services' })
+    expect(src.children[0].children.map((c: any) => c.id)).toEqual(['file:src/main/services/a.ts', 'file:src/main/services/b.ts'])
+    expect(src.children[0].children[0].detail).toBe('')
+    // collapsed directory nodes
+    expect(M.changesView({ ...s, collapsed: { 'dir:untracked:src': true } }).items.find((g: any) => g.id === 'g:untracked').children[0].expanded).toBe(false)
+    // checking a directory checks every file under it; checking the group checks all
+    s = M.reduce(s, { viewId: 'v', type: 'check', itemId: 'dir:untracked:src/main/services', value: true }).state
+    expect(M.checkedPaths(s).sort()).toEqual(['src/main/services/a.ts', 'src/main/services/b.ts'])
+    s = M.reduce(s, { viewId: 'v', type: 'check', itemId: 'dir:untracked:src', value: false }).state
+    expect(M.checkedPaths(s)).toEqual([])
+    // toggle → persist effect, toolbar title follows
+    const res = M.reduce(s, { viewId: 'v', type: 'toolbar', actionId: 'groupDirs' })
+    expect(res.state.groupByDir).toBe(false); expect(res.effects).toEqual([{ type: 'persist', key: 'groupByDir', value: false }])
+    expect(M.changesView(res.state).toolbar.find((a: any) => a.id === 'groupDirs')).toMatchObject({ title: 'Grouper par dossier', icon: 'folder' })
+    expect(M.changesView(s).toolbar.find((a: any) => a.id === 'groupDirs')).toMatchObject({ title: 'Liste à plat', icon: 'list' })
+    expect(M.dirTree([], {}, 'changes', {})).toEqual([])
+    t.dispose()
+  })
+})

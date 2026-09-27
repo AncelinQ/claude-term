@@ -4,7 +4,7 @@ const M = require('./model')
 
 exports.activate = (ctx) => {
   const changes = ctx.ui.view('changes'), branches = ctx.ui.view('branches'), commits = ctx.ui.view('commits')
-  let s = M.initialState(), popover = null, unwatch = [], timer = null
+  let s = { ...M.initialState(), groupByDir: !!ctx.storage.get('groupByDir') }, popover = null, unwatch = [], timer = null
   const git = (args) => ctx.process.exec('git', args, { cwd: s.root || ctx.workspace.project || undefined })
   const q = (x) => "'" + String(x).replace(/'/g, "'\\''") + "'"
   const render = () => { changes.set(M.changesView(s)); branches.set(M.branchesView(s)); commits.set(M.commitsView(s)) }
@@ -23,6 +23,7 @@ exports.activate = (ctx) => {
   async function effect(f) {
     if (f.type === 'run') return ctx.terminal.run({ cwd: s.root, command: 'git ' + f.args.map(q).join(' '), tab: 'reuse' })
     if (f.type === 'refresh') return refresh()
+    if (f.type === 'persist') return ctx.storage.set(f.key, f.value)
     if (f.type === 'notify') return ctx.ui.notify(f.title, f.body)
     if (f.type === 'copy') return ctx.ui.notify('Git', f.text)
     if (f.type === 'openFile') return ctx.workspace.openFile(s.root + '/' + f.path)
@@ -44,7 +45,7 @@ exports.activate = (ctx) => {
   async function dispatch(e) {
     const { state, effects } = M.reduce(s, e)
     s = state
-    if (e.type === 'check' || e.type === 'input' || (e.type === 'toolbar' && e.actionId === 'toggleAll')) changes.set(M.changesView(s))
+    if (e.type === 'check' || e.type === 'input' || (e.type === 'toolbar' && (e.actionId === 'toggleAll' || e.actionId === 'groupDirs'))) changes.set(M.changesView(s))
     if (e.type === 'button') render()
     for (const f of effects) await effect(f)
   }
@@ -56,7 +57,7 @@ exports.activate = (ctx) => {
     const bump = () => { clearTimeout(timer); timer = setTimeout(refresh, 500) }
     for (const p of [s.root, s.root + '/.git', s.root + '/.git/refs/heads']) if (ctx.workspace.fs.exists(p)) unwatch.push(ctx.workspace.fs.watch(p, bump))
   }
-  ctx.workspace.onDidChangeProject(async () => { s = M.initialState(); await refresh(); watchRepo() })
+  ctx.workspace.onDidChangeProject(async () => { s = { ...M.initialState(), groupByDir: s.groupByDir }; await refresh(); watchRepo() })
   ctx.terminal.onCommandEnd(() => { if (s.root) { clearTimeout(timer); timer = setTimeout(refresh, 300) } })
   refresh().then(watchRepo)
 }

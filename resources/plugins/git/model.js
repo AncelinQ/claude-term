@@ -3,7 +3,29 @@
 const { LABELS } = require('./git')
 
 const RUN = (args) => ({ type: 'run', args })
-const initialState = () => ({ root: null, status: null, commits: [], refs: { local: [], remote: [] }, checked: {}, message: '', amend: false, detail: null, collapsed: {}, pending: null })
+const initialState = () => ({ root: null, status: null, commits: [], refs: { local: [], remote: [] }, checked: {}, message: '', amend: false, detail: null, collapsed: {}, groupByDir: false })
+
+/** Files grouped by directory, single-child chains compacted ("src/main/services"), like JetBrains. */
+function dirTree(entries, checked, group, collapsed) {
+  const root = { dirs: {}, files: [] }
+  for (const e of entries) {
+    const parts = e.path.split('/'); let node = root
+    for (const d of parts.slice(0, -1)) node = node.dirs[d] = node.dirs[d] || { dirs: {}, files: [] }
+    node.files.push(e)
+  }
+  const build = (node, prefix) => {
+    const items = []
+    for (const name of Object.keys(node.dirs).sort()) {
+      let label = name, child = node.dirs[name], path = prefix ? `${prefix}/${name}` : name
+      while (child.files.length === 0 && Object.keys(child.dirs).length === 1) { const only = Object.keys(child.dirs)[0]; label += '/' + only; path += '/' + only; child = child.dirs[only] }
+      const id = `dir:${group}:${path}`
+      items.push({ id, label, icon: 'folder', color: 'accent', expanded: !collapsed[id], checked: false, children: build(child, path) })
+    }
+    for (const e of node.files) items.push({ ...fileItem(e, checked, group), label: e.path.split('/').pop(), detail: '' })
+    return items
+  }
+  return build(root, '')
+}
 
 function fileItem(e, checked, group) {
   // no badge for what the group already says (modified in "Modifications", untracked in "Non versionnés")
@@ -28,9 +50,10 @@ function changesView(s) {
   const entries = s.status.entries
   const conflicts = entries.filter((e) => e.conflict), tracked = entries.filter((e) => !e.conflict && !e.untracked), untracked = entries.filter((e) => e.untracked)
   const items = []
-  if (conflicts.length) items.push({ id: 'g:conflicts', label: `Conflits`, detail: `${conflicts.length}`, expanded: !s.collapsed['g:conflicts'], children: conflicts.map((e) => fileItem(e, s.checked, 'conflicts')) })
-  items.push({ id: 'g:changes', label: 'Modifications', detail: `${tracked.length} fichier${tracked.length > 1 ? 's' : ''}`, expanded: !s.collapsed['g:changes'], children: tracked.map((e) => fileItem(e, s.checked, 'changes')) })
-  if (untracked.length) items.push({ id: 'g:untracked', label: 'Non versionnés', detail: `${untracked.length} fichier${untracked.length > 1 ? 's' : ''}`, expanded: !s.collapsed['g:untracked'], children: untracked.map((e) => fileItem(e, s.checked, 'untracked')) })
+  const kids = (es, group) => (s.groupByDir ? dirTree(es, s.checked, group, s.collapsed) : es.map((e) => fileItem(e, s.checked, group)))
+  if (conflicts.length) items.push({ id: 'g:conflicts', label: `Conflits`, detail: `${conflicts.length}`, expanded: !s.collapsed['g:conflicts'], children: kids(conflicts, 'conflicts') })
+  items.push({ id: 'g:changes', label: 'Modifications', detail: `${tracked.length} fichier${tracked.length > 1 ? 's' : ''}`, expanded: !s.collapsed['g:changes'], children: kids(tracked, 'changes') })
+  if (untracked.length) items.push({ id: 'g:untracked', label: 'Non versionnés', detail: `${untracked.length} fichier${untracked.length > 1 ? 's' : ''}`, expanded: !s.collapsed['g:untracked'], children: kids(untracked, 'untracked') })
   const head = s.status.detached ? 'HEAD détachée' : (s.status.branch || '?')
   const ab = (s.status.ahead ? ` ↑${s.status.ahead}` : '') + (s.status.behind ? ` ↓${s.status.behind}` : '')
   const nChecked = Object.keys(s.checked).filter((p) => s.checked[p]).length
@@ -39,6 +62,7 @@ function changesView(s) {
     toolbar: [
       { id: 'branch', title: `Branche : ${head}${ab}`, icon: 'git' },
       { id: 'refresh', title: 'Actualiser', icon: 'activity' },
+      { id: 'groupDirs', title: s.groupByDir ? 'Liste à plat' : 'Grouper par dossier', icon: s.groupByDir ? 'list' : 'folder' },
       { id: 'toggleAll', title: 'Tout replier / déplier', icon: 'chevronDown' },
     ],
     footer: {
@@ -127,6 +151,7 @@ const checkedPaths = (s) => Object.keys(s.checked).filter((p) => s.checked[p])
 const setChecked = (s, paths, on) => { const checked = { ...s.checked }; for (const p of paths) checked[p] = on; return { ...s, checked } }
 const groupPaths = (s, gid) => {
   const es = s.status ? s.status.entries : []
+  if (gid.startsWith('dir:')) { const [, group, dir] = gid.split(/:(.*?):(.*)$/s); return groupPaths(s, 'g:' + group).filter((p) => p.startsWith(dir + '/')) }
   if (gid === 'g:conflicts') return es.filter((e) => e.conflict).map((e) => e.path)
   if (gid === 'g:untracked') return es.filter((e) => e.untracked).map((e) => e.path)
   return es.filter((e) => !e.conflict && !e.untracked).map((e) => e.path)
@@ -157,7 +182,7 @@ function reduce(s, e) {
   if (e.type === 'input' && e.fieldId === 'message') return { state: { ...s, message: String(e.value) }, effects: ef }
   if (e.type === 'check' && e.itemId === 'amend') return { state: { ...s, amend: !!e.value }, effects: ef }
   if (e.type === 'check' && e.itemId) {
-    const paths = e.itemId.startsWith('g:') ? groupPaths(s, e.itemId) : [e.itemId.slice(5)]
+    const paths = e.itemId.startsWith('g:') || e.itemId.startsWith('dir:') ? groupPaths(s, e.itemId) : [e.itemId.slice(5)]
     return { state: setChecked(s, paths, !!e.value), effects: ef }
   }
   if (e.type === 'button') {
@@ -172,6 +197,7 @@ function reduce(s, e) {
     if (e.actionId === 'fetch') return { state: s, effects: [RUN(['fetch', '--all', '--prune'])] }
     if (e.actionId === 'newBranch') return { state: s, effects: [{ type: 'prompt', req: { title: 'Nouvelle branche (git switch -c)', placeholder: 'nom' }, then: { type: 'promptResult', action: 'newBranch' } }] }
     if (e.actionId === 'branch') return { state: s, effects: [{ type: 'popover', view: 'changes', model: branchPopover(s) }] }
+    if (e.actionId === 'groupDirs') return { state: { ...s, groupByDir: !s.groupByDir }, effects: [{ type: 'persist', key: 'groupByDir', value: !s.groupByDir }] }
     if (e.actionId === 'toggleAll') {
       const keys = ['g:conflicts', 'g:changes', 'g:untracked']
       const allCollapsed = keys.every((k) => s.collapsed[k])
@@ -244,4 +270,4 @@ function withData(s, root, status, commits, refs) {
   return { ...s, root, status, commits, refs, checked }
 }
 
-module.exports = { initialState, changesView, branchesView, commitsView, branchPopover, reduce, withData, commitCommands, checkedPaths }
+module.exports = { initialState, changesView, branchesView, commitsView, branchPopover, reduce, withData, commitCommands, checkedPaths, dirTree }
