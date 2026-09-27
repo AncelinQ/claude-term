@@ -43,12 +43,14 @@ export function App() {
           </div>
         ))}
         <button className="plus" title="Nouveau projet (⌘N)" onClick={() => newProject(null)} style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 12, color: 'var(--ct-text-secondary)' }}>{Icons.plus(12)}</button>
+        <span className="spacer" />
+        <button className="gear" title="Réglages (⌘,)">{Icons.gear(16)}</button>
       </div>
-      <div className="body">
-        <LeftActivityBar />
-        {project.root ? <LeftSidebar project={project} /> : <div />}
+      <div className={'body' + (project.root ? '' : ' noproject')}>
+        {project.root && <LeftActivityBar />}
+        {project.root && <LeftSidebar project={project} />}
         {project.root ? <Center project={project} /> : <Welcome project={project} />}
-        {project.root ? <RightSidebar /> : <div />}
+        <RightSidebar />
         <RightActivityBar />
       </div>
       <StatusBar />

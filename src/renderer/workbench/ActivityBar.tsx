@@ -24,8 +24,6 @@ export function LeftActivityBar() {
           {a.icon()}
         </button>
       ))}
-      <span className="spacer" />
-      <button title="Réglages (⌘,)">{Icons.gear()}</button>
     </div>
   )
 }

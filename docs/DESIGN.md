@@ -66,11 +66,18 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
   The top strip holds the project tabs and is the drag region. Menus: native menu bar on macOS,
   hidden on Windows (commands via palette and the ⋯ button), like VS Code's custom title bar.
 - **Left activity bar** (44 px): Explorer (2 islands: Finder, Linked folders), Search,
-  Scripts, MCP, Plugins. Click active = collapse.
-- **Right activity bar** (28 px, secondary): Process, History, Skills.
+  Scripts, MCP, Plugins. Click active = collapse. The left bar and sidebar are **project-bound**:
+  hidden while the active project has no folder (welcome screen).
+- **App settings**: gear button at the top right of the title strip (not in an activity bar);
+  opens the Settings center tab.
+- **Right activity bar** (28 px, secondary): Process, History, Skills. **Global**, not bound to a
+  project: always visible and usable, welcome screen included.
 - **Center**: tab bar (terminal + editor tabs interleaved), terminal/editor on top, session
   block below.
 - **Status bar**: full width; core items + plugin items.
+- **Welcome screen** (project without a folder): "Open a folder…" and the **recent projects** list
+  (name, path, Claude sessions badge), one click opens. On first launch the recents of the Swift v1
+  are imported from its preferences (macOS only).
 - **Islands**: `--island-bg`, 1 px `--island-border`, radius 8, gutter 8 over `--window-bg`,
   no shadow, shared header (icon, title, actions, ⓘ, collapse).
 

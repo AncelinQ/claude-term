@@ -30,7 +30,11 @@ input:focus { border-color: var(--ct-accent); }
 .title.mac { padding-left: 84px; }
 .title.win { padding-right: 140px; }
 .title > * { -webkit-app-region: no-drag; }
+.title .spacer { flex: 1; -webkit-app-region: drag; }
+.title .gear { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; color: var(--ct-text-secondary); }
+.title .gear:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 .body { display: grid; grid-template-columns: var(--ct-activity-w) auto 1fr auto var(--ct-activity2-w); min-height: 0; }
+.body.noproject { grid-template-columns: 1fr auto var(--ct-activity2-w); }
 .status { display: flex; align-items: center; gap: 12px; padding: 0 12px; background: var(--ct-status-bg); color: var(--ct-status-fg); font-size: 11px; white-space: nowrap; overflow: hidden; }
 .status .spacer { flex: 1; }
 .status .item { display: inline-flex; align-items: center; gap: 5px; }
