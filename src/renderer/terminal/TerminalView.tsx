@@ -19,11 +19,20 @@ function xtermTheme(t: ResolvedTheme) {
   }
 }
 
+/** xterm needs a real font list (WebGL measures glyphs with ctx.font): resolve our CSS variable. */
+function monoFont(pref: string): string {
+  if (pref) return `"${pref}", ${defaultMono()}`
+  return defaultMono()
+}
+function defaultMono(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue('--ct-font-mono').trim() || 'Menlo, monospace'
+}
+
 export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, fontSize: number) {
   let t = terminals.get(tab.id)
   if (t) return t
   const term = new Terminal({
-    allowProposedApi: true, cursorBlink: true, fontSize, fontFamily: fontFamily || 'var(--ct-font-mono)',
+    allowProposedApi: true, cursorBlink: true, fontSize, fontFamily: monoFont(fontFamily),
     theme: xtermTheme(theme), scrollback: 10000, macOptionIsMeta: true,
   })
   const fit = new FitAddon()
@@ -74,7 +83,7 @@ export function TerminalHost({ tab }: { tab: Tab }) {
     if (!t) return
     t.term.options.theme = xtermTheme(theme)
     t.term.options.fontSize = settings.fontSize
-    t.term.options.fontFamily = settings.fontFamily || 'var(--ct-font-mono)'
+    t.term.options.fontFamily = monoFont(settings.fontFamily)
     try { t.fit.fit() } catch {}
   }, [theme, settings.fontFamily, settings.fontSize, tab.id])
 
