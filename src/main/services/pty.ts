@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { delimiter, join } from 'node:path'
 import type { PtyCreate, Settings } from '@shared/ipc'
+import { ShellIntegration } from './shell-integration'
 
 export interface PtyHandle {
   id: string
@@ -16,6 +17,8 @@ export class PtyService {
   /** PATH from the user's login shell: apps launched from Finder/Dock get a minimal one. */
   private loginPath: string | undefined
 
+  private integration = new ShellIntegration()
+
   constructor(private getSettings: () => Settings, private onData: (id: string, data: string) => void, private onExit: (id: string, code: number) => void) {
     if (process.platform !== 'win32') this.loginPath = loginShellPath()
   }
@@ -28,9 +31,9 @@ export class PtyService {
     return env
   }
 
-  private shell(): { file: string; args: string[] } {
-    if (process.platform === 'win32') return { file: 'powershell.exe', args: ['-NoLogo'] }
-    return { file: process.env.SHELL || '/bin/zsh', args: ['-il'] }
+  private shell(): { file: string; args: string[]; env: Record<string, string> } {
+    if (process.platform === 'win32') return { file: 'powershell.exe', args: ['-NoLogo'], env: {} }
+    return this.integration.shell(process.env.SHELL || '/bin/zsh')
   }
 
   /** Where `claude` is (PATH from the login shell, then the usual npm/bun locations). */
@@ -50,6 +53,7 @@ export class PtyService {
   create(opts: PtyCreate): { id: string; error?: string } {
     const id = 'pty' + ++this.seq
     const env = this.env()
+    if (opts.projectRoot) env.CLAUDETERM_ROOT = opts.projectRoot
     let file: string, args: string[]
     const settings = this.getSettings()
     if (opts.kind === 'claude') {
@@ -63,7 +67,9 @@ export class PtyService {
         args = opts.resume ? ['--resume', opts.resume] : []
       }
     } else {
-      ;({ file, args } = this.shell())
+      const sh = this.shell()
+      ;({ file, args } = sh)
+      Object.assign(env, sh.env)
       if (process.platform === 'win32' && settings.windowsMode === 'wsl') {
         file = 'wsl.exe'; args = [...(settings.wslDistro ? ['-d', settings.wslDistro] : []), '--cd', opts.cwd]
       }

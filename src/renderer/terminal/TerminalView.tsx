@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import type { ResolvedTheme } from '@shared/theme'
+import { OSC_SHELL } from '@shared/ipc'
 import { useWorkbench, type Tab } from '@/stores/workbench'
 
 /** Terminals live outside React (one xterm per tab), attached to the visible container. */
@@ -38,6 +39,13 @@ export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, 
     unsubs.push(window.ct.pty.onExit(id, (code) => { useWorkbench.getState().tabExited(id, code); term.write(`\r\n\x1b[90m[process terminé, code ${code}]\x1b[0m\r\n`) }))
     term.onData((d) => window.ct.pty.write(id, d))
     term.onResize(({ cols, rows }) => window.ct.pty.resize(id, cols, rows))
+    // shell integration (start/end of commands) and cwd reports
+    term.parser.registerOscHandler(OSC_SHELL, (data) => { useWorkbench.getState().shellEvent(tab.id, data); return true })
+    term.parser.registerOscHandler(7, (data) => {
+      const m = data.match(/^file:\/\/[^/]*(\/.*)$/)
+      if (m) useWorkbench.getState().setCwd(tab.id, decodeURIComponent(m[1]))
+      return true
+    })
   }
   t = { term, fit, el, dispose: () => { unsubs.forEach((u) => u()); term.dispose(); terminals.delete(tab.id) } }
   terminals.set(tab.id, t)

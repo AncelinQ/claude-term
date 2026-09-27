@@ -1,8 +1,16 @@
 import { Icons } from './icons'
 import { Island, Empty } from './Island'
 import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
-import { useWorkbench, type Project } from '@/stores/workbench'
+import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
 import { VStack, useCollapsed } from './Split'
+
+function tabColor(t: Tab) {
+  if (!t.alive) return 'var(--ct-text-tertiary)'
+  if (isClaude(t)) return 'var(--ct-accent)'
+  if (t.busy) return 'var(--ct-badge-ok)'
+  if (t.lastExit !== null && t.lastExit !== 0) return 'var(--ct-badge-error)'
+  return 'var(--ct-badge-info)'
+}
 
 export function Center({ project }: { project: Project }) {
   const { newTab, closeTab, setCurrentTab } = useWorkbench()
@@ -16,11 +24,11 @@ export function Center({ project }: { project: Project }) {
         top={<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <div className="tabs">
           {project.tabs.map((t) => (
-            <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.cwd}>
-              <span style={{ color: t.alive ? (t.kind === 'claude' ? 'var(--ct-accent)' : 'var(--ct-badge-info)') : 'var(--ct-text-tertiary)', display: 'inline-flex' }}>
-                {t.kind === 'claude' ? Icons.sparkle(12) : Icons.terminal(12)}
+            <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.busy ? t.lastCommand : t.cwd}>
+              <span style={{ color: tabColor(t), display: 'inline-flex' }}>
+                {isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
               </span>
-              <span>{t.title.replace(/^✳ /, '')}</span>
+              <span>{t.title}</span>
               <button className="close" onClick={(e) => { e.stopPropagation(); disposeTerminal(t.id); closeTab(project.id, t.id) }} title="Fermer (⌘W)">{Icons.x(10)}</button>
             </div>
           ))}

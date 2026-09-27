@@ -8,7 +8,12 @@ export interface PtyCreate {
   kind: TabKind
   /** `claude --resume <id>` */
   resume?: string
+  /** exported as CLAUDETERM_ROOT for the shell's `claude` wrapper */
+  projectRoot?: string
 }
+
+/** Shell-integration and cwd events parsed from OSC sequences in the renderer. */
+export const OSC_SHELL = 7770
 
 export interface DirEntry {
   name: string

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useWorkbench, useActiveProject } from './stores/workbench'
+import { useWorkbench, useActiveProject, isClaude } from './stores/workbench'
 import { applyTheme } from './theme/apply'
 import { Icons } from './workbench/icons'
 import { LeftActivityBar, RightActivityBar } from './workbench/ActivityBar'
@@ -66,7 +66,14 @@ function StatusBar() {
   return (
     <div className="status">
       {project?.root && <span className="item">{Icons.folder(12)} {short(project.root)}</span>}
-      {tab && <span className="item">{tab.kind === 'claude' ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
+      {tab && <span className="item">{isClaude(tab) ? Icons.sparkle(12) : Icons.terminal(12)} {short(tab.cwd)}</span>}
+      {tab && !isClaude(tab) && tab.busy && <span className="item"><span className="spin" /> <span style={{ color: 'var(--ct-text-tertiary)' }}>{tab.lastCommand}</span></span>}
+      {tab && !isClaude(tab) && !tab.busy && tab.lastExit !== null && (
+        <span className="item">
+          <span className="badge" style={{ background: tab.lastExit === 0 ? 'color-mix(in srgb, var(--ct-badge-ok) 20%, transparent)' : 'color-mix(in srgb, var(--ct-badge-error) 20%, transparent)', color: tab.lastExit === 0 ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }}>{tab.lastExit === 0 ? 'ok' : 'exit ' + tab.lastExit}</span>
+          <span style={{ color: 'var(--ct-text-tertiary)' }}>{tab.lastCommand}</span>
+        </span>
+      )}
       <span className="spacer" />
       {tab && <span className="item"><span className="dot" style={{ width: 7, height: 7, borderRadius: 4, background: tab.alive ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)' }} /> {tab.alive ? 'actif' : 'terminé'}</span>}
     </div>

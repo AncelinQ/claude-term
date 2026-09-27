@@ -3,7 +3,7 @@
 Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the native Swift v1 in
 `../claude-term`; the design is in `docs/DESIGN.md` (read it before structural changes).
 
-- Run: `npm run dev` (electron-vite, HMR for the renderer). Build: `npm run build`.
+- Run: `npm run dev` (electron-vite --watch: HMR for the renderer, main/preload rebuilt and Electron restarted on change). Build: `npm run build`.
   Typecheck: `npm run typecheck`. Tests: `npm test` (vitest, `tests/`). Run all three before a commit.
 - Layout: `src/main` (services + IPC, Node), `src/preload` (contextBridge → `window.ct`, typed by
   `src/shared/ipc.ts`), `src/renderer` (React, zustand store in `stores/workbench.ts`),

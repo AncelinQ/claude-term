@@ -11,7 +11,15 @@ export interface Tab {
   path?: string
   alive: boolean
   exitCode?: number
+  /** a foreground command is running (shell integration) */
+  busy: boolean
+  lastCommand: string
+  lastExit: number | null
+  /** `claude` typed in a shell tab */
+  claudeRunning: boolean
 }
+
+export const isClaude = (t: Tab) => t.kind === 'claude' || t.claudeRunning
 
 export interface Project {
   id: string
@@ -48,6 +56,9 @@ interface Workbench {
   closeTab(projectId: string, tabId: string): void
   setCurrentTab(projectId: string, tabId: string): void
   tabExited(ptyId: string, code: number): void
+  /** "start;<cmd>" | "end;<exit>" from the shell hooks (OSC 7770) */
+  shellEvent(tabId: string, msg: string): void
+  setCwd(tabId: string, cwd: string): void
 }
 
 let seq = 0
@@ -120,8 +131,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
     const dir = cwd ?? p.selectedFolder
-    const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind })
-    const tab: Tab = { id: 't' + ++seq, kind, title: (kind === 'claude' ? '✳ ' : '') + name(dir), cwd: dir, ptyId, alive: !error }
+    const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind, projectRoot: p.root ?? undefined })
+    const tab: Tab = { id: 't' + ++seq, kind, title: name(dir), cwd: dir, ptyId, alive: !error, busy: false, lastCommand: '', lastExit: null, claudeRunning: false }
     if (error) tab.title += ' (erreur)'
     set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)) }))
     if (error) console.error(error)
@@ -144,9 +155,25 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId } : x)) }))
   },
   tabExited(ptyId, code) {
-    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code } : t)) })) }))
+    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code, busy: false, claudeRunning: false } : t)) })) }))
   },
+  shellEvent(tabId, msg) {
+    const [kind, rest = ''] = msg.split(/;(.*)/s)
+    patchTab(set, tabId, (t) => {
+      if (kind === 'start') {
+        const claude = /^\s*claude(\s|$)/.test(rest)
+        return { busy: true, lastCommand: rest, lastExit: null, claudeRunning: claude || t.claudeRunning }
+      }
+      if (kind === 'end') return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false }
+      return {}
+    })
+  },
+  setCwd(tabId, cwd) { patchTab(set, tabId, (t) => (t.cwd === cwd ? {} : { cwd, title: name(cwd) })) },
 }))
+
+function patchTab(set: (fn: (s: Workbench) => Partial<Workbench>) => void, tabId: string, patch: (t: Tab) => Partial<Tab>) {
+  set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.id === tabId ? { ...t, ...patch(t) } : t)) })) }))
+}
 
 let layoutTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleLayoutSave(get: () => Workbench) {
