@@ -148,7 +148,7 @@ const EN: Record<string, string> = {
   'Langue': 'Language',
   "Langue de l'interface": 'Interface language',
   'Système = celle de macOS / Windows.': 'System = the OS language.',
-  "Le thème sombre ou clair suit l'apparence du système.": 'The dark or light theme follows the system appearance.',
+  "Système : sombre ou clair selon l'apparence de l'OS.": 'System: dark or light following the OS appearance.',
   'Affichage': 'Display',
   'Enregistrement': 'Saving',
   'Alertes': 'Alerts',

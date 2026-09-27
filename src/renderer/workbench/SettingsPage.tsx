@@ -55,17 +55,13 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
           )}
           {section === 'apparence' && (
             <Group title={t('Thème')}>
-              <Row label={t('Suivre le système')} hint={t("Le thème sombre ou clair suit l'apparence du système.")}>
-                <Toggle checked={settings.themeFollowSystem} onChange={(v) => set({ themeFollowSystem: v })} />
+              <Row label={t('Thème')} hint={t("Système : sombre ou clair selon l'apparence de l'OS.")}>
+                <select value={settings.themeFollowSystem ? 'system' : settings.themeFixed}
+                  onChange={(e) => e.target.value === 'system' ? set({ themeFollowSystem: true }) : set({ themeFollowSystem: false, themeFixed: e.target.value })}>
+                  <option value="system">{t('Suivre le système')}</option>
+                  {themes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
               </Row>
-              {settings.themeFollowSystem ? (
-                <>
-                  <Row label={t('Thème sombre')}><ThemePicker themes={themes.filter((x) => x.type === 'dark')} value={settings.themeDark} onChange={(v) => set({ themeDark: v })} /></Row>
-                  <Row label={t('Thème clair')}><ThemePicker themes={themes.filter((x) => x.type === 'light')} value={settings.themeLight} onChange={(v) => set({ themeLight: v })} /></Row>
-                </>
-              ) : (
-                <Row label={t('Thème')}><ThemePicker themes={themes} value={settings.themeFixed} onChange={(v) => set({ themeFixed: v })} /></Row>
-              )}
               <Row label={t('Thèmes perso')} hint={t("Dépose un thème VS Code (.json) dans le dossier des thèmes de l'app ; il apparaît ici au prochain lancement.")} />
             </Group>
           )}
@@ -144,6 +140,3 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   return <button className={'toggle' + (checked ? ' on' : '')} disabled={disabled} onClick={() => onChange(!checked)} role="switch" aria-checked={checked}><span /></button>
 }
 
-function ThemePicker({ themes, value, onChange }: { themes: ThemeSpec[]; value: string; onChange: (id: string) => void }) {
-  return <select value={value} onChange={(e) => onChange(e.target.value)}>{themes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-}
