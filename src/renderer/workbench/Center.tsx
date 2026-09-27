@@ -3,6 +3,7 @@ import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
 import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
 import { VStack, useCollapsed } from './Split'
 import { SessionBlock } from './SessionBlock'
+import { Island } from './Island'
 import { EditorHost, ImageView } from '@/editor/EditorHost'
 
 export function attentionColor(a: { kind: string }) {
@@ -29,45 +30,47 @@ export function Center({ project }: { project: Project }) {
   return (
     <div className="center">
       <VStack id="session" collapsed={sessionCollapsed} initial={240} min={120}
-        top={<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <div className="tabs">
-          {project.tabs.map((t) => (
-            <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
-              <span style={{ color: t.kind === 'file' ? (t.changedOnDisk ? 'var(--ct-badge-warn)' : 'var(--ct-text-secondary)') : tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
-                {t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
-                {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
-              </span>
-              <span style={{ fontStyle: t.dirty ? 'italic' : undefined }}>{t.title}</span>
-              <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? 'Modifications non enregistrées (⌘S)' : 'Fermer (⌘W)'}>
-                {t.dirty ? <span className="dirty-dot" /> : Icons.x(10)}
-              </button>
-            </div>
-          ))}
-          <button className="plus" title="Nouvel onglet shell (⌘T)" onClick={() => newTab(project.id, 'shell')}>{Icons.plus(14)}</button>
-          <button className="plus" title="Nouvel onglet Claude (⇧⌘T)" onClick={() => newTab(project.id, 'claude')} style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(14)}</button>
-        </div>
-        {current && current.kind === 'file' ? (
-          current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
-          : current.fileKind === 'image' ? <div className="term-wrap"><ImageView src={current.imageUrl ?? ''} /></div>
-          : <div className="term-wrap editor-bg"><EditorHost tab={current} /></div>
-        ) : current ? (
-          <TerminalHost key={current.id} tab={current} />
-        ) : (
-          <div className="term-wrap">
-            <div className="welcome">
-              <div>
-                <div style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(36)}</div>
-                <h1>Aucune session</h1>
-                <p>{short(project.selectedFolder)}</p>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                  <button className="btn primary" onClick={() => newTab(project.id, 'claude')}>{Icons.sparkle(14)} Démarrer Claude</button>
-                  <button className="btn" onClick={() => newTab(project.id, 'shell')}>{Icons.terminal(14)} Shell</button>
+        top={<Island grow title={
+            <div className="tabs">
+              {project.tabs.map((t) => (
+                <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
+                  <span style={{ color: t.kind === 'file' ? (t.changedOnDisk ? 'var(--ct-badge-warn)' : 'var(--ct-text-secondary)') : tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
+                    {t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
+                    {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
+                  </span>
+                  <span style={{ fontStyle: t.dirty ? 'italic' : undefined }}>{t.title}</span>
+                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? 'Modifications non enregistrées (⌘S)' : 'Fermer (⌘W)'}>
+                    {t.dirty ? <span className="dirty-dot" /> : Icons.x(10)}
+                  </button>
+                </div>
+              ))}
+            </div>}
+          actions={<>
+            <button title="Nouvel onglet shell (⌘T)" onClick={() => newTab(project.id, 'shell')}>{Icons.plus()}</button>
+            <button title="Nouvel onglet Claude (⇧⌘T)" onClick={() => newTab(project.id, 'claude')} style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle()}</button>
+          </>}>
+          {current && current.kind === 'file' ? (
+            current.error ? <div className="term-wrap"><div className="empty">{current.error}</div></div>
+            : current.fileKind === 'image' ? <div className="term-wrap"><ImageView src={current.imageUrl ?? ''} /></div>
+            : <div className="term-wrap editor-bg"><EditorHost tab={current} /></div>
+          ) : current ? (
+            <TerminalHost key={current.id} tab={current} />
+          ) : (
+            <div className="term-wrap">
+              <div className="welcome">
+                <div>
+                  <div style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(36)}</div>
+                  <h1>Aucune session</h1>
+                  <p>{short(project.selectedFolder)}</p>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                    <button className="btn primary" onClick={() => newTab(project.id, 'claude')}>{Icons.sparkle(14)} Démarrer Claude</button>
+                    <button className="btn" onClick={() => newTab(project.id, 'shell')}>{Icons.terminal(14)} Shell</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>}
+          )}
+        </Island>}
         bottom={<SessionBlock project={project} collapsed={sessionCollapsed} onCollapse={setSessionCollapsed} />}
       />
     </div>

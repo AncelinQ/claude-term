@@ -40,7 +40,7 @@ export interface Project {
   selectedFolder: string
 }
 
-export type LeftActivity = 'explorer' | 'search' | 'scripts' | 'skills' | 'mcp' | 'plugins'
+export type LeftActivity = 'explorer' | 'search' | 'skills' | 'mcp' | 'plugins'
 export type RightActivity = 'process' | 'history' | 'skills'
 
 interface Workbench {
@@ -68,7 +68,9 @@ interface Workbench {
   closeProject(id: string): void
   setActiveProject(id: string): void
   select(projectId: string, path: string, isDir: boolean): void
-  newTab(projectId: string, kind: TabKind, cwd?: string): Promise<void>
+  newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string): Promise<void>
+  /** types text into the current Claude tab of the project (opens one if needed) */
+  insertPrompt(projectId: string, text: string): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
   setCurrentTab(projectId: string, tabId: string): void
   tabExited(ptyId: string, code: number): void
@@ -172,17 +174,27 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, selectedPath: path, selectedFolder: folder } : p)) }))
   },
 
-  async newTab(projectId, kind, cwd) {
+  async newTab(projectId, kind, cwd, resume) {
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
     const dir = cwd ?? p.selectedFolder
-    const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind, projectRoot: p.root ?? undefined })
+    const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind, projectRoot: p.root ?? undefined, resume })
     const tab: Tab = { id: 't' + ++seq, kind, title: name(dir), cwd: dir, ptyId, alive: !error, busy: false, lastCommand: '', lastExit: null, claudeRunning: false }
     if (error) tab.title += ' (erreur)'
     set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)), lastClaudeTab: kind === 'claude' ? { ...s.lastClaudeTab, [projectId]: tab.id } : s.lastClaudeTab }))
     if (error) console.error(error)
-    else if (kind === 'claude') window.ct.claude.track(tab.id, dir)
+    else if (kind === 'claude') window.ct.claude.track(tab.id, dir, resume ? { resume } : undefined)
     get().visibleChanged()
+  },
+  async insertPrompt(projectId, text) {
+    const p = get().projects.find((x) => x.id === projectId)
+    if (!p) return
+    let t = p.tabs.find((x) => x.id === p.currentTabId && isClaude(x) && x.alive) ?? p.tabs.find((x) => isClaude(x) && x.alive)
+    if (!t) { await get().newTab(projectId, 'claude'); await new Promise((r) => setTimeout(r, 1500)); t = get().projects.find((x) => x.id === projectId)?.tabs.at(-1) }
+    if (!t?.ptyId) return
+    get().setCurrentTab(projectId, t.id)
+    window.ct.pty.write(t.ptyId, text)
+    ;(await import('@/terminal/TerminalView')).focusTerminal(t.id)
   },
   async closeTab(projectId, tabId) {
     const p = get().projects.find((x) => x.id === projectId)

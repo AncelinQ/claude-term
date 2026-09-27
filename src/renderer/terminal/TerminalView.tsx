@@ -62,6 +62,7 @@ export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, 
 }
 
 export function disposeTerminal(tabId: string) { terminals.get(tabId)?.dispose() }
+export function focusTerminal(tabId: string) { terminals.get(tabId)?.term.focus() }
 
 export function TerminalHost({ tab }: { tab: Tab }) {
   const ref = useRef<HTMLDivElement>(null)

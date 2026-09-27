@@ -3,6 +3,12 @@ import { Icons } from './icons'
 import { FileTree } from './FileTree'
 import { useWorkbench, type Project } from '@/stores/workbench'
 import { Gutter, VStack, useStoredSize, useCollapsed } from './Split'
+import { LinksIsland } from './islands/Links'
+import { SearchIsland } from './islands/Search'
+import { SkillsIsland } from './islands/Skills'
+import { McpIsland } from './islands/Mcp'
+import { ProcessIsland } from './islands/Process'
+import { HistoryIsland } from './islands/History'
 
 export function LeftSidebar({ project }: { project: Project }) {
   const activity = useWorkbench((s) => s.leftActivity)
@@ -21,19 +27,15 @@ export function LeftSidebar({ project }: { project: Project }) {
               actions={<button title="Afficher dans le Finder" onClick={() => project.root && window.ct.app.revealInFinder(project.root)}>{Icons.external()}</button>}>
               {project.root ? <FileTree project={project} root={project.root} /> : <Empty>Aucun dossier</Empty>}
             </Island>}
-          bottom={
-            <Island title="Dossiers liés" icon={Icons.link(14)} collapsible collapsed={linksCollapsed} onCollapse={setLinksCollapsed}>
-              <Empty>Lie l'API, le design system… Claude y aura accès.</Empty>
-            </Island>}
+          bottom={<LinksIsland project={project} collapsed={linksCollapsed} onCollapse={setLinksCollapsed} />}
         />
       )}
-      {activity === 'search' && <Island title="Recherche" icon={Icons.search(14)} grow><Empty>Bientôt : recherche de fichiers</Empty></Island>}
-      {activity === 'scripts' && <Island title="Scripts npm" icon={Icons.box(14)} grow><Empty>Bientôt : scripts du package.json</Empty></Island>}
-      {activity === 'skills' && <Island title="Skills du projet" icon={Icons.sparkle(14)} grow><Empty>Bientôt : .claude/skills et .claude/commands</Empty></Island>}
+      {activity === 'search' && <SearchIsland project={project} />}
+      {activity === 'skills' && <SkillsIsland title="Skills du projet" root={project.root} createIn={project.root} grow load={async () => [...(await window.ct.skills.project(project.root!)), ...(await window.ct.skills.linked(project.root!))]} />}
       {activity === 'mcp' && (
         <VStack id="mcp" collapsed={mcpCollapsed}
-          top={<Island title="MCP du projet" icon={Icons.plug(14)} grow><Empty>Bientôt : .mcp.json</Empty></Island>}
-          bottom={<Island title="MCP perso" icon={Icons.plug(14)} collapsible collapsed={mcpCollapsed} onCollapse={setMcpCollapsed}><Empty>Bientôt : claude mcp list</Empty></Island>}
+          top={<McpIsland scope="project" root={project.root} grow />}
+          bottom={<McpIsland scope="user" root={project.root} collapsed={mcpCollapsed} onCollapse={setMcpCollapsed} />}
         />
       )}
       {activity === 'plugins' && <Island title="Plugins" icon={Icons.puzzle(14)} grow><Empty>Phase 5</Empty></Island>}
@@ -52,12 +54,12 @@ export function RightSidebar() {
     <>
     <Gutter axis="x" className="right" onDrag={(d) => setWidth((w) => Math.max(220, Math.min(700, w - d)))} />
     <div className="sidebar right" style={{ width }}>
-      {activity === 'process' && <Island title="Process Claude" icon={Icons.cpu(14)} grow><Empty>Bientôt : processus claude sur cette machine</Empty></Island>}
-      {activity === 'history' && <Island title="Historique" icon={Icons.clock(14)} grow><Empty>Bientôt : sessions passées</Empty></Island>}
+      {activity === 'process' && <ProcessIsland />}
+      {activity === 'history' && <HistoryIsland />}
       {activity === 'skills' && (
         <VStack id="skills" collapsed={pluginsCollapsed}
-          top={<Island title="Skills perso" icon={Icons.sparkle(14)} grow><Empty>Bientôt : ~/.claude/skills</Empty></Island>}
-          bottom={<Island title="Skills des plugins" icon={Icons.sparkle(14)} collapsible collapsed={pluginsCollapsed} onCollapse={setPluginsCollapsed}><Empty>Bientôt</Empty></Island>}
+          top={<SkillsIsland title="Skills perso" root={null} createIn={null} grow load={() => window.ct.skills.personal()} />}
+          bottom={<SkillsIsland title="Skills des plugins" root={null} collapsed={pluginsCollapsed} onCollapse={setPluginsCollapsed} load={() => window.ct.skills.plugins()} />}
         />
       )}
     </div>

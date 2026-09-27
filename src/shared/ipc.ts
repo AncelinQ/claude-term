@@ -49,6 +49,42 @@ export interface SessionInfo {
 
 export interface PlanInfo { path: string; title: string; modified: number }
 
+export interface LinkedProject { path: string; role: string; readOnly: boolean }
+
+export interface SkillInfo {
+  name: string
+  description: string
+  path: string
+  source: 'project' | 'linked' | 'personal' | 'plugin'
+  isCommand: boolean
+  manualOnly: boolean
+  autoOnly: boolean
+}
+
+export interface MCPServer {
+  name: string
+  transport: 'stdio' | 'http' | 'sse'
+  command: string
+  args: string[]
+  url: string
+  env: Record<string, string>
+  headers: Record<string, string>
+  scope: 'project' | 'linked' | 'local' | 'user' | 'claudeAI' | 'plugin'
+  sourcePath: string
+  disabled: boolean
+  health?: 'unknown' | 'connected' | 'needsAuth' | 'failed'
+}
+
+export interface ClaudeProcess {
+  pid: number
+  started: number
+  elapsed: string
+  cpu: string
+  memMB: number
+  cwd: string
+  children: { pid: number; command: string; cpu: string }[]
+}
+
 export interface DirEntry {
   name: string
   path: string
@@ -148,6 +184,37 @@ export interface CtApi {
     setHooksInstalled(on: boolean): Promise<{ ok: boolean; error?: string }>
   }
   setHooks(on: boolean): Promise<{ ok: boolean; error?: string }>
+  links: {
+    load(root: string): Promise<LinkedProject[]>
+    save(root: string, links: LinkedProject[]): Promise<{ ok: boolean; error?: string }>
+  }
+  skills: {
+    project(root: string): Promise<SkillInfo[]>
+    linked(root: string): Promise<SkillInfo[]>
+    personal(): Promise<SkillInfo[]>
+    plugins(): Promise<SkillInfo[]>
+    create(name: string, description: string, root: string | null): Promise<{ ok: boolean; path?: string; error?: string }>
+    remove(s: SkillInfo): Promise<{ ok: boolean; error?: string }>
+  }
+  mcp: {
+    project(root: string): Promise<MCPServer[]>
+    linked(root: string): Promise<MCPServer[]>
+    user(): Promise<MCPServer[]>
+    local(root: string): Promise<MCPServer[]>
+    library(root: string | null): Promise<MCPServer[]>
+    write(server: MCPServer, root: string, replacing?: string): Promise<{ ok: boolean; error?: string }>
+    remove(name: string, root: string): Promise<{ ok: boolean; error?: string }>
+    cli(args: string[], cwd: string | null): Promise<{ code: number; output: string }>
+    /** `claude mcp list` parsed: name → health */
+    health(cwd: string | null): Promise<Record<string, 'connected' | 'needsAuth' | 'failed'>>
+  }
+  processes: {
+    scan(): Promise<ClaudeProcess[]>
+    kill(pid: number, signal?: 'SIGTERM' | 'SIGKILL'): void
+  }
+  search: {
+    files(root: string, query: string): Promise<string[]>
+  }
   app: {
     /** "Enregistrer" | "Ne pas enregistrer" | "Annuler" → 'save' | 'discard' | 'cancel' */
     confirmSave(name: string): Promise<'save' | 'discard' | 'cancel'>

@@ -57,6 +57,36 @@ const api: CtApi = {
     setHooksInstalled: (on) => ipcRenderer.invoke('hooks:set', on),
   },
   setHooks: (on) => ipcRenderer.invoke('hooks:set', on),
+  links: {
+    load: (root) => ipcRenderer.invoke('links:load', root),
+    save: (root, links) => ipcRenderer.invoke('links:save', { root, links }),
+  },
+  skills: {
+    project: (root) => ipcRenderer.invoke('skills:project', root),
+    linked: (root) => ipcRenderer.invoke('skills:linked', root),
+    personal: () => ipcRenderer.invoke('skills:personal'),
+    plugins: () => ipcRenderer.invoke('skills:plugins'),
+    create: (name, description, root) => ipcRenderer.invoke('skills:create', { name, description, root }),
+    remove: (s) => ipcRenderer.invoke('skills:remove', s),
+  },
+  mcp: {
+    project: (root) => ipcRenderer.invoke('mcp:project', root),
+    linked: (root) => ipcRenderer.invoke('mcp:linked', root),
+    user: () => ipcRenderer.invoke('mcp:user'),
+    local: (root) => ipcRenderer.invoke('mcp:local', root),
+    library: (root) => ipcRenderer.invoke('mcp:library', root),
+    write: (server, root, replacing) => ipcRenderer.invoke('mcp:write', { server, root, replacing }),
+    remove: (name, root) => ipcRenderer.invoke('mcp:remove', { name, root }),
+    cli: (args, cwd) => ipcRenderer.invoke('mcp:cli', { args, cwd }),
+    health: (cwd) => ipcRenderer.invoke('mcp:health', cwd),
+  },
+  processes: {
+    scan: () => ipcRenderer.invoke('proc:scan'),
+    kill: (pid, signal) => ipcRenderer.send('proc:kill', { pid, signal }),
+  },
+  search: {
+    files: (root, query) => ipcRenderer.invoke('search:files', { root, query }),
+  },
   app: {
     confirmSave: (name) => ipcRenderer.invoke('app:confirmSave', name),
     pickFolder: () => ipcRenderer.invoke('app:pickFolder'),

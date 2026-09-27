@@ -10,6 +10,11 @@ import { SessionTracker } from './services/session-tracker'
 import { ClaudeSettings } from './services/claude-settings'
 import { HookHub } from './services/hooks'
 import { FileService } from './services/files'
+import { Links } from './services/links'
+import { Skills } from './services/skills'
+import { Mcp } from './services/mcp'
+import { scanClaudeProcesses } from './services/process'
+import { FileIndex } from './services/search'
 import type { DirEntry } from '@shared/ipc'
 
 // dev: Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts)
@@ -88,6 +93,35 @@ ipcMain.on('claude:clearAttention', (_e, { tabId }) => hooks.clear(tabId))
 ipcMain.on('claude:untrack', (_e, { tabId }) => hooks.clear(tabId))
 ipcMain.handle('hooks:installed', () => hooks.installed())
 ipcMain.handle('hooks:set', (_e, on: boolean) => hooks.setInstalled(on))
+
+// npm, links, skills, mcp, processes, search
+const ok = (fn: () => unknown) => { try { const r = fn(); return { ok: true, ...(typeof r === 'string' ? { path: r } : {}) } } catch (e) { return { ok: false, error: (e as Error).message } } }
+ipcMain.handle('links:load', (_e, root: string) => Links.load(root))
+ipcMain.handle('links:save', (_e, { root, links }) => ok(() => Links.save(root, links)))
+const skills = new Skills()
+ipcMain.handle('skills:project', (_e, root: string) => skills.project(root))
+ipcMain.handle('skills:linked', (_e, root: string) => Links.load(root).flatMap((l) => skills.project(l.path, 'linked')))
+ipcMain.handle('skills:personal', () => skills.personal())
+ipcMain.handle('skills:plugins', () => skills.plugins())
+ipcMain.handle('skills:create', (_e, { name, description, root }) => ok(() => skills.create(name, description, root)))
+ipcMain.handle('skills:remove', (_e, s) => ok(() => skills.remove(s)))
+const mcp = new Mcp(undefined, () => ptys.claudeBinary())
+ipcMain.handle('mcp:project', (_e, root: string) => mcp.project(root))
+ipcMain.handle('mcp:linked', (_e, root: string) => Links.load(root).flatMap((l) => mcp.project(l.path, 'linked')))
+ipcMain.handle('mcp:user', () => mcp.user())
+ipcMain.handle('mcp:local', (_e, root: string) => mcp.local(root))
+ipcMain.handle('mcp:library', (_e, root: string | null) => mcp.library(root, settings.get().recentProjects))
+ipcMain.handle('mcp:write', (_e, { server, root, replacing }) => ok(() => mcp.write(server, root, replacing)))
+ipcMain.handle('mcp:remove', (_e, { name, root }) => ok(() => mcp.remove(name, root)))
+ipcMain.handle('mcp:cli', (_e, { args, cwd }) => mcp.cli(args, cwd))
+ipcMain.handle('mcp:health', async (_e, cwd: string | null) => {
+  const r = await mcp.cli(['list'], cwd)
+  return Object.fromEntries(Mcp.parseList(r.output).map((x) => [x.name, x.health]))
+})
+ipcMain.handle('proc:scan', () => scanClaudeProcesses())
+ipcMain.on('proc:kill', (_e, { pid, signal }) => { try { process.kill(pid, signal ?? 'SIGTERM') } catch { /* gone */ } })
+const index = new FileIndex()
+ipcMain.handle('search:files', (_e, { root, query }) => index.search(root, query))
 
 // app
 ipcMain.handle('app:pickFolder', async () => {

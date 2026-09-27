@@ -13,6 +13,7 @@ export function App() {
   const project = useActiveProject()
   useEffect(() => {
     init()
+    if (import.meta.env.DEV) (window as any).__ct = useWorkbench
     if (import.meta.env.DEV) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
       return { activeProjectId: s.activeProjectId, leftActivity: s.leftActivity, rightActivity: s.rightActivity, showSettings: s.showSettings, sessionMode: s.sessionMode,
@@ -35,7 +36,7 @@ export function App() {
       else if (e.key === ',') { e.preventDefault(); const s = useWorkbench.getState(); s.setShowSettings(!s.showSettings) }
       else if (e.key === 'w' && !e.shiftKey && useWorkbench.getState().showSettings) { e.preventDefault(); useWorkbench.getState().setShowSettings(false) }
       else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }
-      else if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'scripts', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; useWorkbench.getState().setLeft(useWorkbench.getState().leftActivity === id ? null : id) }
+      else if (['1', '2', '3', '4', '5'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; useWorkbench.getState().setLeft(useWorkbench.getState().leftActivity === id ? null : id) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

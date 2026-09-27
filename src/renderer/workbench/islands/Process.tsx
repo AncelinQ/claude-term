@@ -1,0 +1,52 @@
+import { useEffect, useState } from 'react'
+import type { ClaudeProcess } from '@shared/ipc'
+import { Icons } from '../icons'
+import { Island, Empty } from '../Island'
+import { useWorkbench, isClaude } from '@/stores/workbench'
+
+/** Running claude processes on this machine, matched to tabs by cwd. */
+export function ProcessIsland() {
+  const [procs, setProcs] = useState<ClaudeProcess[]>([])
+  const [open, setOpen] = useState<number | null>(null)
+  const { projects, setActiveProject, setCurrentTab } = useWorkbench()
+  const home = window.ct.home
+  const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
+  useEffect(() => {
+    let live = true
+    const tick = () => window.ct.processes.scan().then((r) => { if (live) setProcs(r) })
+    tick()
+    const id = setInterval(tick, 2500)
+    return () => { live = false; clearInterval(id) }
+  }, [])
+  const tabOf = (p: ClaudeProcess) => {
+    for (const pr of projects) for (const t of pr.tabs) if (isClaude(t) && t.cwd === p.cwd) return { pr, t }
+    return null
+  }
+  return (
+    <Island title="Process Claude" icon={Icons.cpu(14)} grow actions={<span className="muted" style={{ fontWeight: 400, textTransform: 'none' }}>{procs.length}</span>}>
+      {procs.length === 0 ? <Empty>Aucun process claude en cours</Empty> : (
+        <div className="list">
+          {procs.map((p) => {
+            const tab = tabOf(p)
+            return (
+              <div key={p.pid}>
+                <div className="lrow" onClick={() => setOpen(open === p.pid ? null : p.pid)}>
+                  <span className="ico" style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(12)}</span>
+                  <div className="lbody">
+                    <div className="head"><span className="name">{short(p.cwd).split('/').pop() || p.cwd}</span><span className="badge dim">PID {p.pid}</span>{tab && <span className="badge dim">onglet</span>}</div>
+                    <div className="desc">{short(p.cwd)} · {p.elapsed} · {p.cpu}% · {p.memMB} Mo{p.children.length ? ` · ${p.children.length} sous-process` : ''}</div>
+                  </div>
+                  <span className="acts">
+                    {tab && <button title="Aller à l'onglet" onClick={(e) => { e.stopPropagation(); setActiveProject(tab.pr.id); setCurrentTab(tab.pr.id, tab.t.id) }}>{Icons.terminal(12)}</button>}
+                    <button title="Arrêter (SIGTERM)" onClick={(e) => { e.stopPropagation(); if (confirm(`Arrêter le process ${p.pid} ?`)) window.ct.processes.kill(p.pid) }}>{Icons.x(12)}</button>
+                  </span>
+                </div>
+                {open === p.pid && p.children.map((c) => <div key={c.pid} className="desc" style={{ padding: '1px 10px 1px 34px', fontFamily: 'var(--ct-font-mono)', fontSize: 10.5 }}>{c.pid} · {c.cpu}% · {c.command}</div>)}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Island>
+  )
+}

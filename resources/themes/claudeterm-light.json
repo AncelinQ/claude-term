@@ -3,7 +3,7 @@
   "name": "ClaudeTerm Light",
   "type": "light",
   "colors": {
-    "editor.background": "#fbfbfc",
+    "editor.background": "#f6f6f8",
     "editor.foreground": "#2b2c33",
     "editorLineNumber.foreground": "#a0a1a7",
     "editor.lineHighlightBackground": "#00000006",
@@ -39,7 +39,7 @@
     "charts.green": "#50a14f",
     "charts.yellow": "#c18401",
     "charts.red": "#e45649",
-    "terminal.background": "#fbfbfc",
+    "terminal.background": "#f6f6f8",
     "terminal.foreground": "#2b2c33",
     "terminalCursor.foreground": "#e5731a",
     "terminal.selectionBackground": "#dfe3ec",
