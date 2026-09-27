@@ -33,3 +33,4 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
   API typings in `resources/plugins/claudeterm.d.ts`, built-ins in `resources/plugins/<id>/`, user plugins in
   `userData/plugins`. Views are declarative models rendered by `workbench/PluginView.tsx`; plugins never draw.
 - License: PolyForm Noncommercial 1.0.0.
+- File icons: Catppuccin SVGs in `src/renderer/assets/catppuccin`; their lavender neutrals were recolored to the theme's grey (hue/saturation of `island.bg`, lightness kept), recorded in `mapping.json` > `recolored`. Redo it if the icons are updated.
