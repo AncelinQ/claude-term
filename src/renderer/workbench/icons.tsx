@@ -2,7 +2,7 @@
 import {
   Files, Search, Box, Plug, Puzzle, Cpu, Clock, Terminal, Plus, X, ChevronRight, ChevronDown, ChevronUp,
   Folder, File, Link, Info, ExternalLink, ArrowUp, List, Activity, Save, Settings, Image, Code, Columns2, Eye, Play, Camera, Sparkle,
-  GitBranch, Minus, Check,
+  GitBranch, Minus, Check, SquareTerminal,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -14,5 +14,5 @@ export const Icons = {
   chevronUp: wrap(ChevronUp), folder: wrap(Folder), file: wrap(File), link: wrap(Link), info: wrap(Info), external: wrap(ExternalLink),
   arrowUp: wrap(ArrowUp), list: wrap(List), activity: wrap(Activity), save: wrap(Save), gear: wrap(Settings), image: wrap(Image),
   code: wrap(Code), columns: wrap(Columns2), eye: wrap(Eye), play: wrap(Play), camera: wrap(Camera),
-  git: wrap(GitBranch), minus: wrap(Minus), check: wrap(Check),
+  terminalBox: wrap(SquareTerminal), git: wrap(GitBranch), minus: wrap(Minus), check: wrap(Check),
 }

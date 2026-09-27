@@ -124,7 +124,7 @@ export function Center({ project }: { project: Project }) {
             <div className="term-wrap">
               <div className="welcome">
                 <div>
-                  <div style={{ color: 'var(--ct-text-tertiary)' }}>{Icons.terminal(36)}</div>
+                  <div style={{ color: 'var(--ct-text-tertiary)' }}>{Icons.terminalBox(40)}</div>
                   <h1>{tr('Aucune session')}</h1>
                   <p>{short(project.selectedFolder)}</p>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
