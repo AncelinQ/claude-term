@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session } from 'electron'
 import { join } from 'node:path'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { SettingsService } from './services/settings'
@@ -132,6 +132,9 @@ ipcMain.on('app:openExternal', (_e, p: string) => { shell.openPath(p) })
 ipcMain.on('app:reveal', (_e, p: string) => { shell.showItemInFolder(p) })
 
 app.whenReady().then(() => {
+  // renderer permissions: only the local font list (settings font pickers)
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'local-fonts')
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'local-fonts'))
   nativeTheme.themeSource = settings.get().themeFollowSystem ? 'system' : themes.current().type
   win = createWindow(themes.current())
   win.on('closed', () => { win = null })
