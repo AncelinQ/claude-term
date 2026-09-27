@@ -122,7 +122,7 @@ function Node({ item, depth, tree, send, onMenu }: { item: ViewItem; depth: numb
   useEffect(() => { if (cbRef.current) cbRef.current.indeterminate = cs === 'mixed' }, [cs])
   return (
     <>
-      <div className={'lrow pv-row' + (hasChildren ? ' group' : '') + (item.muted ? ' muted' : '')} style={{ paddingLeft: 8 + depth * 14 }}
+      <div className={'lrow pv-row' + (hasChildren ? ' group' : '') + (item.muted ? ' muted' : '')} style={{ paddingLeft: 8 + depth * 20 }}
         onClick={() => (hasChildren ? setOpen(!open) : send('select', { itemId: item.id }))} onDoubleClick={() => !hasChildren && send('open', { itemId: item.id })}
         onContextMenu={(e) => item.contextMenu?.length && onMenu(e, item)} title={item.detail}>
         {hasChildren ? <span className={'chev' + (open ? ' open' : '')}>{Icons.chevron(10)}</span> : tree ? <span className="chev placeholder" /> : null}
