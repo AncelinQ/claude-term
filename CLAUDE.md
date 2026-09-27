@@ -30,7 +30,7 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
 - Updates: `services/updater.ts` reads the GitHub releases of sunstan/claude-term. Windows / Linux: electron-updater.
   macOS (unsigned, so no Squirrel): latest-mac.yml → zip (sha512) → a detached script swaps the .app after quit.
   Release: every push to main (workflow `release`, version from `scripts/next-version.mjs`: last tag + 1 patch, or
-  package.json when higher; injected with `-c.extraMetadata.version`, never committed). `CT_UPDATE_URL=http://127.0.0.1:<port>`
+  package.json when higher; injected with `--config.extraMetadata.version`, never committed). `CT_UPDATE_URL=http://127.0.0.1:<port>`
   points a packaged app at a local feed (`latest/download/latest-mac.yml`, `download/v<version>/<zip>`) for tests.
 - Packaging: `electron-builder.yml`; `npm run dist:mac|win|linux`. Themes ship as `extraResources/themes`,
   node-pty is unpacked from the asar. A packaged app started with `CT_CDP_PORT=9444` exposes CDP and the
