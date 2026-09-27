@@ -3,7 +3,7 @@ import type { ThemeSpec } from '@shared/theme'
 import { Icons } from './icons'
 import { useWorkbench } from '@/stores/workbench'
 
-type Section = 'apparence' | 'terminal' | 'notifications' | 'windows'
+type Section = 'apparence' | 'editeur' | 'terminal' | 'notifications' | 'windows'
 
 /** App settings, shown in the center (⌘,). Claude Code's own settings.json form comes in a later phase. */
 export function SettingsPage({ onClose }: { onClose: () => void }) {
@@ -19,7 +19,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
     if (r.ok) { setHooks(on); setHookError(null) } else setHookError(r.error ?? 'erreur')
   }
   const sections: { id: Section; label: string }[] = [
-    { id: 'apparence', label: 'Apparence' }, { id: 'terminal', label: 'Terminal' }, { id: 'notifications', label: 'Notifications' },
+    { id: 'apparence', label: 'Apparence' }, { id: 'editeur', label: 'Éditeur' }, { id: 'terminal', label: 'Terminal' }, { id: 'notifications', label: 'Notifications' },
     ...(window.ct.platform === 'win32' ? [{ id: 'windows' as Section, label: 'Windows' }] : []),
   ]
   return (
@@ -44,6 +44,19 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                 <Row label="Thème"><ThemePicker themes={themes} value={settings.themeFixed} onChange={(v) => set({ themeFixed: v })} /></Row>
               )}
               <Row label="Thèmes perso" hint={`Dépose un thème VS Code (.json) dans le dossier des thèmes de l'app ; il apparaît ici au prochain lancement.`} />
+            </>
+          )}
+          {section === 'editeur' && (
+            <>
+              <Row label="Enregistrement automatique" hint="Écrit le fichier après une pause de frappe. Désactivé, ⌘S enregistre. Un fichier modifié sur le disque entre-temps n'est jamais écrasé automatiquement.">
+                <label className="check"><input type="checkbox" checked={settings.autoSave} onChange={(e) => set({ autoSave: e.target.checked })} /> Activer</label>
+              </Row>
+              {settings.autoSave && (
+                <Row label="Délai">
+                  <input type="number" min={300} max={10000} step={100} value={settings.autoSaveDelay} onChange={(e) => set({ autoSaveDelay: Math.max(300, Math.min(10000, +e.target.value || 1000)) })} style={{ width: 80 }} /> ms
+                </Row>
+              )}
+              <Row label="Police et taille" hint="L'éditeur utilise la police et la taille du terminal (section Terminal)." />
             </>
           )}
           {section === 'terminal' && (

@@ -83,6 +83,7 @@ interface Workbench {
   openFile(projectId: string, path: string): Promise<void>
   reloadFile(path: string): Promise<void>
   saveCurrentFile(): Promise<void>
+  saveFile(path: string): Promise<void>
   setFileDirty(path: string, dirty: boolean): void
   /** tells main which tab is in front and clears its attention */
   visibleChanged(): void
@@ -284,16 +285,29 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     const s = get()
     const p = s.projects.find((x) => x.id === s.activeProjectId)
     const t = p?.tabs.find((x) => x.id === p.currentTabId)
-    if (!t || t.kind !== 'file' || t.fileKind !== 'text' || !t.path) return
+    if (t?.kind === 'file' && t.path) await get().saveFile(t.path)
+  },
+  async saveFile(path) {
+    const tabs = get().projects.flatMap((p) => p.tabs).filter((t) => t.kind === 'file' && t.path === path && t.fileKind === 'text')
+    if (!tabs.length) return
     const ed = await import('@/editor/EditorHost')
-    const text = ed.fileText(t.path)
+    const text = ed.fileText(path)
     if (text === null) return
-    const r = await window.ct.fs.writeFile(t.path, text)
-    if (r.ok) { ed.markSaved(t.path); patchTab(set, t.id, () => ({ dirty: false, changedOnDisk: false, error: undefined })) }
-    else patchTab(set, t.id, () => ({ error: r.error }))
+    const r = await window.ct.fs.writeFile(path, text)
+    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path ? (r.ok ? { ...t, dirty: false, changedOnDisk: false, error: undefined } : { ...t, error: r.error }) : t)) })) }))
+    if (r.ok) ed.markSaved(path)
   },
   setFileDirty(path, dirty) {
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path && t.dirty !== dirty ? { ...t, dirty } : t)) })) }))
+    // auto save after a pause in typing (never over a file that changed on disk meanwhile)
+    clearTimeout(autoSaveTimers.get(path))
+    const st = get().settings
+    if (dirty && st?.autoSave) {
+      autoSaveTimers.set(path, setTimeout(() => {
+        const t = get().projects.flatMap((p) => p.tabs).find((x) => x.kind === 'file' && x.path === path)
+        if (t?.dirty && !t.changedOnDisk) get().saveFile(path)
+      }, Math.max(300, st.autoSaveDelay || 1000)))
+    }
   },
   clearAttention(tabId) {
     const t = get().projects.flatMap((p) => p.tabs).find((x) => x.id === tabId)
@@ -316,6 +330,8 @@ function projectOf(s: Workbench, tabId: string): string {
 function patchTab(set: (fn: (s: Workbench) => Partial<Workbench>) => void, tabId: string, patch: (t: Tab) => Partial<Tab>) {
   set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.id === tabId ? { ...t, ...patch(t) } : t)) })) }))
 }
+
+const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 let layoutTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleLayoutSave(get: () => Workbench) {

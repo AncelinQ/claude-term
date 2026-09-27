@@ -99,6 +99,9 @@ export interface Settings {
   themeFixed: string
   fontFamily: string
   fontSize: number
+  /** editor: write the file after a pause in typing (ms), 0 = off */
+  autoSave: boolean
+  autoSaveDelay: number
   openProjects: string[]
   recentProjects: string[]
   leftActivity: string | null
@@ -120,6 +123,8 @@ export const DEFAULT_SETTINGS: Settings = {
   themeFixed: 'claudeterm-dark',
   fontFamily: '',
   fontSize: 13,
+  autoSave: true,
+  autoSaveDelay: 1000,
   openProjects: [],
   recentProjects: [],
   leftActivity: 'explorer',
