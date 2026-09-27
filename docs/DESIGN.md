@@ -80,8 +80,9 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
 - **Welcome screen** (project without a folder): "Open a folder…" and the **recent projects** list
   (name, path, Claude sessions badge), one click opens. On first launch the recents of the Swift v1
   are imported from its preferences (macOS only).
-- **Islands**: `--island-bg`, 1 px `--island-border`, radius 8, gutter 8 over `--window-bg`,
-  no shadow, shared header (icon, title, actions, ⓘ, collapse).
+- **Islands**: `--island-bg`, radius 8, gutter 8 over `--window-bg`, no border and no shadow
+  (decided 2026-09-27: the background step is enough), shared header (icon, title, actions, ⓘ,
+  collapse) separated from the content by a 1 px `--island-border` line.
 
 ## 5. Themes
 

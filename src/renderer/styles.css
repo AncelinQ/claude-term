@@ -75,7 +75,7 @@ input:focus { border-color: var(--ct-accent); }
 .sidebar.left { padding-right: 0; }
 .sidebar.right { padding-right: var(--ct-gutter); }
 .center { display: flex; flex-direction: column; gap: var(--ct-gutter); padding: var(--ct-gutter); min-width: 0; }
-.island { display: flex; flex-direction: column; min-height: 0; background: var(--ct-island-bg); border: 1px solid var(--ct-island-border); border-radius: var(--ct-radius); overflow: hidden; }
+.island { display: flex; flex-direction: column; min-height: 0; background: var(--ct-island-bg); border-radius: var(--ct-radius); overflow: hidden; }
 .island.grow { flex: 1; }
 .island > .hdr { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 10px; background: var(--ct-island-header-bg); border-bottom: 1px solid var(--ct-island-border); font-weight: 600; font-size: 11px; letter-spacing: .02em; color: var(--ct-text-secondary); text-transform: uppercase; flex: none; }
 .island > .hdr .spacer { flex: 1; }
