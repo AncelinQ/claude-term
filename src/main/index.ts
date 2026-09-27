@@ -241,6 +241,8 @@ ipcMain.on('app:openExternal', (_e, p: string) => { shell.openPath(p) })
 ipcMain.on('app:reveal', (_e, p: string) => { shell.showItemInFolder(p) })
 
 app.whenReady().then(() => {
+  // dev runs the stock Electron binary: show the app icon in the Dock (packaged builds carry icon.icns)
+  if (!app.isPackaged && process.platform === 'darwin') app.dock?.setIcon(join(app.getAppPath(), 'build', 'icon.png'))
   // renderer permissions: only the local font list (settings font pickers)
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'local-fonts')
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'local-fonts'))
