@@ -110,6 +110,10 @@ export interface Settings {
   editorMinimap: boolean
   /** editor: save dirty files when the editor loses focus (tab switch, window blur) */
   autoSave: boolean
+  /** editor: run the formatter before writing a file */
+  formatOnSave: boolean
+  /** shortcut overrides by action id (defaults: JetBrains, see shared/keymap) */
+  keybindings: Record<string, string>
   openProjects: string[]
   recentProjects: string[]
   leftActivity: string | null
@@ -138,6 +142,8 @@ export const DEFAULT_SETTINGS: Settings = {
   editorWordWrap: false,
   editorMinimap: false,
   autoSave: true,
+  formatOnSave: false,
+  keybindings: {},
   openProjects: [],
   recentProjects: [],
   leftActivity: 'explorer',

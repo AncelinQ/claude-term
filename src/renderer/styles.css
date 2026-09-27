@@ -409,3 +409,7 @@ input[type=checkbox]:disabled { opacity: .4; }
 .pv-row.tone-deleted .name { color: var(--ct-text-tertiary); text-decoration: line-through; }
 .pv-row.tone-modified .name { color: var(--ct-badge-info); }
 .pv-row.tone-renamed .name { color: var(--ct-badge-warn); }
+
+.key-recorder { min-width: 96px; height: 24px; padding: 0 10px; border-radius: 6px; background: var(--ct-input-bg); border: 1px solid var(--ct-input-border); font-family: var(--ct-font-ui); font-size: 12px; color: var(--ct-text); text-align: center; }
+.key-recorder.on { border-color: var(--ct-accent); color: var(--ct-accent); }
+.key-recorder.conflict { border-color: var(--ct-badge-warn); }

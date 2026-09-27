@@ -5,8 +5,9 @@ import { t } from '@/i18n'
 import { useWorkbench } from '@/stores/workbench'
 import { installedMonoFonts } from './fonts'
 import { ClaudeCodeSettings } from './ClaudeCodeSettings'
+import { ACTIONS, binding, conflicts, fromEvent, label as keyLabel } from '@shared/keymap'
 
-type Section = 'general' | 'apparence' | 'editeur' | 'terminal' | 'claude' | 'notifications' | 'windows'
+type Section = 'general' | 'apparence' | 'editeur' | 'raccourcis' | 'terminal' | 'claude' | 'notifications' | 'windows'
 
 /** App settings modal: sections on the left, grouped blocks of rows on the right. */
 export function SettingsPage({ onClose }: { onClose: () => void }) {
@@ -23,7 +24,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
     if (r.ok) { setHooks(on); setHookError(null) } else setHookError(r.error ?? 'erreur')
   }
   const sections: { id: Section; label: string }[] = [
-    { id: 'general', label: t('Général') }, { id: 'apparence', label: t('Apparence') }, { id: 'editeur', label: t('Éditeur') },
+    { id: 'general', label: t('Général') }, { id: 'apparence', label: t('Apparence') }, { id: 'editeur', label: t('Éditeur') }, { id: 'raccourcis', label: t('Raccourcis') },
     { id: 'terminal', label: t('Terminal') }, { id: 'claude', label: t('Claude Code') }, { id: 'notifications', label: t('Notifications') },
     ...(window.ct.platform === 'win32' ? [{ id: 'windows' as Section, label: t('Windows') }] : []),
   ]
@@ -78,12 +79,16 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                 <Row label={t('Minimap')}><Toggle checked={settings.editorMinimap} onChange={(v) => set({ editorMinimap: v })} /></Row>
               </Group>
               <Group title={t('Enregistrement')}>
+                <Row label={t("Reformater à l'enregistrement")} hint={t('Indentation et mise en forme avant chaque écriture (JSON, JS/TS, CSS, HTML…).')}>
+                  <Toggle checked={settings.formatOnSave} onChange={(v) => set({ formatOnSave: v })} />
+                </Row>
                 <Row label={t('Enregistrement automatique')} hint={t("Enregistre les fichiers modifiés quand l'éditeur perd le focus : changement d'onglet, clic dans le terminal, fenêtre en arrière-plan. Désactivé, ⌘S enregistre. Un fichier modifié sur le disque entre-temps n'est jamais écrasé automatiquement.")}>
                   <Toggle checked={settings.autoSave} onChange={(v) => set({ autoSave: v })} />
                 </Row>
               </Group>
             </>
           )}
+          {section === 'raccourcis' && <Shortcuts Group={Group} Row={Row} />}
           {section === 'terminal' && (
             <Group title={t('Police')}>
               <Row label={t('Police')}>{fontSelect(settings.fontFamily, (v) => set({ fontFamily: v }))}</Row>
@@ -142,3 +147,43 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   return <button className={'toggle' + (checked ? ' on' : '')} disabled={disabled} onClick={() => onChange(!checked)} role="switch" aria-checked={checked}><span /></button>
 }
 
+
+/** Keymap editor: click a shortcut, press the new combination (Escape cancels, Backspace clears). */
+function Shortcuts({ Group, Row }: { Group: (p: { title: string; children: ReactNode }) => ReactNode; Row: (p: { label: string; hint?: string; children?: ReactNode }) => ReactNode }) {
+  const settings = useWorkbench((s) => s.settings)!
+  const kb = settings.keybindings ?? {}
+  const mac = window.ct.platform === 'darwin'
+  const [recording, setRecording] = useState<string | null>(null)
+  const cf = conflicts(kb)
+  const setKb = (next: Record<string, string>) => window.ct.settings.set({ keybindings: next })
+  const onKey = (id: string, e: React.KeyboardEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    if (e.key === 'Escape') return setRecording(null)
+    const combo = e.key === 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey ? '' : fromEvent(e.nativeEvent, mac)
+    if (combo === null) return
+    const def = ACTIONS.find((a) => a.id === id)!.default
+    const next = { ...kb }; if (combo === def) delete next[id]; else next[id] = combo
+    setKb(next); setRecording(null)
+  }
+  const group = (scope: 'general' | 'editor', title: string) => (
+    <Group title={title}>
+      {ACTIONS.filter((a) => a.scope === scope).map((a) => (
+        <Row key={a.id} label={t(a.label)} hint={cf[a.id] ? t('En conflit avec : {x}', { x: cf[a.id].map((id) => t(ACTIONS.find((b) => b.id === id)!.label)).join(', ') }) : undefined}>
+          <span className="unit-row">
+            <button className={'key-recorder' + (recording === a.id ? ' on' : '') + (cf[a.id] ? ' conflict' : '')} onClick={() => setRecording(a.id)} onKeyDown={(e) => recording === a.id && onKey(a.id, e)} onBlur={() => setRecording(null)}>
+              {recording === a.id ? t('Appuie sur les touches…') : keyLabel(binding(a.id, kb), mac)}
+            </button>
+            {kb[a.id] !== undefined && <button className="linkbtn" onClick={() => { const n = { ...kb }; delete n[a.id]; setKb(n) }}>{t('Rétablir')}</button>}
+          </span>
+        </Row>
+      ))}
+    </Group>
+  )
+  return (
+    <>
+      <div className="cc-bar"><span className="muted">{t('Raccourcis par défaut : JetBrains. Clic sur un raccourci puis nouvelle combinaison ; Échap annule, ⌫ efface.')}</span><span className="spacer" />{Object.keys(kb).length > 0 && <button className="btn" onClick={() => setKb({})}>{t('Tout rétablir')}</button>}</div>
+      {group('general', t('Général'))}
+      {group('editor', t('Éditeur'))}
+    </>
+  )
+}

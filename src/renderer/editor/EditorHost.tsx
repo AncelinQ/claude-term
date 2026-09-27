@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { monaco, applyMonacoTheme } from './monaco'
 import { useWorkbench, type Tab } from '@/stores/workbench'
+import { ACTIONS, binding, parse } from '@shared/keymap'
+import { runAppAction } from '@/actions'
 
 /** One Monaco editor for the center; models (and their undo stacks) live per file path. */
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
@@ -25,7 +27,7 @@ function ensureEditor(s: Parameters<typeof editorOptions>[0]) {
     tabSize: 2, insertSpaces: true, detectIndentation: true, smoothScrolling: true, padding: { top: 8 },
     scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }, fixedOverflowWidgets: true,
   })
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => useWorkbench.getState().saveCurrentFile())
+  applyKeymap(useWorkbench.getState().settings?.keybindings ?? {})
   editor.onDidBlurEditorWidget(() => useWorkbench.getState().autoSaveAll())
   editor.onDidChangeModelContent(() => {
     const m = editor!.getModel()
@@ -34,6 +36,38 @@ function ensureEditor(s: Parameters<typeof editorOptions>[0]) {
     useWorkbench.getState().setFileDirty(path, m.getValue() !== saved.get(path))
   })
   return editor
+}
+
+const KEYCODES: Record<string, number> = {
+  ArrowUp: monaco.KeyCode.UpArrow, ArrowDown: monaco.KeyCode.DownArrow, ArrowLeft: monaco.KeyCode.LeftArrow, ArrowRight: monaco.KeyCode.RightArrow,
+  Backspace: monaco.KeyCode.Backspace, Delete: monaco.KeyCode.Delete, Enter: monaco.KeyCode.Enter, Space: monaco.KeyCode.Space, Tab: monaco.KeyCode.Tab, Escape: monaco.KeyCode.Escape,
+  '/': monaco.KeyCode.Slash, ',': monaco.KeyCode.Comma, '-': monaco.KeyCode.Minus, '=': monaco.KeyCode.Equal, '[': monaco.KeyCode.BracketLeft, ']': monaco.KeyCode.BracketRight, '.': monaco.KeyCode.Period,
+}
+/** "Mod+Alt+L" → Monaco keybinding number. */
+function monacoKey(s: string): number | null {
+  const c = parse(s)
+  if (!c) return null
+  const mac = window.ct.platform === 'darwin'
+  const k = c.key.length === 1 && /[a-z]/.test(c.key) ? (monaco.KeyCode as any)['Key' + c.key.toUpperCase()] : /^[0-9]$/.test(c.key) ? (monaco.KeyCode as any)['Digit' + c.key] : /^F\d+$/.test(c.key) ? (monaco.KeyCode as any)[c.key] : KEYCODES[c.key]
+  if (k === undefined) return null
+  return k | (c.mod ? monaco.KeyMod.CtrlCmd : 0) | (c.ctrl ? (mac ? monaco.KeyMod.WinCtrl : monaco.KeyMod.CtrlCmd) : 0) | (c.alt ? monaco.KeyMod.Alt : 0) | (c.shift ? monaco.KeyMod.Shift : 0)
+}
+let keymapDisposables: { dispose(): void }[] = []
+/** (Re)binds every keymap action in Monaco: editor actions run the Monaco command, general ones the app action. */
+export function applyKeymap(overrides: Record<string, string>) {
+  if (!editor) return
+  keymapDisposables.forEach((d) => d.dispose()); keymapDisposables = []
+  for (const a of ACTIONS) {
+    const kb = monacoKey(binding(a.id, overrides))
+    if (kb === null) continue
+    const run = a.scope === 'editor' ? () => { editor!.getAction(a.id)?.run() ?? editor!.trigger('keymap', a.id, null) } : () => { runAppAction(a.id) }
+    keymapDisposables.push(editor.addAction({ id: 'ct.' + a.id, label: a.label, keybindings: [kb], run }))
+  }
+}
+/** Runs the formatter on a file's model when it is the one in the editor. */
+export async function formatIfActive(path: string) {
+  if (!editor || editor.getModel()?.uri.fsPath !== path) return
+  await editor.getAction('editor.action.formatDocument')?.run()
 }
 
 export function modelFor(path: string, text: string): monaco.editor.ITextModel {
@@ -105,6 +139,7 @@ export function EditorHost({ tab }: { tab: Tab }) {
     applyMonacoTheme(theme); themedFor = theme.id
     editor.updateOptions(editorOptions(settings))
   }, [theme, settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight, settings.editorWordWrap, settings.editorMinimap])
+  useEffect(() => { applyKeymap(settings.keybindings ?? {}) }, [JSON.stringify(settings.keybindings ?? {})])
 
   return <div className="editor-wrap" ref={ref} />
 }

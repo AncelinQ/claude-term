@@ -8,6 +8,8 @@ import { Center } from './workbench/Center'
 import { Welcome } from './workbench/Welcome'
 import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
+import { ACTIONS, binding, matches } from '@shared/keymap'
+import { runAppAction } from './actions'
 import { usePlugins } from './stores/plugins'
 import { PluginPopover } from './workbench/PluginView'
 import { t } from '@/i18n'
@@ -40,24 +42,16 @@ export function App() {
   setLanguage(language)
   useEffect(() => { setLanguage(language) }, [language])
 
-  // shortcuts
+  // shortcuts (keymap: JetBrains defaults, overridable in the settings)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useWorkbench.getState()
       if (e.key === 'Escape' && st.showSettings) { st.setShowSettings(false); return }
-      const mod = e.metaKey || e.ctrlKey
-      if (!mod) return
-      const p = st.projects.find((x) => x.id === st.activeProjectId)
-      if (e.key === 't' && !e.shiftKey && p?.root) { e.preventDefault(); newTab(p.id, 'shell') }
-      else if (e.key === 't' && e.shiftKey && p?.root) { e.preventDefault(); newTab(p.id, 'claude') }
-      else if (e.key === 'w' && !e.shiftKey && st.showSettings) { e.preventDefault(); st.setShowSettings(false) }
-      else if (e.key === 'w' && !e.shiftKey && p?.currentTabId) { e.preventDefault(); closeTab(p.id, p.currentTabId) }
-      else if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newProject(null) }
-      else if (e.key === 's' && e.altKey && p?.root) { e.preventDefault(); st.captureScreen(p.id) }
-      else if (e.key === 's' && !e.shiftKey) { e.preventDefault(); st.saveCurrentFile() }
-      else if (e.key === ',') { e.preventDefault(); st.setShowSettings(!st.showSettings) }
-      else if (e.key === 'o' && !e.shiftKey) { e.preventDefault(); window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }) }
-      else if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.altKey) { e.preventDefault(); const ids = ['explorer', 'search', 'history', 'skills', 'mcp', 'plugins'] as const; const id = ids[+e.key - 1]; st.setLeft(st.leftActivity === id ? null : id) }
+      if ((e.target as HTMLElement)?.closest?.('.key-recorder')) return
+      const kb = st.settings?.keybindings ?? {}
+      const mac = window.ct.platform === 'darwin'
+      const hit = ACTIONS.find((a) => a.scope === 'general' && matches(binding(a.id, kb), e, mac))
+      if (hit && runAppAction(hit.id)) e.preventDefault()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

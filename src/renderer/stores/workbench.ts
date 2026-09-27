@@ -336,6 +336,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     const tabs = get().projects.flatMap((p) => p.tabs).filter((t) => t.kind === 'file' && t.path === path && t.fileKind === 'text')
     if (!tabs.length) return
     const ed = await import('@/editor/EditorHost')
+    if (get().settings?.formatOnSave) await ed.formatIfActive(path)
     const text = ed.fileText(path)
     if (text === null) return
     const r = await window.ct.fs.writeFile(path, text)
