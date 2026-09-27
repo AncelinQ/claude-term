@@ -24,7 +24,8 @@ export async function installedMonoFonts(): Promise<string[]> {
     const q = (window as any).queryLocalFonts as (() => Promise<{ family: string }[]>) | undefined
     if (q) families = [...new Set((await q()).map((f) => f.family))]
   } catch { /* permission denied or unsupported */ }
-  const out = families.length ? families.filter((f) => isMono(f, ctx)) : FALLBACK.filter((f) => installed(f, ctx))
+  const symbolic = /wingdings|webdings|symbol|dingbat|emoji|braille|ayuthaya/i
+  const out = families.length ? families.filter((f) => !symbolic.test(f) && isMono(f, ctx)) : FALLBACK.filter((f) => installed(f, ctx))
   cache = out.sort((a, b) => a.localeCompare(b))
   return cache
 }
