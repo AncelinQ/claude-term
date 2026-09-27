@@ -11,6 +11,8 @@ files:
 extraResources:
   - from: resources/themes
     to: themes
+  - from: resources/plugins
+    to: plugins
 asarUnpack:
   - "**/node_modules/node-pty/**"
 mac:

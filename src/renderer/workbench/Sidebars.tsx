@@ -1,6 +1,7 @@
 import { Island, Empty } from './Island'
 import { Icons } from './icons'
 import { FileTree } from './FileTree'
+import { useMemo } from 'react'
 import { useWorkbench, type Project } from '@/stores/workbench'
 import { Gutter, VStack, useStoredSize, useCollapsed } from './Split'
 import { LinksIsland } from './islands/Links'
@@ -9,6 +10,16 @@ import { SkillsIsland } from './islands/Skills'
 import { McpIsland } from './islands/Mcp'
 import { ProcessIsland } from './islands/Process'
 import { HistoryIsland } from './islands/History'
+import { PluginViewIsland } from './PluginView'
+import { PluginsIsland } from './islands/Plugins'
+import { usePlugins } from '@/stores/plugins'
+
+function PluginViews({ activity }: { activity: string }) {
+  const plugins = usePlugins((s) => s.plugins)
+  const views = useMemo(() => usePlugins.getState().viewsOf(activity), [plugins, activity])
+  if (!views.length) return <Island title={activity} grow><Empty>—</Empty></Island>
+  return <>{views.map((v, i) => <PluginViewIsland key={v.id} viewId={v.id} title={v.title} grow={i === 0} />)}</>
+}
 import { t } from '@/i18n'
 
 export function LeftSidebar({ project }: { project: Project }) {
@@ -40,7 +51,8 @@ export function LeftSidebar({ project }: { project: Project }) {
           bottom={<McpIsland scope="user" root={project.root} collapsed={mcpCollapsed} onCollapse={setMcpCollapsed} />}
         />
       )}
-      {activity === 'plugins' && <Island title={t('Plugins')} icon={Icons.puzzle(14)} grow><Empty>{t('Phase 5')}</Empty></Island>}
+      {activity === 'plugins' && <PluginsIsland />}
+      {activity.includes(':') && <PluginViews activity={activity} />}
     </div>
     <Gutter axis="x" className="left" onDrag={(d) => setWidth((w) => Math.max(180, Math.min(600, w + d)))} />
     </>
@@ -58,6 +70,7 @@ export function RightSidebar() {
     <div className="sidebar right" style={{ width }}>
       {activity === 'process' && <ProcessIsland />}
       {activity === 'history' && <HistoryIsland scope="all" />}
+      {activity.includes(':') && <PluginViews activity={activity} />}
       {activity === 'skills' && (
         <VStack id="skills" collapsed={pluginsCollapsed}
           top={<SkillsIsland title={t('Skills perso')} root={null} createIn={null} grow load={() => window.ct.skills.personal()} />}

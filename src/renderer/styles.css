@@ -329,3 +329,12 @@ input[type=checkbox]:disabled { opacity: .4; }
 .tstatus { display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ct-text-secondary); white-space: nowrap; }
 .tstatus .item { display: inline-flex; align-items: center; gap: 5px; }
 .tstatus .cmd { max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: var(--ct-text-tertiary); }
+
+/* plugins */
+.activity .sep { width: 18px; height: 1px; background: var(--ct-island-border); margin: 4px 0; flex: none; }
+.activity.right .sep { width: 14px; }
+.pv-row.group { color: var(--ct-text-secondary); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: .03em; padding-top: 7px; padding-bottom: 3px; }
+.pv-row.group .name { font-weight: 600; }
+.pv-row .acts.always { display: inline-flex; }
+.pv-row .acts button.primary { color: var(--ct-accent); }
+.lrow .acts.always button.primary { opacity: .85; }

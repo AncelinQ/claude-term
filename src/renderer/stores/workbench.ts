@@ -44,8 +44,8 @@ export interface Project {
   selectedFolder: string
 }
 
-export type LeftActivity = 'explorer' | 'search' | 'history' | 'skills' | 'mcp' | 'plugins'
-export type RightActivity = 'process' | 'history' | 'skills'
+export type LeftActivity = 'explorer' | 'search' | 'history' | 'skills' | 'mcp' | 'plugins' | (string & {})
+export type RightActivity = 'process' | 'history' | 'skills' | (string & {})
 
 interface Workbench {
   theme: ResolvedTheme | null
@@ -78,6 +78,8 @@ interface Workbench {
   /** types escaped file paths into a terminal tab (the current one, else the Claude tab) */
   sendPaths(projectId: string, paths: string[], tabId?: string): Promise<void>
   captureScreen(projectId: string): Promise<void>
+  /** runs a command in an idle shell tab of the project (or a new one), cd-ing first when needed */
+  runCommand(projectId: string, cwd: string, command: string, tab?: 'reuse' | 'new'): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
   /** closes every file tab (terminals stay), except `keep` */
   closeFiles(projectId: string, keep?: string): Promise<void>
@@ -207,6 +209,21 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       window.ct.pty.write(t.ptyId, pathsForPrompt(paths))
       ;(await import('@/terminal/TerminalView')).focusTerminal(t.id)
     } else await get().insertPrompt(projectId, pathsForPrompt(paths))
+  },
+  async runCommand(projectId, cwd, command, tab = 'reuse') {
+    const p = get().projects.find((x) => x.id === projectId)
+    if (!p) return
+    let target = tab === 'reuse' ? (p.tabs.find((x) => x.id === p.currentTabId && x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning) ?? p.tabs.find((x) => x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning)) : undefined
+    if (!target) {
+      await get().newTab(projectId, 'shell', cwd)
+      await new Promise((r) => setTimeout(r, 700))
+      target = get().projects.find((x) => x.id === projectId)?.tabs.at(-1)
+    }
+    if (!target?.ptyId) return
+    get().setCurrentTab(projectId, target.id)
+    const prefix = target.cwd === cwd ? '' : `cd ${cwd.replace(/(["\s'$`\\])/g, '\\$1')} && `
+    window.ct.pty.write(target.ptyId, '\x15' + prefix + command + '\n')   // ^U clears pending input
+    ;(await import('@/terminal/TerminalView')).focusTerminal(target.id)
   },
   async captureScreen(projectId) {
     const p = await window.ct.attachments.captureScreen()

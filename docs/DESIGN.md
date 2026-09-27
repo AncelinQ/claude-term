@@ -108,6 +108,12 @@ is generated.
 
 ## 7. Plugins
 
+Phase 5.0 (2026-09-27): the host runs **in the main process**, one Node `vm` context per plugin,
+with the API in `resources/plugins/claudeterm.d.ts`; moving it to a utility process later keeps the
+same API. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
+after a separator line in the bar. First built-in plugin: **Lanceur** (`resources/plugins/runnables`),
+which detects npm scripts (workspaces included), make targets, cargo, go, python and shell scripts.
+
 Folder `userData/plugins/<id>/` with `plugin.json` (id, version, engine, activation,
 permissions, contributes: commands, activity, views, status, menus, themes, settings) and
 `main.js`. Runs in the extension host (one `vm` context per plugin, host in an Electron

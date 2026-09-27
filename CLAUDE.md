@@ -29,4 +29,7 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
 - Packaging: `electron-builder.yml`; `npm run dist:mac|win|linux`. Themes ship as `extraResources/themes`,
   node-pty is unpacked from the asar. A packaged app started with `CT_CDP_PORT=9444` exposes CDP and the
   test hooks, so `CT_CDP_PORT=9444 npx tsx scripts/ui.ts …` drives it like the dev app. Icons in `build/`.
+- Plugins: host in `src/main/services/plugins.ts` (vm per plugin), contract in `src/shared/plugins.ts`,
+  API typings in `resources/plugins/claudeterm.d.ts`, built-ins in `resources/plugins/<id>/`, user plugins in
+  `userData/plugins`. Views are declarative models rendered by `workbench/PluginView.tsx`; plugins never draw.
 - License: PolyForm Noncommercial 1.0.0.

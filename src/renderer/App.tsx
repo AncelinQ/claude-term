@@ -8,6 +8,7 @@ import { Center } from './workbench/Center'
 import { Welcome } from './workbench/Welcome'
 import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
+import { usePlugins } from './stores/plugins'
 import { t } from '@/i18n'
 
 export function App() {
@@ -15,6 +16,9 @@ export function App() {
   const project = useActiveProject()
   useEffect(() => {
     init()
+    usePlugins.getState().init()
+    window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, r.command, r.tab) })
+    window.ct.plugins.onNotify((n) => { new Notification(n.title, { body: n.body }) })
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
@@ -23,6 +27,8 @@ export function App() {
     }
   }, [])
   useEffect(() => { if (theme) applyTheme(theme) }, [theme])
+  const activeRoot = project?.root ?? null
+  useEffect(() => { window.ct.plugins.projectChanged(activeRoot) }, [activeRoot])
   const language = settings?.language ?? 'system'
   setLanguage(language)
   useEffect(() => { setLanguage(language) }, [language])

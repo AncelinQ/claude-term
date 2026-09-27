@@ -92,6 +92,16 @@ const api: CtApi = {
   search: {
     files: (root, query) => ipcRenderer.invoke('search:files', { root, query }),
   },
+  plugins: {
+    list: () => ipcRenderer.invoke('plugins:list'),
+    onChanged: (cb) => channel('plugins:changed', () => true, (p) => p, cb),
+    view: (viewId) => ipcRenderer.invoke('plugins:viewModel', viewId),
+    onView: (cb) => channel('plugins:view', () => true, (p) => p, cb),
+    event: (e) => ipcRenderer.send('plugins:event', e),
+    onRun: (cb) => channel('plugins:run', () => true, (p) => p, cb),
+    onNotify: (cb) => channel('plugins:notify', () => true, (p) => p, cb),
+    projectChanged: (root) => ipcRenderer.send('plugins:project', root),
+  },
   attachments: {
     pathForFile: (file) => webUtils.getPathForFile(file),
     saveDataUrl: (dataUrl) => ipcRenderer.invoke('att:saveDataUrl', dataUrl),

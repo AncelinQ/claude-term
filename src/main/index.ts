@@ -16,6 +16,7 @@ import { Mcp } from './services/mcp'
 import { scanClaudeProcesses } from './services/process'
 import { FileIndex } from './services/search'
 import { Attachments } from './services/attachments'
+import { PluginHost } from './services/plugins'
 import type { DirEntry } from '@shared/ipc'
 
 // Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts): always in dev, on demand (CT_CDP_PORT) when packaged
@@ -133,6 +134,15 @@ ipcMain.handle('att:saveDataUrl', (_e, d: string) => attachments.saveDataUrl(d))
 ipcMain.handle('att:clipboardImage', () => attachments.clipboardImage())
 ipcMain.handle('att:captureScreen', async () => { const p = await attachments.captureScreen(); if (p) { win?.show(); win?.focus() } return p })
 
+// plugins
+let activeRoot: string | null = null
+const builtinPlugins = app.isPackaged ? join(process.resourcesPath, 'plugins') : join(app.getAppPath(), 'resources', 'plugins')
+const pluginHost = new PluginHost(builtinPlugins, { send, projectRoot: () => activeRoot, settings: () => settings.get() as any })
+ipcMain.handle('plugins:list', () => pluginHost.list())
+ipcMain.handle('plugins:viewModel', (_e, id: string) => pluginHost.viewModel(id))
+ipcMain.on('plugins:event', (_e, ev) => pluginHost.viewEvent(ev))
+ipcMain.on('plugins:project', (_e, root: string | null) => { if (root !== activeRoot) { activeRoot = root; pluginHost.projectChanged(root) } })
+
 // app
 ipcMain.handle('app:pickFolder', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory', 'showHiddenFiles'] })
@@ -148,8 +158,9 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = settings.get().themeFollowSystem ? 'system' : themes.current().type
   win = createWindow(themes.current())
   win.on('closed', () => { win = null })
+  win.webContents.once('did-finish-load', () => pluginHost.loadAll())
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) win = createWindow(themes.current()) })
 })
 
 app.on('window-all-closed', () => { ptys.killAll(); app.quit() })
-app.on('before-quit', () => ptys.killAll())
+app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose() })

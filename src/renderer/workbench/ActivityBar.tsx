@@ -1,6 +1,24 @@
 import type React from "react"
+import { useMemo } from 'react'
 import { Icons } from './icons'
 import { useWorkbench, type LeftActivity, type RightActivity } from '@/stores/workbench'
+import { usePlugins } from '@/stores/plugins'
+
+const pluginIcon = (name: string) => { const f = (Icons as Record<string, ((s?: number) => React.ReactElement) | undefined>)[name]; return f ? f() : Icons.puzzle() }
+
+function PluginEntries({ side, current, select }: { side: 'left' | 'right'; current: string | null; select: (id: string | null) => void }) {
+  const plugins = usePlugins((s) => s.plugins)
+  const entries = useMemo(() => usePlugins.getState().activities(side), [plugins, side])
+  if (!entries.length) return null
+  return (
+    <>
+      <span className="sep" />
+      {entries.map((a) => (
+        <button key={a.id} className={current === a.id ? 'on' : ''} title={a.title} onClick={() => select(current === a.id ? null : a.id)}>{pluginIcon(a.icon)}</button>
+      ))}
+    </>
+  )
+}
 import { t } from '@/i18n'
 
 const LEFT: { id: LeftActivity; title: string; icon: () => React.ReactElement }[] = [
@@ -26,6 +44,7 @@ export function LeftActivityBar() {
           {a.icon()}
         </button>
       ))}
+      <PluginEntries side="left" current={leftActivity} select={(id) => setLeft(id as LeftActivity | null)} />
     </div>
   )
 }
@@ -39,6 +58,7 @@ export function RightActivityBar() {
           {a.icon()}
         </button>
       ))}
+      <PluginEntries side="right" current={rightActivity} select={(id) => setRight(id as RightActivity | null)} />
       <span className="spacer" />
       <button className={showSettings ? 'on' : ''} title={t(window.ct.platform === 'darwin' ? 'Réglages (⌘,)' : 'Réglages (Ctrl+,)')} onClick={() => setShowSettings(!showSettings)}>{Icons.gear()}</button>
     </div>

@@ -98,6 +98,10 @@ const EN: Record<string, string> = {
   'Arrêter (SIGTERM)': 'Stop (SIGTERM)',
   'Arrêter le process {pid} ?': 'Stop process {pid}?',
   'Plugins': 'Plugins',
+  'Chargement…': 'Loading…',
+  'Aucun plugin installé': 'No plugin installed',
+  'intégré': 'built-in',
+  'Dossier des plugins': 'Plugins folder',
   'Phase 5': 'Phase 5',
   // center
   'Nouvel onglet': 'New tab',

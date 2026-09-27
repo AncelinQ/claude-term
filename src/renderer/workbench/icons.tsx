@@ -24,6 +24,7 @@ export const Icons = {
   code: (s?: number) => <I size={s} d="M16 18l6-6-6-6|M8 6l-6 6 6 6" />,
   columns: (s?: number) => <I size={s} d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z|M12 3v18" />,
   eye: (s?: number) => <I size={s} d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z|M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />,
+  play: (s?: number) => <I size={s} d="M6 4l14 8-14 8z" />,
   camera: (s?: number) => <I size={s} d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z|M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
   file: (s?: number) => <I size={s} d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z|M14 2v5h5" />,
   link: (s?: number) => <I size={s} d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7|M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />,
