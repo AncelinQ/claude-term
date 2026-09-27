@@ -436,7 +436,5 @@ input[type=checkbox]:disabled { opacity: .4; }
 /* markdown mode switch moves below the find bar when it covers the same pane */
 .md-host:has(.mode-code .findbar) .md-modes { top: 41px; }
 .md-host:has(.mode-code .findbar .fb-row + .fb-row) .md-modes { top: 69px; }
-/* right bar: owns the gutter only when the right sidebar is open (else the center's padding is the gutter) */
-.body:not(:has(> .sidebar.right)) > .activity.right { width: 30px; }
 /* the right activity bar already includes the gutter: with the right sidebar hidden, the center adds none */
 .body:not(:has(> .sidebar.right)) > .center { padding-right: 0; }
