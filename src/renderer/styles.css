@@ -6,7 +6,7 @@
   --ct-title-h: 38px;
   --ct-status-h: 24px;
   --ct-activity-w: 44px;
-  --ct-activity2-w: 30px;
+  --ct-activity2-w: 38px;
 }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; overflow: hidden; }
@@ -46,7 +46,7 @@ input:focus { border-color: var(--ct-accent); }
 .activity button:hover { color: var(--ct-activity-active); background: var(--ct-hover-bg); }
 .activity button.on { color: var(--ct-activity-active); }
 .activity button.on::before { content: ""; position: absolute; left: -5px; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--ct-activity-indicator); }
-.activity.right button.on::before { left: auto; right: -3px; top: 4px; bottom: 4px; }
+.activity.right button.on::before { left: auto; right: -6px; top: 4px; bottom: 4px; }
 .activity svg { width: 20px; height: 20px; }
 .activity.right svg { width: 16px; height: 16px; }
 
@@ -68,7 +68,7 @@ input:focus { border-color: var(--ct-accent); }
 /* sidebars and islands */
 .sidebar { display: flex; flex-direction: column; gap: var(--ct-gutter); padding: var(--ct-gutter) 0 var(--ct-gutter) 0; min-width: 0; overflow: hidden; }
 .sidebar.left { padding-right: 0; }
-.sidebar.right { padding-right: var(--ct-gutter); }
+.sidebar.right { padding-right: 0; }
 .center { display: flex; flex-direction: column; gap: var(--ct-gutter); padding: var(--ct-gutter); min-width: 0; }
 .island { display: flex; flex-direction: column; min-height: 0; background: var(--ct-island-bg); border-radius: var(--ct-radius); overflow: hidden; }
 .island.grow { flex: 1; }
