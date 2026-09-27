@@ -1,26 +1,43 @@
 name: release
-# A "v*" tag (npm version patch && git push --follow-tags) builds the three platforms and publishes the GitHub
-# release the in-app updater reads (installers + latest*.yml). workflow_dispatch: build only, artifacts kept.
+# Every push to main (docs aside) publishes a release: version = latest v* tag + 1 patch, or package.json's version
+# when it is higher (raise it for a minor / major). Builds upload into a draft that is published only when the three
+# platforms succeed, so the in-app updater (releases/latest) never sees a partial release. Nothing is committed back.
+# workflow_dispatch: build only (artifacts kept), or publish when asked.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths-ignore: ['docs/**', '**/*.md', 'LICENSE.md']
   workflow_dispatch:
+    inputs:
+      publish: { description: 'Publish a release', type: boolean, default: false }
+concurrency: { group: release, cancel-in-progress: false }
 permissions:
   contents: write
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      publish: ${{ steps.v.outputs.publish }}
     steps:
       - uses: actions/checkout@v4
-      - name: create the release (the builds upload into it)
-        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "ClaudeTerm ${GITHUB_REF_NAME#v}" --generate-notes
-        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        with: { fetch-depth: 0 }
+      - id: v
+        run: |
+          echo "version=$(node scripts/next-version.mjs)" >> "$GITHUB_OUTPUT"
+          echo "publish=${{ github.event_name == 'push' || inputs.publish }}" >> "$GITHUB_OUTPUT"
+      - name: draft release (a leftover draft of a failed run is replaced)
+        if: steps.v.outputs.publish == 'true'
+        run: |
+          V=v${{ steps.v.outputs.version }}
+          if gh release view "$V" --json isDraft -q .isDraft 2>/dev/null | grep -q true; then gh release delete "$V" --yes; fi
+          gh release create "$V" --draft --target "$GITHUB_SHA" --title "ClaudeTerm ${V#v}" --generate-notes
   build:
-    needs: release
-    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    needs: version
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: macos-latest
@@ -36,18 +53,23 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm test
-      - run: npm run ${{ matrix.script }} -- --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+      - run: npm run ${{ matrix.script }} -- --publish ${{ needs.version.outputs.publish == 'true' && 'always' || 'never' }} -c.extraMetadata.version=${{ needs.version.outputs.version }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           # the renderer bundle (Monaco) needs more than the default heap
           NODE_OPTIONS: --max-old-space-size=6144
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
-          name: claudeterm-${{ matrix.os }}
+          name: claudeterm-${{ needs.version.outputs.version }}-${{ matrix.os }}
           path: |
             dist/*.dmg
             dist/*.zip
             dist/*.exe
             dist/*.AppImage
             dist/latest*.yml
+  publish:
+    needs: [version, build]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release edit "v${{ needs.version.outputs.version }}" -R "$GITHUB_REPOSITORY" --draft=false --latest

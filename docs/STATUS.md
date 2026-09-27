@@ -37,7 +37,8 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   the `v1` branch and `v1-swift` tag). Windows / Linux through electron-updater; macOS through our own updater
   (unsigned builds): feed, zip sha512, bundle version check, swap after quit + reopen. Checked end to end with a
   local feed (packaged 2.0.0 → 2.0.1). Settings › Général › Mises à jour; download icon in the right bar when ready.
-  CI workflow `release` on `v*` tags publishes the release (installers + latest*.yml).
+  CI workflow `release`: every push to main → next version (last tag + 1 patch, or package.json when higher) →
+  draft release → 3 platforms → published when all succeed. First release: v2.0.0.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.

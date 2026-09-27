@@ -47,4 +47,5 @@ publish:
   provider: github
   owner: sunstan
   repo: claude-term
-  releaseType: release
+  # CI publishes the draft once every platform is built
+  releaseType: draft

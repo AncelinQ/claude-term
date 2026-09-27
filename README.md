@@ -39,10 +39,12 @@ Settings › General › Updates: check now, turn automatic checks off.
 
 ## Release
 
-```
-npm version patch        # or minor / major: bumps package.json and creates the v<version> tag
-git push --follow-tags   # the "release" workflow builds macOS / Windows / Linux and publishes the GitHub release
-```
+Every push to `main` publishes a release (the `release` workflow; changes limited to docs / Markdown are skipped):
+
+- version = latest `v*` tag + 1 patch (2.0.0 → 2.0.1 → 2.0.2…), nothing is committed back;
+- minor / major: raise `version` in `package.json` (e.g. `2.1.0`), the next push releases it, then patches continue;
+- the three platforms upload into a draft release, published only when all of them succeed;
+- Actions › release › Run workflow: build only (artifacts), or publish on demand.
 
 Windows: Settings › Windows chooses where `claude` runs (native, or a WSL distribution).
 Requirements on every platform: Node is not needed at runtime; `claude` must be installed
