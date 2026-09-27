@@ -39,7 +39,7 @@ export function LeftSidebar({ project }: { project: Project }) {
       )}
       {activity === 'plugins' && <Island title="Plugins" icon={Icons.puzzle(14)} grow><Empty>Phase 5</Empty></Island>}
     </div>
-    <Gutter axis="x" onDrag={(d) => setWidth(Math.max(180, Math.min(600, width + d)))} />
+    <Gutter axis="x" className="left" onDrag={(d) => setWidth(Math.max(180, Math.min(600, width + d)))} />
     </>
   )
 }
@@ -51,7 +51,7 @@ export function RightSidebar() {
   if (!activity) return null
   return (
     <>
-    <Gutter axis="x" onDrag={(d) => setWidth(Math.max(220, Math.min(700, width - d)))} />
+    <Gutter axis="x" className="right" onDrag={(d) => setWidth(Math.max(220, Math.min(700, width - d)))} />
     <div className="sidebar right" style={{ width }}>
       {activity === 'process' && <Island title="Process Claude" icon={Icons.cpu(14)} grow><Empty>Bientôt : processus claude sur cette machine</Empty></Island>}
       {activity === 'history' && <Island title="Historique" icon={Icons.clock(14)} grow><Empty>Bientôt : sessions passées</Empty></Island>}

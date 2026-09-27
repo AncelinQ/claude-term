@@ -8,7 +8,7 @@ export function useStoredSize(key: string, initial: number): [number, (v: number
 }
 
 /** Drag handle. `axis` x resizes a width, y a height; `sign` −1 when the resized box is after the handle. */
-export function Gutter({ axis, onDrag, onEnd }: { axis: 'x' | 'y'; onDrag: (delta: number) => void; onEnd?: () => void }) {
+export function Gutter({ axis, onDrag, onEnd, className, inert }: { axis: 'x' | 'y'; onDrag: (delta: number) => void; onEnd?: () => void; className?: string; inert?: boolean }) {
   const start = useRef(0)
   const onDown = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -23,7 +23,7 @@ export function Gutter({ axis, onDrag, onEnd }: { axis: 'x' | 'y'; onDrag: (delt
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
-  return <div className={'gutter ' + axis} onMouseDown={onDown} />
+  return <div className={'gutter ' + axis + (className ? ' ' + className : '') + (inert ? ' inert' : '')} onMouseDown={onDown} />
 }
 
 /**
@@ -39,7 +39,7 @@ export function VStack({ id, top, bottom, collapsed, min = 100, initial = 220 }:
   return (
     <div className="vstack" ref={ref}>
       <div className="vstack-top">{top}</div>
-      {!collapsed && <Gutter axis="y" onDrag={(d) => setH(clamp(h - d))} />}
+      <Gutter axis="y" inert={collapsed} onDrag={(d) => setH(clamp(h - d))} />
       <div className="vstack-bottom" style={{ height: collapsed ? undefined : h, flex: collapsed ? 'none' : undefined }}>{bottom}</div>
     </div>
   )

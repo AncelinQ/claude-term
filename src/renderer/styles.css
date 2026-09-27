@@ -56,15 +56,17 @@ input:focus { border-color: var(--ct-accent); }
 .activity.right svg { width: 16px; height: 16px; }
 
 /* gutters and stacks */
-.gutter.x { width: var(--ct-gutter); margin: 0 calc(var(--ct-gutter) * -1) 0 0; cursor: col-resize; flex: none; z-index: 2; }
-.gutter.y { height: var(--ct-gutter); margin: calc(var(--ct-gutter) * -1) 0 0; cursor: row-resize; flex: none; z-index: 2; }
+/* gutters overlay the existing gaps (center padding, stack gap): they take no extra space */
+.gutter { flex: none; z-index: 2; }
+.gutter.x { width: var(--ct-gutter); cursor: col-resize; }
+.gutter.y { height: var(--ct-gutter); cursor: row-resize; }
+.gutter.inert { pointer-events: none; }
 .gutter:hover { background: color-mix(in srgb, var(--ct-accent) 35%, transparent); }
-.vstack { display: flex; flex-direction: column; gap: var(--ct-gutter); flex: 1; min-height: 0; }
+.vstack { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .vstack-top { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .vstack-top > .island { flex: 1; }
 .vstack-bottom { display: flex; flex-direction: column; min-height: 0; }
 .vstack-bottom > .island { flex: 1; }
-.body > .gutter.x { margin: 0; width: var(--ct-gutter); }
 .body > .gutter.x.left { margin-right: calc(var(--ct-gutter) * -1); }
 .body > .gutter.x.right { margin-left: calc(var(--ct-gutter) * -1); }
 
