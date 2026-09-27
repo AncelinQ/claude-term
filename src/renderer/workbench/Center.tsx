@@ -2,6 +2,7 @@ import { Icons } from './icons'
 import { Island, Empty } from './Island'
 import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
 import { useWorkbench, type Project } from '@/stores/workbench'
+import { VStack } from './Split'
 
 export function Center({ project }: { project: Project }) {
   const { newTab, closeTab, setCurrentTab, sessionCollapsed, toggleSession } = useWorkbench()
@@ -10,7 +11,8 @@ export function Center({ project }: { project: Project }) {
   const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
   return (
     <div className="center">
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <VStack id="session" collapsed={sessionCollapsed} initial={240} min={120}
+        top={<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <div className="tabs">
           {project.tabs.map((t) => (
             <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '')} onClick={() => setCurrentTab(project.id, t.id)} title={t.cwd}>
@@ -41,10 +43,11 @@ export function Center({ project }: { project: Project }) {
             </div>
           </div>
         )}
-      </div>
-      <Island title="Session" icon={Icons.activity(14)} collapsible>
-        <Empty>Phase 2 : plan, activité et fichiers de la session Claude</Empty>
-      </Island>
+      </div>}
+        bottom={<Island title="Session" icon={Icons.activity(14)} collapsible collapsed={sessionCollapsed} onCollapse={toggleSession}>
+          <Empty>Phase 2 : plan, activité et fichiers de la session Claude</Empty>
+        </Island>}
+      />
     </div>
   )
 }

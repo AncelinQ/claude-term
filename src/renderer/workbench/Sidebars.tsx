@@ -1,52 +1,67 @@
 import { Island, Empty } from './Island'
 import { Icons } from './icons'
 import { FileTree } from './FileTree'
+import { useState } from 'react'
 import { useWorkbench, type Project } from '@/stores/workbench'
+import { Gutter, VStack, useStoredSize } from './Split'
 
 export function LeftSidebar({ project }: { project: Project }) {
   const activity = useWorkbench((s) => s.leftActivity)
+  const [width, setWidth] = useStoredSize('left', 260)
+  const [linksCollapsed, setLinksCollapsed] = useState(false)
+  const [mcpCollapsed, setMcpCollapsed] = useState(false)
   if (!activity) return null
   const name = project.root?.split(/[\\/]/).filter(Boolean).pop() ?? ''
   return (
-    <div className="sidebar left">
+    <>
+    <div className="sidebar left" style={{ width }}>
       {activity === 'explorer' && (
-        <>
-          <Island title={name} icon={Icons.folder(14)} grow
-            actions={<button title="Afficher dans le Finder" onClick={() => project.root && window.ct.app.revealInFinder(project.root)}>{Icons.external()}</button>}>
-            {project.root ? <FileTree project={project} root={project.root} /> : <Empty>Aucun dossier</Empty>}
-          </Island>
-          <Island title="Dossiers liés" icon={Icons.link(14)} collapsible>
-            <Empty>Lie l'API, le design system… Claude y aura accès.</Empty>
-          </Island>
-        </>
+        <VStack id="explorer" collapsed={linksCollapsed} initial={200}
+          top={
+            <Island title={name} icon={Icons.folder(14)} grow
+              actions={<button title="Afficher dans le Finder" onClick={() => project.root && window.ct.app.revealInFinder(project.root)}>{Icons.external()}</button>}>
+              {project.root ? <FileTree project={project} root={project.root} /> : <Empty>Aucun dossier</Empty>}
+            </Island>}
+          bottom={
+            <Island title="Dossiers liés" icon={Icons.link(14)} collapsible collapsed={linksCollapsed} onCollapse={setLinksCollapsed}>
+              <Empty>Lie l'API, le design system… Claude y aura accès.</Empty>
+            </Island>}
+        />
       )}
       {activity === 'search' && <Island title="Recherche" icon={Icons.search(14)} grow><Empty>Bientôt : recherche de fichiers</Empty></Island>}
       {activity === 'scripts' && <Island title="Scripts npm" icon={Icons.box(14)} grow><Empty>Bientôt : scripts du package.json</Empty></Island>}
       {activity === 'skills' && <Island title="Skills du projet" icon={Icons.sparkle(14)} grow><Empty>Bientôt : .claude/skills et .claude/commands</Empty></Island>}
       {activity === 'mcp' && (
-        <>
-          <Island title="MCP du projet" icon={Icons.plug(14)} grow><Empty>Bientôt : .mcp.json</Empty></Island>
-          <Island title="MCP perso" icon={Icons.plug(14)} grow collapsible><Empty>Bientôt : claude mcp list</Empty></Island>
-        </>
+        <VStack id="mcp" collapsed={mcpCollapsed}
+          top={<Island title="MCP du projet" icon={Icons.plug(14)} grow><Empty>Bientôt : .mcp.json</Empty></Island>}
+          bottom={<Island title="MCP perso" icon={Icons.plug(14)} collapsible collapsed={mcpCollapsed} onCollapse={setMcpCollapsed}><Empty>Bientôt : claude mcp list</Empty></Island>}
+        />
       )}
       {activity === 'plugins' && <Island title="Plugins" icon={Icons.puzzle(14)} grow><Empty>Phase 5</Empty></Island>}
     </div>
+    <Gutter axis="x" onDrag={(d) => setWidth(Math.max(180, Math.min(600, width + d)))} />
+    </>
   )
 }
 
 export function RightSidebar() {
   const activity = useWorkbench((s) => s.rightActivity)
+  const [width, setWidth] = useStoredSize('right', 320)
+  const [pluginsCollapsed, setPluginsCollapsed] = useState(false)
   if (!activity) return null
   return (
-    <div className="sidebar right">
+    <>
+    <Gutter axis="x" onDrag={(d) => setWidth(Math.max(220, Math.min(700, width - d)))} />
+    <div className="sidebar right" style={{ width }}>
       {activity === 'process' && <Island title="Process Claude" icon={Icons.cpu(14)} grow><Empty>Bientôt : processus claude sur cette machine</Empty></Island>}
       {activity === 'history' && <Island title="Historique" icon={Icons.clock(14)} grow><Empty>Bientôt : sessions passées</Empty></Island>}
       {activity === 'skills' && (
-        <>
-          <Island title="Skills perso" icon={Icons.sparkle(14)} grow><Empty>Bientôt : ~/.claude/skills</Empty></Island>
-          <Island title="Skills des plugins" icon={Icons.sparkle(14)} grow collapsible><Empty>Bientôt</Empty></Island>
-        </>
+        <VStack id="skills" collapsed={pluginsCollapsed}
+          top={<Island title="Skills perso" icon={Icons.sparkle(14)} grow><Empty>Bientôt : ~/.claude/skills</Empty></Island>}
+          bottom={<Island title="Skills des plugins" icon={Icons.sparkle(14)} collapsible collapsed={pluginsCollapsed} onCollapse={setPluginsCollapsed}><Empty>Bientôt</Empty></Island>}
+        />
       )}
     </div>
+    </>
   )
 }

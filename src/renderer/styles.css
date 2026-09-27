@@ -55,10 +55,23 @@ input:focus { border-color: var(--ct-accent); }
 .activity svg { width: 20px; height: 20px; }
 .activity.right svg { width: 16px; height: 16px; }
 
+/* gutters and stacks */
+.gutter.x { width: var(--ct-gutter); margin: 0 calc(var(--ct-gutter) * -1) 0 0; cursor: col-resize; flex: none; z-index: 2; }
+.gutter.y { height: var(--ct-gutter); margin: calc(var(--ct-gutter) * -1) 0 0; cursor: row-resize; flex: none; z-index: 2; }
+.gutter:hover { background: color-mix(in srgb, var(--ct-accent) 35%, transparent); }
+.vstack { display: flex; flex-direction: column; gap: var(--ct-gutter); flex: 1; min-height: 0; }
+.vstack-top { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.vstack-top > .island { flex: 1; }
+.vstack-bottom { display: flex; flex-direction: column; min-height: 0; }
+.vstack-bottom > .island { flex: 1; }
+.body > .gutter.x { margin: 0; width: var(--ct-gutter); }
+.body > .gutter.x.left { margin-right: calc(var(--ct-gutter) * -1); }
+.body > .gutter.x.right { margin-left: calc(var(--ct-gutter) * -1); }
+
 /* sidebars and islands */
 .sidebar { display: flex; flex-direction: column; gap: var(--ct-gutter); padding: var(--ct-gutter) 0 var(--ct-gutter) 0; min-width: 0; overflow: hidden; }
-.sidebar.left { width: 260px; padding-right: 0; }
-.sidebar.right { width: 320px; }
+.sidebar.left { padding-right: 0; }
+.sidebar.right { padding-right: 0; }
 .center { display: flex; flex-direction: column; gap: var(--ct-gutter); padding: var(--ct-gutter); min-width: 0; }
 .island { display: flex; flex-direction: column; min-height: 0; background: var(--ct-island-bg); border: 1px solid var(--ct-island-border); border-radius: var(--ct-radius); overflow: hidden; }
 .island.grow { flex: 1; }
