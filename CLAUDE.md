@@ -16,7 +16,7 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
   `src/shared` (pure code, tested). No Node in the renderer; every capability goes through `window.ct`.
 - UI: token-driven. Colors only through `var(--ct-<token>)` (tokens listed in `src/shared/theme.ts`,
   `TOKEN_FALLBACKS`), never hard-coded. Islands (`Island` component) with the shared header; no shadows.
-  Icons are inline SVG in `workbench/icons.tsx` (CSP forbids icon fonts/CDNs).
+  Icons come from `lucide-react` through `workbench/icons.tsx` (bundled; CSP forbids icon fonts/CDNs).
 - Themes: VS Code format (`colors`, `tokenColors`) + our tokens; built-ins in `resources/themes`,
   user themes in `userData/themes`. A VS Code theme must load unchanged.
 - Terminals: one xterm per tab, created outside React (`terminal/TerminalView.tsx`) so switching tabs
