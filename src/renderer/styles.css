@@ -26,13 +26,11 @@ input:focus { border-color: var(--ct-accent); }
 
 /* window */
 .wb { display: grid; grid-template-rows: var(--ct-title-h) 1fr var(--ct-status-h); grid-template-columns: minmax(0, 1fr); height: 100%; width: 100%; }
-.title { display: flex; align-items: center; gap: 6px; padding: 0 2px 0 8px; -webkit-app-region: drag; background: var(--ct-activity-bg); }
+.title { display: flex; align-items: center; justify-content: center; padding: 0 8px; -webkit-app-region: drag; background: var(--ct-activity-bg); }
 .title.mac { padding-left: 84px; }
 .title.win { padding-right: 140px; }
-.title > * { -webkit-app-region: no-drag; }
-.title .spacer { flex: 1; -webkit-app-region: drag; }
-.title .gear { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; color: var(--ct-text-secondary); }
-.title .gear:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
+.title .ptabs { display: inline-flex; align-items: center; gap: 6px; -webkit-app-region: no-drag; max-width: 100%; overflow-x: auto; }
+.title .ptabs::-webkit-scrollbar { height: 0; }
 .body { display: flex; min-height: 0; min-width: 0; }
 .body > .activity.left { width: var(--ct-activity-w); flex: none; }
 .body > .activity.right { width: var(--ct-activity2-w); flex: none; }
