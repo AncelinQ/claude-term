@@ -4,8 +4,9 @@ import { Icons } from './icons'
 import { t } from '@/i18n'
 import { useWorkbench } from '@/stores/workbench'
 import { installedMonoFonts } from './fonts'
+import { ClaudeCodeSettings } from './ClaudeCodeSettings'
 
-type Section = 'general' | 'apparence' | 'editeur' | 'terminal' | 'notifications' | 'windows'
+type Section = 'general' | 'apparence' | 'editeur' | 'terminal' | 'claude' | 'notifications' | 'windows'
 
 /** App settings modal: sections on the left, grouped blocks of rows on the right. */
 export function SettingsPage({ onClose }: { onClose: () => void }) {
@@ -23,7 +24,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
   }
   const sections: { id: Section; label: string }[] = [
     { id: 'general', label: t('Général') }, { id: 'apparence', label: t('Apparence') }, { id: 'editeur', label: t('Éditeur') },
-    { id: 'terminal', label: t('Terminal') }, { id: 'notifications', label: t('Notifications') },
+    { id: 'terminal', label: t('Terminal') }, { id: 'claude', label: t('Claude Code') }, { id: 'notifications', label: t('Notifications') },
     ...(window.ct.platform === 'win32' ? [{ id: 'windows' as Section, label: t('Windows') }] : []),
   ]
   const fontSelect = (value: string, onChange: (v: string) => void) => (
@@ -89,6 +90,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
               <Row label={t('Taille')}>{num(settings.fontSize, 9, 24, 'pt', (v) => set({ fontSize: v }))}</Row>
             </Group>
           )}
+          {section === 'claude' && <ClaudeCodeSettings Group={Group} Row={Row} Toggle={Toggle} />}
           {section === 'notifications' && (
             <>
               <Group title={t('Hooks Claude Code')}>

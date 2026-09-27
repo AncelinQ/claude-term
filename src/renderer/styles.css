@@ -298,3 +298,16 @@ input[type=checkbox]:disabled { opacity: .4; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.45); display: grid; place-items: center; }
 .modal { width: min(860px, calc(100vw - 80px)); height: min(620px, calc(100vh - 80px)); display: flex; }
 .modal > .island { flex: 1; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+
+/* Claude Code settings form */
+.cc-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 11px; }
+.cc-bar .spacer { flex: 1; }
+.cc-list { padding: 6px 14px; border-bottom: 1px solid var(--ct-island-border); }
+.cc-list:last-child { border-bottom: 0; }
+.cc-list-head { display: flex; justify-content: space-between; padding: 4px 0 6px; }
+.cc-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.cc-item code { font-family: var(--ct-font-mono); font-size: 11px; flex: 1; }
+.cc-hooks { padding: 6px 0; }
+.cc-hook { display: flex; align-items: center; gap: 6px; padding: 3px 14px; }
+.ibtn { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 4px; color: var(--ct-text-secondary); flex: none; }
+.ibtn:hover { background: var(--ct-hover-bg); color: var(--ct-text); }

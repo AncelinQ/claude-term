@@ -201,6 +201,11 @@ export interface CtApi {
     setHooksInstalled(on: boolean): Promise<{ ok: boolean; error?: string }>
   }
   setHooks(on: boolean): Promise<{ ok: boolean; error?: string }>
+  /** ~/.claude/settings.json as an object (form); unknown keys preserved on write */
+  claudeSettings: {
+    read(): Promise<{ ok: true; data: Record<string, any>; path: string } | { ok: false; error: string; path: string }>
+    write(data: Record<string, any>): Promise<{ ok: boolean; error?: string }>
+  }
   links: {
     load(root: string): Promise<LinkedProject[]>
     save(root: string, links: LinkedProject[]): Promise<{ ok: boolean; error?: string }>

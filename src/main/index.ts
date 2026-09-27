@@ -92,6 +92,9 @@ const hooks = new HookHub(new ClaudeSettings(claudeData.settingsPath), () => tra
 ipcMain.on('claude:clearAttention', (_e, { tabId }) => hooks.clear(tabId))
 ipcMain.on('claude:untrack', (_e, { tabId }) => hooks.clear(tabId))
 ipcMain.handle('hooks:installed', () => hooks.installed())
+const claudeSettingsFile = new ClaudeSettings(claudeData.settingsPath)
+ipcMain.handle('claudeSettings:read', () => ({ ...claudeSettingsFile.read(), path: claudeData.settingsPath }))
+ipcMain.handle('claudeSettings:write', (_e, data) => { try { claudeSettingsFile.write(data); return { ok: true } } catch (e) { return { ok: false, error: String(e) } } })
 ipcMain.handle('hooks:set', (_e, on: boolean) => hooks.setInstalled(on))
 
 // npm, links, skills, mcp, processes, search

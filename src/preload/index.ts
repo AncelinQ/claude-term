@@ -57,6 +57,10 @@ const api: CtApi = {
     setHooksInstalled: (on) => ipcRenderer.invoke('hooks:set', on),
   },
   setHooks: (on) => ipcRenderer.invoke('hooks:set', on),
+  claudeSettings: {
+    read: () => ipcRenderer.invoke('claudeSettings:read'),
+    write: (data) => ipcRenderer.invoke('claudeSettings:write', data),
+  },
   links: {
     load: (root) => ipcRenderer.invoke('links:load', root),
     save: (root, links) => ipcRenderer.invoke('links:save', { root, links }),
