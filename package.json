@@ -18,7 +18,8 @@
     "dist:mac-all": "npm run build && electron-builder --mac dmg --arm64 --x64",
     "dist:win": "npm run build && electron-builder --win nsis --x64",
     "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps && node scripts/dev-bundle.mjs",
+    "dev:bundle": "node scripts/dev-bundle.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

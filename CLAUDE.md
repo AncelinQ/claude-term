@@ -4,6 +4,7 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
 `../claude-term`; the design is in `docs/DESIGN.md` (read it before structural changes).
 
 - Run: `npm run dev` (electron-vite --watch: HMR for the renderer, main/preload rebuilt and Electron restarted on change). Build: `npm run build`.
+  Dev name/icon on macOS: `npm run dev:bundle` (also run by postinstall) renames node_modules' Electron.app to ClaudeTerm.
   Typecheck: `npm run typecheck`. Tests: `npm test` (vitest, `tests/`). Run all three before a commit.
 - Tests cover `src/shared` (pure) and the main services that touch files: `ClaudeSettings`, `ClaudeData`,
   `SessionTracker` (temp dirs via `tests/helpers.ts`). Add a test whenever these change.
