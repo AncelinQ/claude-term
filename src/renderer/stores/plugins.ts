@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useWorkbench } from './workbench'
 import type { PluginInfo, ViewModel, PopoverRequest } from '@shared/plugins'
 
 interface PluginStore {
@@ -24,7 +25,14 @@ export const usePlugins = create<PluginStore>((set, get) => ({
   },
   init() {
     window.ct.plugins.list().then((plugins) => set({ plugins }))
-    window.ct.plugins.onChanged((plugins) => set({ plugins }))
+    window.ct.plugins.onChanged((plugins) => {
+      set({ plugins })
+      // a disabled or uninstalled plugin takes its activity with it
+      const wb = useWorkbench.getState()
+      const gone = (a: string | null) => !!a?.includes(':') && !plugins.some((p) => p.enabled && a.startsWith(p.manifest.id + ':'))
+      if (gone(wb.leftActivity)) wb.setLeft('explorer')
+      if (gone(wb.rightActivity)) wb.setRight(null)
+    })
     window.ct.plugins.onView(({ viewId, model }) => set((s) => ({ views: { ...s.views, [viewId]: model } })))
     window.ct.plugins.onPopover((r) => set((s) => ({ popovers: [...s.popovers.filter((p) => p.id !== r.id), r] })))
     window.ct.plugins.onPopoverClose((id) => set((s) => ({ popovers: s.popovers.filter((p) => p.id !== id) })))

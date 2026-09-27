@@ -438,3 +438,11 @@ input[type=checkbox]:disabled { opacity: .4; }
 .md-host:has(.mode-code .findbar .fb-row + .fb-row) .md-modes { top: 69px; }
 /* the right activity bar already includes the gutter: with the right sidebar hidden, the center adds none */
 .body:not(:has(> .sidebar.right)) > .center { padding-right: 0; }
+
+/* plugins island */
+.pl-error { padding: 6px 10px; color: var(--ct-badge-error); font-size: 11px; cursor: pointer; }
+.pl-src { color: var(--ct-text-tertiary); font-size: 11px; margin-top: 4px; word-break: break-all; }
+.list > .pl-src { padding: 4px 10px; }
+.form .hint { color: var(--ct-text-secondary); font-size: 11px; }
+.tabs .tab .badge { margin-left: 2px; }
+.lrow .acts.always { display: inline-flex; }

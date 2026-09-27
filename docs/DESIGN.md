@@ -133,6 +133,29 @@ Webviews for plugin UI: postponed on purpose.
 First plugins: **Thèmes** (built-in: list, preview, apply, import VS Code theme/marketplace URL)
 and **Linear** (API key in secrets, GraphQL, "Mes issues", "Démarrer avec Claude").
 
+### 7.1 Distribution and catalogue (decided 2026-09-27)
+
+- Built-in plugins live in the app repo (`resources/plugins`); every other plugin has **its own repo** and
+  publishes a `.tgz` (release asset or GitHub archive) with `plugin.json` at the root or under one top folder.
+- **Catalogue**: a `registry.json` fetched from `settings.pluginRegistry` (default: raw GitHub of
+  `sunstan/claudeterm-plugins`, `main` branch; `https:`, `http://localhost` and `file:` accepted):
+  `{ "version": 1, "plugins": [{ id, name, description, version, engine?, permissions, repo, url, sha256 }] }`.
+  `engine` is the minimal app version (`">=2.0.0"` or `"2.0.0"`).
+- **Install** (catalogue or URL), all in main (`services/plugin-store.ts`): download (≤ 20 MB) → sha256 check
+  (catalogue: must match; URL: the computed hash is shown in the approval) → unpack into
+  `userData/plugins/.staging` (regular files and folders only, no absolute / `..` paths, ≤ 50 MB, ≤ 2000 files)
+  → manifest checks (valid, id / version equal to the entry, not a built-in id, engine satisfied, permissions
+  ⊆ the entry's) → **permission approval** (native dialog from main listing the permissions) → swap into
+  `userData/plugins/<id>` and activate without restart.
+- **Approved permissions** are stored in `settings.pluginPermissions[id]`; a user plugin whose manifest asks for
+  more than what was approved is not activated ("permissions à approuver", approve from the island).
+  Built-ins are trusted.
+- **Enable / disable**: `settings.disabledPlugins`; disabling runs the plugin's disposers and hides its
+  contributions, no restart. **Update**: catalogue version newer than the installed one; same flow, the
+  approval only asks again when permissions grow. **Uninstall**: confirm, deactivate, remove the folder
+  (its storage file is kept).
+- **Plugins island** (left, ⌘6): tabs Installés / Catalogue, refresh, install from URL.
+
 ## 8. Claude Code integration (ported from v1)
 
 - Claude tab = pty running `claude` (or `claude --resume <id>`) in the project cwd.

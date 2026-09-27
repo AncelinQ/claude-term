@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session, net } from 'electron'
 import { join } from 'node:path'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { SettingsService } from './services/settings'
@@ -17,6 +17,9 @@ import { scanClaudeProcesses } from './services/process'
 import { FileIndex } from './services/search'
 import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
+import { PluginStore, type ApprovalRequest } from './services/plugin-store'
+import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
+import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
 import type { DirEntry } from '@shared/ipc'
 
 // Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts): always in dev, on demand (CT_CDP_PORT) when packaged
@@ -145,6 +148,90 @@ ipcMain.on('plugins:project', (_e, root: string | null) => { if (root !== active
 ipcMain.on('plugins:commandEnd', (_e, info) => pluginHost.commandEnd(info))
 ipcMain.on('plugins:promptReply', (_e, { id, value }) => pluginHost.promptReply(id, value))
 
+// plugin catalogue (DESIGN.md §7.1)
+const setApproved = (id: string, perms: string[] | null) => {
+  const all = { ...settings.get().pluginPermissions }
+  if (perms) all[id] = perms; else delete all[id]
+  settings.set({ pluginPermissions: all })
+}
+const pluginStore = new PluginStore(pluginHost.userDir, app.getVersion(), {
+  download,
+  builtinIds: () => pluginHost.builtinIds(),
+  installedVersion: (id) => pluginHost.get(id)?.manifest.version,
+  approved: (id) => settings.get().pluginPermissions[id],
+  approve: approvePlugin,
+  setApproved,
+  unload: (id) => pluginHost.unload(id),
+  load: (dir) => { pluginHost.load(dir); send('plugins:changed', pluginHost.list()) },
+})
+let registryCache: { url: string; entries: RegistryEntry[]; skipped: string[] } | null = null
+ipcMain.handle('plugins:catalogue', async (_e, refresh: boolean): Promise<Catalogue> => {
+  const url = settings.get().pluginRegistry
+  try {
+    if (refresh || registryCache?.url !== url) registryCache = { url, ...(await pluginStore.registry(url)) }
+    return { url, items: catalogueItems(registryCache.entries, pluginHost.list(), app.getVersion()), skipped: registryCache.skipped }
+  } catch (e) {
+    return { url, items: [], skipped: [], error: String((e as Error)?.message ?? e) }
+  }
+})
+ipcMain.handle('plugins:install', async (_e, src: { id: string } | { url: string }) => {
+  if ('url' in src) return pluginStore.install({ url: src.url })
+  const entry = registryCache?.entries.find((x) => x.id === src.id)
+  return entry ? pluginStore.install({ entry }) : { ok: false, error: 'plugin absent du catalogue' }
+})
+ipcMain.handle('plugins:uninstall', async (_e, id: string) => {
+  const p = pluginHost.get(id)
+  if (!p) return { ok: false, error: 'plugin inconnu' }
+  const r = await dialog.showMessageBox(win!, { type: 'warning', message: `Désinstaller « ${p.manifest.name} » ?`, detail: `Le dossier ${p.dir} sera supprimé. Ses données (storage) sont conservées.`, buttons: ['Désinstaller', 'Annuler'], defaultId: 1, cancelId: 1 })
+  if (r.response !== 0) return { ok: false, error: 'annulé' }
+  settings.set({ disabledPlugins: settings.get().disabledPlugins.filter((x) => x !== id) })
+  return pluginStore.uninstall(id, p.dir)
+})
+ipcMain.handle('plugins:setEnabled', (_e, { id, enabled }: { id: string; enabled: boolean }) => {
+  const others = settings.get().disabledPlugins.filter((x) => x !== id)
+  settings.set({ disabledPlugins: enabled ? others : [...others, id] })
+  pluginHost.reload(id)
+})
+ipcMain.handle('plugins:approve', async (_e, id: string) => {
+  const p = pluginHost.get(id)
+  if (!p?.pendingPermissions) return false
+  const perms = p.manifest.permissions ?? []
+  if (!(await approvePlugin({ id, name: p.manifest.name, version: p.manifest.version, source: p.dir, sha256: '', permissions: perms, verified: false }))) return false
+  setApproved(id, perms)
+  pluginHost.reload(id)
+  return true
+})
+
+async function approvePlugin(req: ApprovalRequest): Promise<boolean> {
+  const perms = req.permissions.length ? req.permissions.map((p: PluginPermission) => `• ${p} — ${PLUGIN_PERMISSIONS[p]}`).join('\n') : 'aucune'
+  const origin = req.sha256 ? `Source : ${req.source}\nsha256 : ${req.sha256}${req.verified ? ' (vérifié avec le catalogue)' : ' (non vérifié : installation depuis une URL)'}` : `Dossier : ${req.source}`
+  const r = await dialog.showMessageBox(win!, {
+    type: req.verified ? 'question' : 'warning',
+    message: req.update ? `Mettre à jour « ${req.name} » ${req.update} → ${req.version} ?` : req.sha256 ? `Installer « ${req.name} » ${req.version} ?` : `Autoriser « ${req.name} » ?`,
+    detail: `Permissions demandées :\n${perms}\n\n${origin}\n\nUn plugin s'exécute avec ces droits dans ClaudeTerm.`,
+    buttons: [req.update ? 'Mettre à jour' : req.sha256 ? 'Installer' : 'Autoriser', 'Annuler'], defaultId: 1, cancelId: 1,
+  })
+  return r.response === 0
+}
+
+/** GET with a size cap (file: and http(s) through Electron's net stack). */
+async function download(url: string, maxBytes: number): Promise<Buffer> {
+  const res = await net.fetch(url, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`téléchargement : HTTP ${res.status}`)
+  if (Number(res.headers.get('content-length') ?? 0) > maxBytes) throw new Error('fichier trop grand')
+  const chunks: Uint8Array[] = []
+  let size = 0
+  const reader = res.body!.getReader()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.length
+    if (size > maxBytes) { reader.cancel(); throw new Error('fichier trop grand') }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks)
+}
+
 // app
 ipcMain.handle('app:pickFolder', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory', 'showHiddenFiles'] })
@@ -160,7 +247,7 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = settings.get().themeFollowSystem ? 'system' : themes.current().type
   win = createWindow(themes.current())
   win.on('closed', () => { win = null })
-  win.webContents.once('did-finish-load', () => pluginHost.loadAll())
+  win.webContents.once('did-finish-load', () => { pluginStore.cleanStaging(); pluginHost.loadAll() })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) win = createWindow(themes.current()) })
 })
 

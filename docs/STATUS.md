@@ -27,25 +27,35 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   - **Git**: checkbox commit panel (group by directory), branches (menu: switch, new from, diff, pull, push, rename,
     safe delete), branch popover, commits in the bottom block with graph + files + details, diff tabs. Every write
     is a visible `git` command, nothing destructive. Parsers, model and graph at **100 % coverage** (`npm run test:git`).
+- **Plugin catalogue** (DESIGN.md §7.1): `registry.json` from `settings.pluginRegistry` (Réglages > Plugins),
+  Plugins island with Installés / Catalogue tabs, install with sha256 check + native permission approval,
+  install from a .tgz URL, update (asks again only when permissions grow), enable / disable and uninstall
+  without restart, approval of pending permissions. `services/tar.ts` (safe .tgz reader), `services/plugin-store.ts`,
+  `shared/plugin-registry.ts`, tests in `tests/plugin-store.test.ts`. Checked end to end with a local `file:` catalogue.
 - **Packaging**: electron-builder (dmg / nsis / AppImage), GitHub Actions workflow, `CT_CDP_PORT` test hooks.
-- **Tests**: 57 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.
+- **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
+  `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
+- **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.
 
 ## Open / next
 
-0. **Next task: plugin catalogue** (spec in DESIGN.md §5.5): registry.json fetch, Plugins island (Installed /
-   Catalogue, install with sha256 check + permission approval, update, enable/disable, uninstall, install from
-   URL), then the Linear plugin as the first catalogue plugin. Tests for download/verify/unpack/manifest checks.
+0. **Next task: Linear plugin**, first catalogue plugin, in its own repo: needs the `fetch` (network permission,
+   domain-scoped) and `secrets` (safeStorage) APIs in the host first. Then create the `sunstan/claudeterm-plugins`
+   repo with `registry.json` (the default catalogue address 404s until it exists) and a release .tgz + sha256.
 1. **Bug to reproduce**: the user sees the right icon column change size "when a tab is selected"; not reproduced
    (measured 38 px in every state). Waiting for before/after screenshots.
 2. Find bar for terminals (xterm search addon).
-3. Plugins: Thèmes plugin (list, preview, VS Code import), Plugins island (enable/disable, install from a git
-   repo), host in a utilityProcess before opening to third-party plugins; Linear plugin later.
+3. Plugins: Thèmes plugin (list, preview, VS Code import), host in a utilityProcess before opening to
+   third-party plugins.
 4. Windows: test on a real machine (native and WSL), `hook.cmd`, screen capture, Ctrl shortcuts typed in a
    terminal go to the shell instead of the app.
 5. Formatter beyond Monaco's languages (Prettier); content search (rg) in the search island.
 6. Push the repo to a remote so the CI builds the installers (no remote yet).
 
 ## Gotchas
+
+- Catalogue approval / uninstall use native dialogs from main: `scripts/ui.ts` cannot click them (osascript has no
+  Accessibility access), the user has to.
 
 - Built-in plugins run in main: changes in `resources/plugins` need an app restart (no HMR).
 - Monaco 0.57 worker paths: `monaco-editor/editor/editor.worker.js?worker`.

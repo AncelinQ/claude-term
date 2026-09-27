@@ -18,7 +18,29 @@ export interface PluginManifest {
   }
 }
 
-export interface PluginInfo { manifest: PluginManifest; dir: string; builtin: boolean; enabled: boolean; error?: string }
+export type PluginPermission = NonNullable<PluginManifest['permissions']>[number]
+export const PLUGIN_PERMISSIONS: Record<PluginPermission, string> = {
+  process: 'lancer des programmes',
+  'fs:home': 'lire les fichiers du dossier personnel',
+  network: 'accès réseau',
+  secrets: 'secrets (trousseau)',
+}
+
+/** enabled = activated; disabled = turned off by the user; pendingPermissions = asked by the manifest, not approved yet */
+export interface PluginInfo { manifest: PluginManifest; dir: string; builtin: boolean; enabled: boolean; disabled?: boolean; pendingPermissions?: PluginPermission[]; error?: string }
+
+export function validateManifest(m: any): string | null {
+  if (!m || typeof m !== 'object') return 'plugin.json invalide'
+  if (typeof m.id !== 'string' || !/^[a-z0-9][a-z0-9.-]*$/.test(m.id)) return 'id manquant ou invalide'
+  if (typeof m.name !== 'string' || !m.name) return 'name manquant'
+  if (typeof m.main !== 'string' || !m.main) return 'main manquant'
+  if (m.version !== undefined && typeof m.version !== 'string') return 'version invalide'
+  if (m.permissions !== undefined && (!Array.isArray(m.permissions) || m.permissions.some((x: unknown) => typeof x !== 'string' || !Object.hasOwn(PLUGIN_PERMISSIONS, x as string)))) return 'permissions invalides'
+  for (const a of m.contributes?.activity ?? []) if (!a.id || !a.title || (a.side !== 'left' && a.side !== 'right')) return 'contributes.activity invalide'
+  for (const v of m.contributes?.views ?? []) if (!v.id || (!v.activity && v.placement !== 'bottom')) return 'contributes.views invalide'
+  return null
+}
+
 
 // MARK: view models (rendered by the workbench, never drawn by plugins)
 

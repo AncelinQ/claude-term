@@ -3,7 +3,10 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSy
 import { join, resolve, dirname, relative } from 'node:path'
 import { execFile } from 'node:child_process'
 import vm from 'node:vm'
-import type { PluginManifest, PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, DiffRequest } from '@shared/plugins'
+import { missingPermissions } from '@shared/plugin-registry'
+import { validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type RunRequest, type PromptRequest, type DiffRequest } from '@shared/plugins'
+
+export { validateManifest }
 
 export interface HostBridge {
   send(channel: string, payload: unknown): void
@@ -32,12 +35,17 @@ export class PluginHost {
   }
 
   list(): PluginInfo[] { return [...this.plugins.values()].map((p) => p.info) }
+  get(id: string): PluginInfo | undefined { return this.plugins.get(id)?.info }
+  builtinIds(): string[] {
+    try { return readdirSync(this.builtinDir).filter((n) => existsSync(join(this.builtinDir, n, 'plugin.json'))).map((n) => JSON.parse(readFileSync(join(this.builtinDir, n, 'plugin.json'), 'utf8')).id) } catch { return [] }
+  }
   viewModel(viewId: string) { return this.views.get(viewId) ?? null }
 
   loadAll() {
     for (const [dir, builtin] of [[this.builtinDir, true], [this.userDir, false]] as const) {
       if (!existsSync(dir)) continue
       for (const name of readdirSync(dir)) {
+        if (name.startsWith('.')) continue
         const pdir = join(dir, name)
         try { if (!statSync(pdir).isDirectory() || !existsSync(join(pdir, 'plugin.json'))) continue } catch { continue }
         this.load(pdir, builtin)
@@ -46,20 +54,62 @@ export class PluginHost {
     this.bridge.send('plugins:changed', this.list())
   }
 
-  private load(dir: string, builtin: boolean) {
+  /**
+   * Loads a plugin folder: activated unless invalid, disabled by the user (settings.disabledPlugins) or, for a
+   * user plugin, asking for permissions that were not approved (settings.pluginPermissions).
+   */
+  load(dir: string, builtin = false) {
     let manifest: PluginManifest
     try { manifest = JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8')) } catch (e) { return }
     const err = validateManifest(manifest)
-    const info: PluginInfo = { manifest, dir, builtin, enabled: !err, error: err ?? undefined }
+    if (!err && this.plugins.has(manifest.id) && this.plugins.get(manifest.id)!.info.dir !== dir) {
+      console.warn(`[plugins] ${manifest.id}: already loaded from ${this.plugins.get(manifest.id)!.info.dir}, ${dir} ignored`)
+      return
+    }
+    const s = this.bridge.settings()
+    const disabled = !err && (s.disabledPlugins ?? []).includes(manifest.id)
+    const pending = err || builtin ? [] : missingPermissions(manifest.permissions, s.pluginPermissions?.[manifest.id])
+    const info: PluginInfo = { manifest, dir, builtin, enabled: !err && !disabled && !pending.length, disabled: disabled || undefined, pendingPermissions: pending.length ? pending : undefined, error: err ?? undefined }
     const loaded: Loaded = { info, ctx: null, disposers: [] }
     this.plugins.set(manifest.id, loaded)
-    if (!err) this.activate(loaded)
+    if (info.enabled) this.activate(loaded)
+  }
+
+  /** Deactivates a plugin (deactivate(), disposers, timers, views) and forgets it. */
+  unload(id: string) {
+    const p = this.plugins.get(id)
+    if (!p) return
+    try { p.deactivate?.() } catch (e) { console.error(`[plugin ${id}] deactivate`, e) }
+    p.disposers.forEach((d) => { try { d() } catch { /* already gone */ } })
+    p.emit = undefined
+    for (const v of [...this.views.keys()]) if (v.startsWith(id + ':')) this.views.delete(v)
+    this.plugins.delete(id)
+    this.bridge.send('plugins:changed', this.list())
+  }
+
+  /** Reloads a plugin from its folder after a settings change (enable, disable, approval). */
+  reload(id: string) {
+    const p = this.plugins.get(id)
+    if (!p) return
+    const { dir, builtin } = p.info
+    this.unload(id)
+    this.load(dir, builtin)
+    this.bridge.send('plugins:changed', this.list())
   }
 
   private activate(p: Loaded) {
     const { manifest, dir } = p.info
     const api = this.makeApi(p)
-    const context = vm.createContext({ console: scopedConsole(manifest.id), setTimeout, clearTimeout, setInterval, clearInterval, Promise, JSON, Math, Date, RegExp, Error, Map, Set, Array, Object, String, Number, Boolean })
+    // timers are tracked so that disabling a plugin stops them
+    const timers = new Set<ReturnType<typeof setTimeout>>()
+    p.disposers.push(() => { timers.forEach((t) => clearTimeout(t)); timers.clear() })
+    const track = (t: ReturnType<typeof setTimeout>) => (timers.add(t), t)
+    const untrack = (t: ReturnType<typeof setTimeout>) => { timers.delete(t); clearTimeout(t) }
+    const context = vm.createContext({
+      console: scopedConsole(manifest.id),
+      setTimeout: (cb: () => void, ms?: number) => { const t: ReturnType<typeof setTimeout> = track(setTimeout(() => { timers.delete(t); cb() }, ms)); return t },
+      clearTimeout: untrack, setInterval: (cb: () => void, ms?: number) => track(setInterval(cb, ms)), clearInterval: untrack,
+      Promise, JSON, Math, Date, RegExp, Error, Map, Set, Array, Object, String, Number, Boolean })
     const requireLocal = (name: string) => {
       const file = resolve(dir, name.endsWith('.js') ? name : name + '.js')
       if (relative(dir, file).startsWith('..')) throw new Error('require outside the plugin folder')
@@ -72,6 +122,7 @@ export class PluginHost {
       const activate = main.activate ?? main.default?.activate
       if (typeof activate !== 'function') throw new Error('main.js exports no activate(ctx)')
       p.ctx = api
+      if (typeof (main.deactivate ?? main.default?.deactivate) === 'function') p.deactivate = main.deactivate ?? main.default.deactivate
       Promise.resolve(activate(api)).catch((e) => this.fail(p, e))
     } catch (e) { this.fail(p, e) }
   }
@@ -162,17 +213,7 @@ export class PluginHost {
   dispose() { this.watchers.forEach((w) => w.close()); for (const p of this.plugins.values()) p.disposers.forEach((d) => d()) }
 }
 
-interface Loaded { info: PluginInfo; ctx: any; disposers: (() => void)[]; emit?: (ev: string, ...a: any[]) => void }
-
-export function validateManifest(m: any): string | null {
-  if (!m || typeof m !== 'object') return 'plugin.json invalide'
-  if (typeof m.id !== 'string' || !/^[a-z0-9][a-z0-9.-]*$/.test(m.id)) return 'id manquant ou invalide'
-  if (typeof m.name !== 'string' || !m.name) return 'name manquant'
-  if (typeof m.main !== 'string' || !m.main) return 'main manquant'
-  for (const a of m.contributes?.activity ?? []) if (!a.id || !a.title || (a.side !== 'left' && a.side !== 'right')) return 'contributes.activity invalide'
-  for (const v of m.contributes?.views ?? []) if (!v.id || (!v.activity && v.placement !== 'bottom')) return 'contributes.views invalide'
-  return null
-}
+interface Loaded { info: PluginInfo; ctx: any; disposers: (() => void)[]; emit?: (ev: string, ...a: any[]) => void; deactivate?: () => void }
 
 function scopedConsole(id: string) {
   const tag = `[plugin ${id}]`

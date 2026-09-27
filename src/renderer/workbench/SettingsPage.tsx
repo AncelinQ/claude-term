@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { DEFAULT_REGISTRY } from '@shared/plugin-registry'
 import type { ThemeSpec } from '@shared/theme'
 import { Icons } from './icons'
 import { t } from '@/i18n'
@@ -7,7 +8,7 @@ import { installedMonoFonts } from './fonts'
 import { ClaudeCodeSettings } from './ClaudeCodeSettings'
 import { ACTIONS, binding, conflicts, fromEvent, label as keyLabel } from '@shared/keymap'
 
-type Section = 'general' | 'apparence' | 'editeur' | 'raccourcis' | 'terminal' | 'claude' | 'notifications' | 'windows'
+type Section = 'general' | 'apparence' | 'editeur' | 'raccourcis' | 'terminal' | 'claude' | 'notifications' | 'plugins' | 'windows'
 
 /** App settings modal: sections on the left, grouped blocks of rows on the right. */
 export function SettingsPage({ onClose }: { onClose: () => void }) {
@@ -25,7 +26,7 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
   }
   const sections: { id: Section; label: string }[] = [
     { id: 'general', label: t('Général') }, { id: 'apparence', label: t('Apparence') }, { id: 'editeur', label: t('Éditeur') }, { id: 'raccourcis', label: t('Raccourcis') },
-    { id: 'terminal', label: t('Terminal') }, { id: 'claude', label: t('Claude Code') }, { id: 'notifications', label: t('Notifications') },
+    { id: 'terminal', label: t('Terminal') }, { id: 'claude', label: t('Claude Code') }, { id: 'notifications', label: t('Notifications') }, { id: 'plugins', label: t('Plugins') },
     ...(window.ct.platform === 'win32' ? [{ id: 'windows' as Section, label: t('Windows') }] : []),
   ]
   const fontSelect = (value: string, onChange: (v: string) => void) => (
@@ -109,6 +110,16 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                 {window.ct.platform === 'darwin' && <Row label={t('Badge du Dock')} hint={t("Nombre d'onglets en attente")}><Toggle checked={settings.dockBadge} onChange={(v) => set({ dockBadge: v })} /></Row>}
               </Group>
             </>
+          )}
+          {section === 'plugins' && (
+            <Group title={t('Catalogue')}>
+              <Row label={t('Adresse du catalogue')} hint={t('registry.json listant les plugins installables (https, http://localhost ou file:).')}>
+                <input key={settings.pluginRegistry} defaultValue={settings.pluginRegistry} spellCheck={false} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== settings.pluginRegistry) set({ pluginRegistry: v }) }} style={{ width: 320 }} />
+              </Row>
+              <Row label={t('Catalogue par défaut')}>
+                <button className="btn" disabled={settings.pluginRegistry === DEFAULT_REGISTRY} onClick={() => set({ pluginRegistry: DEFAULT_REGISTRY })}>{t('Rétablir')}</button>
+              </Row>
+            </Group>
           )}
           {section === 'windows' && (
             <Group title={t('Claude Code')}>

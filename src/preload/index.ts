@@ -95,6 +95,11 @@ const api: CtApi = {
   plugins: {
     list: () => ipcRenderer.invoke('plugins:list'),
     onChanged: (cb) => channel('plugins:changed', () => true, (p) => p, cb),
+    catalogue: (refresh) => ipcRenderer.invoke('plugins:catalogue', !!refresh),
+    install: (src) => ipcRenderer.invoke('plugins:install', src),
+    uninstall: (id) => ipcRenderer.invoke('plugins:uninstall', id),
+    setEnabled: (id, enabled) => ipcRenderer.invoke('plugins:setEnabled', { id, enabled }),
+    approve: (id) => ipcRenderer.invoke('plugins:approve', id),
     view: (viewId) => ipcRenderer.invoke('plugins:viewModel', viewId),
     onView: (cb) => channel('plugins:view', () => true, (p) => p, cb),
     event: (e) => ipcRenderer.send('plugins:event', e),

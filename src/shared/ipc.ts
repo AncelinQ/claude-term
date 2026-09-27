@@ -1,6 +1,7 @@
 /** Typed contract between renderer (`window.ct`) and main. */
 import type { ThemeSpec, ResolvedTheme } from './theme'
 import type { ToolEvent } from './claude-format'
+import { DEFAULT_REGISTRY, type Catalogue } from './plugin-registry'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -126,6 +127,12 @@ export interface Settings {
   /** Windows: run claude natively or inside WSL */
   windowsMode: 'native' | 'wsl'
   wslDistro: string
+  /** plugin catalogue (registry.json) */
+  pluginRegistry: string
+  /** plugin ids turned off by the user (built-ins included) */
+  disabledPlugins: string[]
+  /** permissions approved per user plugin */
+  pluginPermissions: Record<string, string[]>
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -153,6 +160,9 @@ export const DEFAULT_SETTINGS: Settings = {
   dockBadge: true,
   windowsMode: 'native',
   wslDistro: '',
+  pluginRegistry: DEFAULT_REGISTRY,
+  disabledPlugins: [],
+  pluginPermissions: {},
 }
 
 export interface CtApi {
@@ -249,6 +259,14 @@ export interface CtApi {
   plugins: {
     list(): Promise<PluginInfo[]>
     onChanged(cb: (list: PluginInfo[]) => void): () => void
+    /** registry.json from settings.pluginRegistry, merged with the installed plugins (refresh: skip the cache) */
+    catalogue(refresh?: boolean): Promise<Catalogue>
+    /** download, verify, approve (native dialog), unpack and activate */
+    install(src: { id: string } | { url: string }): Promise<{ ok: boolean; error?: string; cancelled?: boolean }>
+    uninstall(id: string): Promise<{ ok: boolean; error?: string }>
+    setEnabled(id: string, enabled: boolean): Promise<void>
+    /** approves the pending permissions of a plugin (native dialog) */
+    approve(id: string): Promise<boolean>
     view(viewId: string): Promise<ViewModel | null>
     onView(cb: (u: { viewId: string; model: ViewModel }) => void): () => void
     event(e: ViewEvent): void
