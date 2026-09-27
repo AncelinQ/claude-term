@@ -32,6 +32,9 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
 
 ## Open / next
 
+0. **Next task: plugin catalogue** (spec in DESIGN.md §5.5): registry.json fetch, Plugins island (Installed /
+   Catalogue, install with sha256 check + permission approval, update, enable/disable, uninstall, install from
+   URL), then the Linear plugin as the first catalogue plugin. Tests for download/verify/unpack/manifest checks.
 1. **Bug to reproduce**: the user sees the right icon column change size "when a tab is selected"; not reproduced
    (measured 38 px in every state). Waiting for before/after screenshots.
 2. Find bar for terminals (xterm search addon).
