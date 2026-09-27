@@ -101,6 +101,10 @@ const api: CtApi = {
     onRun: (cb) => channel('plugins:run', () => true, (p) => p, cb),
     onNotify: (cb) => channel('plugins:notify', () => true, (p) => p, cb),
     projectChanged: (root) => ipcRenderer.send('plugins:project', root),
+    commandEnd: (info) => ipcRenderer.send('plugins:commandEnd', info),
+    onPrompt: (cb) => channel('plugins:prompt', () => true, (p) => p, cb),
+    promptReply: (id, value) => ipcRenderer.send('plugins:promptReply', { id, value }),
+    onOpenFile: (cb) => channel('plugins:openFile', () => true, (p) => p.path as string, cb),
   },
   attachments: {
     pathForFile: (file) => webUtils.getPathForFile(file),

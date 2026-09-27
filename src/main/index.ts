@@ -142,6 +142,8 @@ ipcMain.handle('plugins:list', () => pluginHost.list())
 ipcMain.handle('plugins:viewModel', (_e, id: string) => pluginHost.viewModel(id))
 ipcMain.on('plugins:event', (_e, ev) => pluginHost.viewEvent(ev))
 ipcMain.on('plugins:project', (_e, root: string | null) => { if (root !== activeRoot) { activeRoot = root; pluginHost.projectChanged(root) } })
+ipcMain.on('plugins:commandEnd', (_e, info) => pluginHost.commandEnd(info))
+ipcMain.on('plugins:promptReply', (_e, { id, value }) => pluginHost.promptReply(id, value))
 
 // app
 ipcMain.handle('app:pickFolder', async () => {

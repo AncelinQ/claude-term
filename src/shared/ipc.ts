@@ -1,7 +1,7 @@
 /** Typed contract between renderer (`window.ct`) and main. */
 import type { ThemeSpec, ResolvedTheme } from './theme'
 import type { ToolEvent } from './claude-format'
-import type { PluginInfo, ViewModel, ViewEvent, RunRequest } from './plugins'
+import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
 
@@ -250,6 +250,10 @@ export interface CtApi {
     onNotify(cb: (n: { title: string; body?: string }) => void): () => void
     /** tells the host which project root is active */
     projectChanged(root: string | null): void
+    commandEnd(info: { command: string; exit: number | null }): void
+    onPrompt(cb: (r: PromptRequest) => void): () => void
+    promptReply(id: number, value: string | null): void
+    onOpenFile(cb: (path: string) => void): () => void
   }
   attachments: {
     /** absolute path of a dropped File (Electron webUtils) */

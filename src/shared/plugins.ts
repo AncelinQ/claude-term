@@ -38,9 +38,13 @@ export type ViewModel =
   | { kind: 'list'; items: ViewItem[]; toolbar?: ViewAction[] }
   | { kind: 'tree'; items: ViewItem[]; toolbar?: ViewAction[] }
   | { kind: 'markdown'; text: string }
+  | { kind: 'diff'; text: string }
 
 /** Renderer → host: an interaction on a view. */
 export interface ViewEvent { viewId: string; type: 'select' | 'open' | 'action' | 'toolbar'; itemId?: string; actionId?: string }
+
+/** Host → renderer: a text prompt (modal); answered with `plugins:promptReply`. */
+export interface PromptRequest { id: number; title: string; placeholder?: string; options?: string[] }
 
 /** Host → renderer: a terminal command request. */
 export interface RunRequest { cwd: string; command: string; label?: string; tab?: 'reuse' | 'new' }

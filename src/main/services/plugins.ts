@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSy
 import { join, resolve, dirname, relative } from 'node:path'
 import { execFile } from 'node:child_process'
 import vm from 'node:vm'
-import type { PluginManifest, PluginInfo, ViewModel, ViewEvent, RunRequest } from '@shared/plugins'
+import type { PluginManifest, PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest } from '@shared/plugins'
 
 export interface HostBridge {
   send(channel: string, payload: unknown): void
@@ -21,6 +21,8 @@ export class PluginHost {
   readonly userDir: string
   private plugins = new Map<string, Loaded>()
   private views = new Map<string, ViewModel>()
+  private prompts = new Map<number, (v: string | null) => void>()
+  private promptSeq = 0
   private watchers: FSWatcher[] = []
 
   constructor(private builtinDir: string, private bridge: HostBridge, userDir = join(app.getPath('userData'), 'plugins')) {
@@ -93,6 +95,7 @@ export class PluginHost {
       workspace: {
         get project() { return host.bridge.projectRoot() },
         onDidChangeProject: (cb: (root: string | null) => void) => on('project', cb),
+        openFile: (path: string) => host.bridge.send('plugins:openFile', { path }),
         fs: {
           exists: (path: string) => existsSync(path),
           read: (path: string) => readFileSync(path, 'utf8'),
@@ -109,9 +112,13 @@ export class PluginHost {
           }
         },
         notify: (title: string, body?: string) => host.bridge.send('plugins:notify', { title, body }),
+        /** modal text prompt; resolves null when cancelled */
+        prompt: (req: Omit<PromptRequest, 'id'>) => new Promise<string | null>((res) => { const pid = ++host.promptSeq; host.prompts.set(pid, res); host.bridge.send('plugins:prompt', { id: pid, ...req }) }),
       },
       terminal: {
         run: (req: RunRequest) => host.bridge.send('plugins:run', req),
+        /** a foreground command ended in a shell tab of the active project (shell integration) */
+        onCommandEnd: (cb: (info: { command: string; exit: number | null }) => void) => on('commandEnd', cb),
       },
       process: {
         exec: (file: string, args: string[] = [], opts: { cwd?: string } = {}) => {
@@ -134,6 +141,10 @@ export class PluginHost {
   projectChanged(root: string | null) {
     for (const p of this.plugins.values()) p.emit?.('project', root)
   }
+  commandEnd(info: { command: string; exit: number | null }) {
+    for (const p of this.plugins.values()) p.emit?.('commandEnd', info)
+  }
+  promptReply(id: number, value: string | null) { this.prompts.get(id)?.(value); this.prompts.delete(id) }
   dispose() { this.watchers.forEach((w) => w.close()); for (const p of this.plugins.values()) p.disposers.forEach((d) => d()) }
 }
 

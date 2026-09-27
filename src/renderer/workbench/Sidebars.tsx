@@ -18,7 +18,7 @@ function PluginViews({ activity }: { activity: string }) {
   const plugins = usePlugins((s) => s.plugins)
   const views = useMemo(() => usePlugins.getState().viewsOf(activity), [plugins, activity])
   if (!views.length) return <Island title={activity} grow><Empty>—</Empty></Island>
-  return <>{views.map((v, i) => <PluginViewIsland key={v.id} viewId={v.id} title={v.title} grow={i === 0} />)}</>
+  return <div className="pstack">{views.map((v) => <PluginViewIsland key={v.id} viewId={v.id} title={v.title} grow />)}</div>
 }
 import { t } from '@/i18n'
 

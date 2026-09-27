@@ -338,3 +338,11 @@ input[type=checkbox]:disabled { opacity: .4; }
 .pv-row .acts.always { display: inline-flex; }
 .pv-row .acts button.primary { color: var(--ct-accent); }
 .lrow .acts.always button.primary { opacity: .85; }
+
+.modal.prompt { width: min(520px, calc(100vw - 80px)); height: auto; }
+.modal.prompt .content { display: flex; flex-direction: column; }
+.modal.prompt input { width: 100%; }
+
+/* stacked plugin views share the sidebar height */
+.pstack { display: flex; flex-direction: column; gap: var(--ct-gutter); flex: 1; min-height: 0; }
+.pstack > .island { flex: 1 1 0; min-height: 90px; }

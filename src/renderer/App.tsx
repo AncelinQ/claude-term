@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useWorkbench, useActiveProject, isClaude } from './stores/workbench'
 import { applyTheme } from './theme/apply'
 import { Icons } from './workbench/icons'
@@ -14,11 +14,14 @@ import { t } from '@/i18n'
 export function App() {
   const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab, showSettings, setShowSettings } = useWorkbench()
   const project = useActiveProject()
+  const [prompt, setPrompt] = useState<import('@shared/plugins').PromptRequest | null>(null)
   useEffect(() => {
     init()
     usePlugins.getState().init()
     window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, r.command, r.tab) })
     window.ct.plugins.onNotify((n) => { new Notification(n.title, { body: n.body }) })
+    window.ct.plugins.onOpenFile((path) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openFile(s.activeProjectId, path) })
+    window.ct.plugins.onPrompt((r) => setPrompt(r))
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
@@ -81,11 +84,38 @@ export function App() {
         <RightSidebar />
         <RightActivityBar />
       </div>
+      {prompt && <PromptModal req={prompt} onDone={(v) => { window.ct.plugins.promptReply(prompt.id, v); setPrompt(null) }} />}
       {showSettings && (
         <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>
           <div className="modal"><SettingsPage onClose={() => setShowSettings(false)} /></div>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Themed text prompt used by plugins (ctx.ui.prompt). */
+function PromptModal({ req, onDone }: { req: import('@shared/plugins').PromptRequest; onDone: (v: string | null) => void }) {
+  const [value, setValue] = useState('')
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onDone(null) }}>
+      <div className="modal prompt">
+        <div className="island">
+          <div className="hdr"><span>{req.title}</span></div>
+          <div className="content" style={{ padding: 12, gap: 10 }}>
+            <input autoFocus list={req.options ? 'prompt-options' : undefined} placeholder={req.placeholder} value={value} onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') onDone(value); if (e.key === 'Escape') { e.stopPropagation(); onDone(null) } }} />
+            {req.options && <datalist id="prompt-options">{req.options.map((o) => <option key={o} value={o} />)}</datalist>}
+            {req.options && req.options.length > 0 && (
+              <div className="plan-pick" style={{ padding: 0 }}>{req.options.slice(0, 12).map((o) => <button key={o} className="linkbtn" onClick={() => onDone(o)}>{o}</button>)}</div>
+            )}
+            <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => onDone(null)}>{t('Annuler')}</button>
+              <button className="btn primary" disabled={!value.trim()} onClick={() => onDone(value)}>OK</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

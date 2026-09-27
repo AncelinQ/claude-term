@@ -25,6 +25,7 @@ export function PluginViewIsland({ viewId, title, grow }: { viewId: string; titl
       {!model ? <Empty>{t('Chargement…')}</Empty>
         : model.kind === 'empty' ? <Empty>{model.text}</Empty>
         : model.kind === 'markdown' ? <div className="md" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(model.text, { async: false }) as string) }} />
+        : model.kind === 'diff' ? <div className="diff">{model.text.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>)}</div>
         : <div className="list pv">{model.items.map((it) => <Node key={it.id} item={it} depth={0} tree={model.kind === 'tree'} send={send} />)}</div>}
     </Island>
   )

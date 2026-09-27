@@ -298,6 +298,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       }
       if (kind === 'end') {
         if (t.claudeRunning) window.ct.claude.untrack(t.id)
+        window.ct.plugins.commandEnd({ command: t.lastCommand, exit: rest === '' ? null : +rest })
         return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false, title: name(t.cwd) }
       }
       return {}

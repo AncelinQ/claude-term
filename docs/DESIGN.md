@@ -111,8 +111,12 @@ is generated.
 Phase 5.0 (2026-09-27): the host runs **in the main process**, one Node `vm` context per plugin,
 with the API in `resources/plugins/claudeterm.d.ts`; moving it to a utility process later keeps the
 same API. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
-after a separator line in the bar. First built-in plugin: **Lanceur** (`resources/plugins/runnables`),
-which detects npm scripts (workspaces included), make targets, cargo, go, python and shell scripts.
+after a separator line in the bar. First built-in plugins: **Lanceur** (`resources/plugins/runnables`),
+which detects npm scripts (workspaces included), make targets, cargo, go, python and shell scripts,
+and **Git** (`resources/plugins/git`, decided 2026-09-27 with a zero-bug rule): no git logic of our
+own, reads through porcelain v2 / log formats parsed by tested code, every write is a plain `git`
+command typed into a visible shell tab (add, restore --staged, commit -m, checkout), nothing
+destructive (no reset --hard, checkout -- file, push --force, clean).
 
 Folder `userData/plugins/<id>/` with `plugin.json` (id, version, engine, activation,
 permissions, contributes: commands, activity, views, status, menus, themes, settings) and
