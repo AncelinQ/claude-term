@@ -29,7 +29,7 @@ const LEFT: { id: LeftActivity; title: string; icon: () => React.ReactElement }[
   { id: 'skills', title: 'Skills du projet (⌘4)', icon: () => Icons.sparkle() },
   { id: 'mcp', title: 'MCP (⌘5)', icon: () => Icons.plug() },
   { id: 'plugins', title: 'Plugins (⌘6)', icon: () => Icons.puzzle() },
-  { id: 'run', title: 'Exécuter (⌘7)', icon: () => Icons.play() },
+  { id: 'run', title: 'Exécuteurs (⌘7)', icon: () => Icons.play() },
 ]
 const RIGHT: { id: RightActivity; title: string; icon: () => React.ReactElement }[] = [
   { id: 'claude', title: 'Claude : usage, version, artifacts', icon: () => Icons.gauge() },

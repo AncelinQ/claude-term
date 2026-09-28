@@ -16,6 +16,13 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 const EN: Record<string, string> = {
+  'Exécuteurs': 'Runners',
+  'Exécuteurs (⌘7)': 'Runners (⌘7)',
+  'Scripts': 'Scripts',
+  'Tests': 'Tests',
+  'Les tests du projet arrivent ici : détection de Vitest, Jest et pytest à la prochaine étape.': "The project's tests will be here: Vitest, Jest and pytest detection comes next.",
+  'Ouvre un projet': 'Open a project',
+  'Rien à lancer ici : pas de package.json, Makefile, Cargo.toml, go.mod ni script.': 'Nothing to run here: no package.json, Makefile, Cargo.toml, go.mod or script.',
   'Espace': 'Space',
   "Afficher dans l'explorateur": 'Show in Explorer',
   'dans {d} j {h} h': 'in {d} d {h} h',

@@ -522,3 +522,14 @@ input[type=checkbox]:disabled { opacity: .4; }
 .claude-panel .cp-select { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px 0 8px; margin: -3px -6px -3px 0; border-radius: 6px; color: var(--ct-text); font-size: 12px; }
 .claude-panel .cp-select:hover, .claude-panel .cp-select.on { background: var(--ct-hover-bg); }
 .tree:focus { outline: none; }
+
+/* tabs inside an island, full width, above its content (Exécuteurs: Scripts | Tests) */
+.island > .content > .panel-tabs { flex: 1; min-height: 0; }
+.panel-tabs { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.panel-tabs-bar { display: flex; gap: 2px; margin: 8px 10px 0; padding: 2px; border-radius: 7px; background: var(--ct-island-header-bg); border: 1px solid var(--ct-island-border); }
+.panel-tabs-bar button { flex: 1; min-width: 0; height: 24px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 5px; font-size: 12px; color: var(--ct-text-secondary); }
+.panel-tabs-bar button:hover { color: var(--ct-text); background: var(--ct-hover-bg); }
+.panel-tabs-bar button.on { background: var(--ct-tab-active-bg); color: var(--ct-tab-active-fg); }
+.panel-tabs-bar .count { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; font-size: 10px; font-weight: 700; display: inline-grid; place-items: center; background: var(--ct-accent-bg); color: var(--ct-accent); }
+.panel-tabs-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel-tabs-body > .pv-main, .panel-tabs-body > .empty { flex: 1; min-height: 0; }
