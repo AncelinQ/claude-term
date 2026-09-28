@@ -2,39 +2,70 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { TempDir } from './helpers'
-import { Links } from '../src/main/services/links'
+import { ProjectLinks, migrateFromProject } from '../src/main/services/links'
 import { Skills } from '../src/main/services/skills'
 import { Mcp } from '../src/main/services/mcp'
 import { FileIndex, score } from '../src/main/services/search'
 import { frontmatter, isValidSkillName } from '../src/shared/frontmatter'
 
 describe('links', () => {
-  it('saves roles, additionalDirectories and deny rules, and cleans up removed links', () => {
+  const L = [{ path: '/x/api', role: 'API', readOnly: true }, { path: '/x/ds', role: '', readOnly: false }]
+
+  it('keeps links in the app data and nothing in the project; launch files for claude', () => {
     const t = new TempDir()
-    const root = join(t.path, 'front')
-    t.write('front/.claude/settings.local.json', JSON.stringify({ permissions: { allow: ['Bash(ls)'], additionalDirectories: ['/keep'] }, other: 1 }))
-    Links.save(root, [{ path: '/x/api', role: 'API', readOnly: true }, { path: '/x/ds', role: '', readOnly: false }])
-    let s = JSON.parse(readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8'))
-    expect(s.other).toBe(1)
-    expect(s.permissions.allow).toEqual(['Bash(ls)'])
-    expect(s.permissions.additionalDirectories).toEqual(['/keep', '/x/api', '/x/ds'])
-    expect(s.permissions.deny).toEqual(['Edit(///x/api/**)', 'Write(///x/api/**)'])
-    expect(Links.load(root)).toEqual([{ path: '/x/api', role: 'API', readOnly: true }, { path: '/x/ds', role: '', readOnly: false }])
-    expect(readFileSync(Links.promptPath(root), 'utf8')).toContain('api (API) : /x/api [lecture seule')
-    // remove one link: its dir and deny rules go, foreign entries stay
-    Links.save(root, [{ path: '/x/ds', role: '', readOnly: false }])
-    s = JSON.parse(readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8'))
-    expect(s.permissions.additionalDirectories).toEqual(['/keep', '/x/ds'])
-    expect(s.permissions.deny).toBeUndefined()
-    Links.save(root, [])
-    expect(existsSync(Links.promptPath(root))).toBe(false)
+    const app = join(t.path, 'userData'), root = join(t.path, 'front')
+    t.write('front/src/a.ts', '')
+    const links = new ProjectLinks(app)
+    links.save(root, L)
+    expect(existsSync(join(root, '.claude'))).toBe(false)
+    expect(new ProjectLinks(app).load(root)).toEqual(L)
+    expect(JSON.parse(readFileSync(links.settingsPath(root), 'utf8'))).toEqual({ permissions: { additionalDirectories: ['/x/api', '/x/ds'], deny: ['Edit(///x/api/**)'] } })
+    expect(readFileSync(links.promptPath(root), 'utf8')).toContain('api (API) : /x/api [lecture seule')
+    expect(links.claudeArgs(root)).toEqual(['--settings', links.settingsPath(root), '--append-system-prompt-file', links.promptPath(root)])
+    expect(links.dir(root).startsWith(join(app, 'projects'))).toBe(true)
+    expect(links.dir(root)).not.toBe(links.dir(root + '2'))
+    // another project and no project: no arguments
+    expect(links.claudeArgs(join(t.path, 'other'))).toEqual([])
+    expect(links.claudeArgs(null)).toEqual([])
+    // without read-only links: no deny; no links: launch files removed
+    links.save(root, [L[1]])
+    expect(JSON.parse(readFileSync(links.settingsPath(root), 'utf8'))).toEqual({ permissions: { additionalDirectories: ['/x/ds'] } })
+    links.save(root, [])
+    expect(existsSync(links.dir(root))).toBe(false)
+    expect(links.load(root)).toEqual([])
     t.dispose()
   })
-  it('refuses to overwrite an unreadable settings.local.json', () => {
+
+  it('moves the links an earlier version wrote in the project out of it, keeping the rest', () => {
     const t = new TempDir()
-    t.write('p/.claude/settings.local.json', '{ broken')
-    expect(() => Links.save(join(t.path, 'p'), [{ path: '/x', role: '', readOnly: false }])).toThrow(/illisible/)
-    expect(readFileSync(join(t.path, 'p', '.claude', 'settings.local.json'), 'utf8')).toBe('{ broken')
+    const app = join(t.path, 'userData'), root = join(t.path, 'front')
+    t.write('front/.claude/claudeterm.json', JSON.stringify({ links: L }))
+    t.write('front/.claude/claudeterm-prompt.txt', 'x')
+    t.write('front/.claude/settings.local.json', JSON.stringify({ permissions: { allow: ['Bash(ls)'], additionalDirectories: ['/keep', '/x/api', '/x/ds'], deny: ['Edit(///x/api/**)', 'Write(///x/api/**)', 'Read(./.env)'] }, other: 1 }))
+    const links = new ProjectLinks(app)
+    expect(links.load(root)).toEqual(L)
+    expect(existsSync(join(root, '.claude', 'claudeterm.json'))).toBe(false)
+    expect(existsSync(join(root, '.claude', 'claudeterm-prompt.txt'))).toBe(false)
+    expect(JSON.parse(readFileSync(join(root, '.claude', 'settings.local.json'), 'utf8'))).toEqual({ permissions: { allow: ['Bash(ls)'], additionalDirectories: ['/keep'], deny: ['Read(./.env)'] }, other: 1 })
+    expect(new ProjectLinks(app).load(root)).toEqual(L)
+    t.dispose()
+  })
+
+  it('migration removes what only we wrote: settings.local.json and .claude when nothing else is left', () => {
+    const t = new TempDir()
+    const root = join(t.path, 'p')
+    t.write('p/.claude/claudeterm.json', JSON.stringify({ links: [L[0]] }))
+    t.write('p/.claude/settings.local.json', JSON.stringify({ permissions: { additionalDirectories: ['/x/api'], deny: ['Edit(///x/api/**)', 'Write(///x/api/**)'] } }))
+    expect(migrateFromProject(root)).toEqual([L[0]])
+    expect(existsSync(join(root, '.claude'))).toBe(false)
+    // nothing to migrate
+    expect(migrateFromProject(join(t.path, 'none'))).toBeNull()
+    // unreadable settings.local.json is left alone; our file still goes
+    t.write('q/.claude/claudeterm.json', '{ broken')
+    t.write('q/.claude/settings.local.json', '{ broken')
+    expect(migrateFromProject(join(t.path, 'q'))).toEqual([])
+    expect(readFileSync(join(t.path, 'q', '.claude', 'settings.local.json'), 'utf8')).toBe('{ broken')
+    expect(existsSync(join(t.path, 'q', '.claude', 'claudeterm.json'))).toBe(false)
     t.dispose()
   })
 })

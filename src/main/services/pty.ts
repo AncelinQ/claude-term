@@ -19,7 +19,9 @@ export class PtyService {
 
   private integration = new ShellIntegration()
 
-  constructor(private getSettings: () => Settings, private onData: (id: string, data: string) => void, private onExit: (id: string, code: number) => void) {
+  constructor(private getSettings: () => Settings, private onData: (id: string, data: string) => void, private onExit: (id: string, code: number) => void,
+    /** linked folders of the project, passed to claude at launch (nothing written in the project) */
+    private links?: { claudeArgs(root: string | undefined | null): string[]; dir(root: string): string }) {
     if (process.platform !== 'win32') this.loginPath = loginShellPath()
   }
 
@@ -48,7 +50,11 @@ export class PtyService {
   create(opts: PtyCreate): { id: string; error?: string } {
     const id = 'pty' + ++this.seq
     const env = this.env()
-    if (opts.projectRoot) env.CLAUDETERM_ROOT = opts.projectRoot
+    if (opts.projectRoot) {
+      env.CLAUDETERM_ROOT = opts.projectRoot
+      // for the shell's `claude` wrapper (shell-integration.ts): the launch files of the linked folders
+      if (this.links?.claudeArgs(opts.projectRoot).length) env.CLAUDETERM_LINKS = this.links.dir(opts.projectRoot)
+    }
     let file: string, args: string[], verbatim = false
     const settings = this.getSettings()
     if (opts.kind === 'claude') {
@@ -56,7 +62,7 @@ export class PtyService {
         file = 'wsl.exe'
         args = [...(settings.wslDistro ? ['-d', settings.wslDistro] : []), '--cd', opts.cwd, '--', 'claude', ...(opts.resume ? ['--resume', opts.resume] : [])]
       } else {
-        const inv = this.claudeCommand(opts.resume ? ['--resume', opts.resume] : [], true)
+        const inv = this.claudeCommand([...(this.links?.claudeArgs(opts.projectRoot) ?? []), ...(opts.resume ? ['--resume', opts.resume] : [])], true)
         if (!inv) return { id, error: 'claude introuvable dans le PATH (installe Claude Code : npm i -g @anthropic-ai/claude-code)' }
         file = inv.file
         args = inv.args

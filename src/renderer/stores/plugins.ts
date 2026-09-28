@@ -13,7 +13,12 @@ interface PluginStore {
   /** activity entries contributed for a side */
   activities(side: 'left' | 'right'): { id: string; title: string; icon: string; pluginId: string }[]
   viewsOf(activityId: string): { id: string; title: string; pluginId: string }[]
+  /** tree nodes opened / closed by the user (settings.treeState): kept across tab switches and restarts */
+  treeState: Record<string, Record<string, boolean>>
+  setOpen(viewId: string, itemId: string, open: boolean): void
 }
+
+let saveTimer: ReturnType<typeof setTimeout> | undefined
 
 export const usePlugins = create<PluginStore>((set, get) => ({
   plugins: [],
@@ -23,7 +28,18 @@ export const usePlugins = create<PluginStore>((set, get) => ({
   bottomViews() {
     return get().plugins.filter((p) => p.enabled).flatMap((p) => (p.manifest.contributes?.views ?? []).filter((v) => v.placement === 'bottom').map((v) => ({ id: `${p.manifest.id}:${v.id}`, title: v.title, pluginId: p.manifest.id })))
   },
+  treeState: {},
+  setOpen(viewId, itemId, open) {
+    set((s) => {
+      // bounded: the oldest choices of a view go first (item ids of closed projects pile up otherwise)
+      const view = Object.entries({ ...s.treeState[viewId], [itemId]: open }).filter(([k]) => k !== itemId).slice(-499)
+      return { treeState: { ...s.treeState, [viewId]: Object.fromEntries([...view, [itemId, open]]) } }
+    })
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => window.ct.settings.set({ treeState: get().treeState }), 400)
+  },
   init() {
+    window.ct.settings.get().then((s) => set({ treeState: s.treeState ?? {} }))
     window.ct.plugins.list().then((plugins) => set({ plugins }))
     window.ct.plugins.onChanged((plugins) => {
       set({ plugins })

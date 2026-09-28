@@ -10,7 +10,7 @@ import { SessionTracker } from './services/session-tracker'
 import { ClaudeSettings } from './services/claude-settings'
 import { HookHub } from './services/hooks'
 import { FileService } from './services/files'
-import { Links } from './services/links'
+import { ProjectLinks } from './services/links'
 import { Skills } from './services/skills'
 import { Mcp } from './services/mcp'
 import { scanClaudeProcesses } from './services/process'
@@ -33,7 +33,8 @@ const themes = new ThemeService(settings, builtinThemes)
 let win: BrowserWindow | null = null
 const send = (channel: string, payload: unknown) => { if (win && !win.isDestroyed()) win.webContents.send(channel, payload) }
 
-const ptys = new PtyService(() => settings.get(), (id, data) => send('pty:data', { id, data }), (id, code) => send('pty:exit', { id, code }))
+const links = new ProjectLinks(app.getPath('userData'))
+const ptys = new PtyService(() => settings.get(), (id, data) => send('pty:data', { id, data }), (id, code) => send('pty:exit', { id, code }), links)
 
 // pty
 ipcMain.handle('pty:create', (_e, opts) => ptys.create(opts))
@@ -106,18 +107,18 @@ ipcMain.handle('hooks:set', (_e, on: boolean) => hooks.setInstalled(on))
 
 // npm, links, skills, mcp, processes, search
 const ok = (fn: () => unknown) => { try { const r = fn(); return { ok: true, ...(typeof r === 'string' ? { path: r } : {}) } } catch (e) { return { ok: false, error: (e as Error).message } } }
-ipcMain.handle('links:load', (_e, root: string) => Links.load(root))
-ipcMain.handle('links:save', (_e, { root, links }) => ok(() => Links.save(root, links)))
+ipcMain.handle('links:load', (_e, root: string) => links.load(root))
+ipcMain.handle('links:save', (_e, { root, links: l }) => ok(() => links.save(root, l)))
 const skills = new Skills()
 ipcMain.handle('skills:project', (_e, root: string) => skills.project(root))
-ipcMain.handle('skills:linked', (_e, root: string) => Links.load(root).flatMap((l) => skills.project(l.path, 'linked')))
+ipcMain.handle('skills:linked', (_e, root: string) => links.load(root).flatMap((l) => skills.project(l.path, 'linked')))
 ipcMain.handle('skills:personal', () => skills.personal())
 ipcMain.handle('skills:plugins', () => skills.plugins())
 ipcMain.handle('skills:create', (_e, { name, description, root }) => ok(() => skills.create(name, description, root)))
 ipcMain.handle('skills:remove', (_e, s) => ok(() => skills.remove(s)))
 const mcp = new Mcp(undefined, (args) => ptys.claudeCommand(args, false))
 ipcMain.handle('mcp:project', (_e, root: string) => mcp.project(root))
-ipcMain.handle('mcp:linked', (_e, root: string) => Links.load(root).flatMap((l) => mcp.project(l.path, 'linked')))
+ipcMain.handle('mcp:linked', (_e, root: string) => links.load(root).flatMap((l) => mcp.project(l.path, 'linked')))
 ipcMain.handle('mcp:user', () => mcp.user())
 ipcMain.handle('mcp:local', (_e, root: string) => mcp.local(root))
 ipcMain.handle('mcp:library', (_e, root: string | null) => mcp.library(root, settings.get().recentProjects))

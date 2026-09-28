@@ -136,6 +136,8 @@ export interface Settings {
   pluginPermissions: Record<string, string[]>
   /** check the GitHub releases at startup and every 6 h, download in the background */
   autoUpdate: boolean
+  /** open / closed nodes of plugin trees chosen by the user, by view id then item id */
+  treeState: Record<string, Record<string, boolean>>
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -167,6 +169,7 @@ export const DEFAULT_SETTINGS: Settings = {
   disabledPlugins: [],
   pluginPermissions: {},
   autoUpdate: true,
+  treeState: {},
 }
 
 export interface CtApi {

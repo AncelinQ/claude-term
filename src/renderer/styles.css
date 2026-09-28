@@ -447,3 +447,11 @@ input[type=checkbox]:disabled { opacity: .4; }
 .tabs .tab .badge { margin-left: 2px; }
 .lrow .acts.always { display: inline-flex; }
 .activity button.update { color: var(--ct-accent); }
+
+/* tab drag and drop: insertion bar on the side where the tab will land */
+.tab, .ptab { position: relative; }
+.tab.drop-before::before, .ptab.drop-before::before, .tab.drop-after::after, .ptab.drop-after::after {
+  content: ''; position: absolute; top: 3px; bottom: 3px; width: 2px; border-radius: 1px; background: var(--ct-accent); pointer-events: none;
+}
+.tab.drop-before::before, .ptab.drop-before::before { left: -3px; }
+.tab.drop-after::after, .ptab.drop-after::after { right: -3px; }

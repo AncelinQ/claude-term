@@ -175,7 +175,9 @@ and **Linear** (API key in secrets, GraphQL, "Mes issues", "Démarrer avec Claud
 - Shell integration: OSC 7770 from a private zsh rc (busy state, last command, exit code);
   PowerShell profile equivalent on Windows.
 - Writes are limited to: `~/.claude/settings.json` (form), `sessions-index.json`,
-  `<project>/.claude/settings.local.json` (links), `<project>/.mcp.json`. MCP user scope goes
+  `<project>/.mcp.json` (project MCP, meant to be shared). Linked folders are machine-specific, so they live in the
+  app's data (`userData/projects.json`, launch files in `userData/projects/<key>/`) and reach Claude through
+  `--settings` + `--append-system-prompt-file` at launch; nothing is written in the project (2026-09-28). MCP user scope goes
   through `claude mcp add|remove`, never `~/.claude.json`.
 
 ## 9. Phases

@@ -22,6 +22,9 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
   user themes in `userData/themes`. A VS Code theme must load unchanged.
 - Terminals: one xterm per tab, created outside React (`terminal/TerminalView.tsx`) so switching tabs
   keeps scrollback; pty in main (`services/pty.ts`). PATH comes from the user's login shell.
+- Nothing machine-specific goes in the user's projects (absolute paths, app state): it lives in `userData`
+  (e.g. linked folders: `services/links.ts`, passed to claude with `--settings` at launch). A project only gets
+  files meant to be shared (`.mcp.json`, skills the user creates).
 - Claude Code files (`~/.claude/...`) are read, never rewritten except the ones listed in
   `docs/DESIGN.md` §8. Never `~/.claude.json`: use `claude mcp add|remove`. Strip `CLAUDE_CODE_*` env.
 - Language: code, comments, commit messages, README.md and docs in English; UI strings in French

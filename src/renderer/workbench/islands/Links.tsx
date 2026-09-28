@@ -33,7 +33,7 @@ export function LinksIsland({ project, collapsed, onCollapse }: { project: Proje
       {error && <div className="error" style={{ padding: '6px 10px' }}>{error}</div>}
       {editing && links.length > 0 && (
         <div className="links-editor">
-          <div className="hint">{t('Écrit dans .claude/settings.local.json du projet. Le rôle est transmis à Claude au lancement.')}</div>
+          <div className="hint">{t("Gardé dans les données de l'app, rien n'est écrit dans le projet. Donné à Claude au lancement (nouvelles sessions).")}</div>
           {links.map((l) => (
             <div key={l.path} className="link-edit">
               <div className="name">{l.path.split(/[\\/]/).pop()}</div>

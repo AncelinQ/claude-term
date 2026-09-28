@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { reorder } from '@shared/order'
 import { commandLine, dialectFor } from '@shared/shell'
 import { t } from '@/i18n'
 import { pathsForPrompt } from '@shared/paths'
@@ -74,6 +75,9 @@ interface Workbench {
   setRoot(id: string, root: string): void
   closeProject(id: string): Promise<void>
   setActiveProject(id: string): void
+  /** drag and drop of the project tabs (order kept in openProjects) and of the center tabs */
+  moveProject(from: string, to: string, place: 'before' | 'after'): void
+  moveTab(projectId: string, from: string, to: string, place: 'before' | 'after'): void
   select(projectId: string, path: string, isDir: boolean): void
   newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string): Promise<void>
   /** types text into the current Claude tab of the project (opens one if needed) */
@@ -192,6 +196,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     persistProjects(get)
   },
   setActiveProject(id) { set({ activeProjectId: id }); get().visibleChanged() },
+  moveProject(from, to, place) { set((s) => ({ projects: reorder(s.projects, (p) => p.id, from, to, place) })); persistProjects(get) },
+  moveTab(projectId, from, to, place) { set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, tabs: reorder(p.tabs, (t) => t.id, from, to, place) } : p)) })) },
 
   select(projectId, path, isDir) {
     const folder = isDir ? path : path.replace(/[\\/][^\\/]*$/, '')

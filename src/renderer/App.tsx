@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useReorder } from './workbench/useReorder'
 import { useWorkbench, useActiveProject, isClaude } from './stores/workbench'
 import { applyTheme } from './theme/apply'
 import { Icons } from './workbench/icons'
@@ -16,7 +17,8 @@ import { PluginPopover } from './workbench/PluginView'
 import { t } from '@/i18n'
 
 export function App() {
-  const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab, showSettings, setShowSettings } = useWorkbench()
+  const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab, showSettings, setShowSettings, moveProject } = useWorkbench()
+  const drag = useReorder('project', moveProject)
   const project = useActiveProject()
   const [prompt, setPrompt] = useState<import('@shared/plugins').PromptRequest | null>(null)
   const popovers = usePlugins((s) => s.popovers)
@@ -66,7 +68,7 @@ export function App() {
       <div className={'title ' + (mac ? 'mac' : 'win')}>
         <div className="ptabs">
         {projects.map((p) => (
-          <div key={p.id} className={'ptab' + (p.id === activeProjectId ? ' on' : '')} onClick={() => setActiveProject(p.id)}>
+          <div key={p.id} className={'ptab' + (p.id === activeProjectId ? ' on' : '') + drag.dropClass(p.id)} onClick={() => setActiveProject(p.id)} {...drag.props(p.id)}>
             <span style={{ display: 'inline-flex', color: p.id === activeProjectId ? 'var(--ct-accent)' : undefined }}>{Icons.folder(12)}</span>
             <span>{p.root ? p.root.split(/[\\/]/).filter(Boolean).pop() : t('Nouveau projet')}</span>
             {p.tabs.some((t) => t.attention) && <span className="pcount attn">{p.tabs.filter((t) => t.attention).length}</span>}

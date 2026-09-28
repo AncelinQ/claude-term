@@ -1,4 +1,5 @@
 import { Icons } from './icons'
+import { useReorder } from './useReorder'
 import { TerminalHost } from '@/terminal/TerminalView'
 import { useEffect, useState } from 'react'
 import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
@@ -55,7 +56,8 @@ function tabColor(t: Tab) {
 }
 
 export function Center({ project }: { project: Project }) {
-  const { newTab, closeTab, closeFiles, setCurrentTab } = useWorkbench()
+  const { newTab, closeTab, closeFiles, setCurrentTab, moveTab } = useWorkbench()
+  const drag = useReorder('tab:' + project.id, (from, to, place) => moveTab(project.id, from, to, place))
   const [ctx, setCtx] = useState<{ x: number; y: number; tab: Tab } | null>(null)
   const setMdMode = useWorkbench((s) => s.setMdMode)
   const [splitWidth, setSplitWidth] = useStoredSize('md-split', 50)   // % of the editor area
@@ -78,7 +80,7 @@ export function Center({ project }: { project: Project }) {
         top={<Island grow title={
             <div className="tabs">
               {project.tabs.map((t) => (
-                <div key={t.id} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '')} onClick={() => setCurrentTab(project.id, t.id)} onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, tab: t }) }} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
+                <div key={t.id} {...drag.props(t.id)} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '') + drag.dropClass(t.id)} onClick={() => setCurrentTab(project.id, t.id)} onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, tab: t }) }} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
                   <span style={{ color: t.kind === 'file' ? (t.changedOnDisk ? 'var(--ct-badge-warn)' : 'var(--ct-text-secondary)') : tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
                     {t.kind === 'diff' ? Icons.columns(12) : t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
                     {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}

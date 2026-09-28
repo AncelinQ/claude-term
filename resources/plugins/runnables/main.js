@@ -13,7 +13,8 @@ exports.activate = (ctx) => {
     const groups = detect(ctx.workspace.fs, root)
     for (const g of groups) for (const it of g.children) commands.set(it.id, { cwd: it.cwd, command: it.command })
     if (!groups.length) { view.set({ kind: 'empty', text: 'Rien à lancer ici : pas de package.json, Makefile, Cargo.toml, go.mod ni script.' }); return }
-    view.set({ kind: 'tree', items: groups, toolbar: [{ id: 'refresh', title: 'Actualiser', icon: 'activity' }] })
+    // closed by default (a monorepo can have dozens of packages); the workbench remembers what the user opens
+    view.set({ kind: 'tree', search: true, items: groups.map((g) => ({ ...g, expanded: groups.length === 1 })), toolbar: [{ id: 'refresh', title: 'Actualiser', icon: 'activity' }] })
   }
 
   const watchRoot = () => {

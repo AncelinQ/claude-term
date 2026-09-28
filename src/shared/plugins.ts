@@ -127,3 +127,14 @@ export const FILE_COLORS: Record<string, string> = {
 }
 
 export const VIEW_ICONS = ['play', 'box', 'terminal', 'file', 'folder', 'sparkle', 'plug', 'puzzle', 'search', 'list', 'activity', 'gear', 'cpu', 'clock', 'link', 'code', 'image'] as const
+
+/** Items matching the query (label or detail); a matching group keeps all its children (a folder found by name). */
+export function filterItems(items: ViewItem[], q: string): ViewItem[] {
+  return items.flatMap((it) => {
+    const hit = it.label.toLowerCase().includes(q) || (it.detail ?? '').toLowerCase().includes(q)
+    if (hit) return [{ ...it, expanded: true }]
+    const kids = it.children ? filterItems(it.children, q) : undefined
+    if (kids && kids.length) return [{ ...it, children: kids, expanded: true }]
+    return []
+  })
+}

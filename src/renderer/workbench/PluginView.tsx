@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { ViewAction, ViewItem, ViewModel } from '@shared/plugins'
-import { FILE_COLORS } from '@shared/plugins'
+import { FILE_COLORS, filterItems } from '@shared/plugins'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { Icons } from './icons'
@@ -37,7 +37,7 @@ export function PluginViewIsland({ viewId, title, grow }: { viewId: string; titl
   ) : undefined
   return (
     <Island title={(model && 'title' in model && model.title) || title} icon={Icons.puzzle(14)} actions={toolbar} grow={grow} dataView={viewId}>
-      <PluginViewBody model={model} send={send} />
+      <PluginViewBody model={model} send={send} layoutKey={viewId} />
     </Island>
   )
 }
@@ -63,7 +63,7 @@ export function PluginViewBody({ model, send, wide, layoutKey = 'pv' }: { model:
       {model.search && <div className="search"><input value={q} placeholder={t('filtrer…')} onChange={(e) => setQ(e.target.value)} autoFocus /></div>}
       <div className={'list pv' + (model.kind === 'list' && model.graph ? ' graph' : '')}>
         {items.length === 0 && <Empty>{q ? t('Aucun résultat') : '—'}</Empty>}
-        {items.map((it) => <Node key={it.id} item={it} depth={0} tree={model.kind === 'tree'} send={send} graphWidth={model.kind === 'list' && model.graph && !q ? Math.max(1, ...model.items.map((x) => x.graph?.width ?? 1)) : 0} onMenu={(e, item) => { e.preventDefault(); e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, item }) }} />)}
+        {items.map((it) => <Node key={it.id} item={it} depth={0} tree={model.kind === 'tree'} send={send} stateKey={layoutKey} forceOpen={!!q} graphWidth={model.kind === 'list' && model.graph && !q ? Math.max(1, ...model.items.map((x) => x.graph?.width ?? 1)) : 0} onMenu={(e, item) => { e.preventDefault(); e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, item }) }} />)}
       </div>
       {model.footer && <Footer footer={model.footer} send={send} />}
       <ContextMenu at={ctx} onClose={() => setCtx(null)} items={(ctx?.item.contextMenu ?? []).map((a): MenuItem | 'sep' => a === 'sep' ? 'sep' : { label: a.title, icon: a.icon ? icon(a.icon, 13) : undefined, shortcut: a.shortcut, disabled: a.disabled, onSelect: () => send('menu', { itemId: ctx!.item.id, actionId: a.id }) })} />
@@ -118,14 +118,6 @@ function GraphCell({ g, width }: { g: NonNullable<ViewItem['graph']>; width: num
   )
 }
 
-function filterItems(items: ViewItem[], q: string): ViewItem[] {
-  return items.flatMap((it) => {
-    const kids = it.children ? filterItems(it.children, q) : undefined
-    const hit = it.label.toLowerCase().includes(q) || (it.detail ?? '').toLowerCase().includes(q)
-    if (hit || (kids && kids.length)) return [{ ...it, children: kids, expanded: true }]
-    return []
-  })
-}
 
 function DiffText({ text }: { text: string }) {
   return <div className="diff">{text.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>)}</div>
@@ -161,8 +153,11 @@ function checkState(item: ViewItem): boolean | 'mixed' | undefined {
   return item.checked
 }
 
-function Node({ item, depth, tree, send, onMenu, graphWidth = 0 }: { item: ViewItem; depth: number; tree: boolean; send: Send; onMenu: (e: React.MouseEvent, item: ViewItem) => void; graphWidth?: number }) {
-  const [open, setOpen] = useState(item.expanded ?? true)
+function Node({ item, depth, tree, send, onMenu, graphWidth = 0, stateKey, forceOpen }: { item: ViewItem; depth: number; tree: boolean; send: Send; onMenu: (e: React.MouseEvent, item: ViewItem) => void; graphWidth?: number; stateKey: string; forceOpen?: boolean }) {
+  // the user's choice (kept per view in settings.treeState) wins over the plugin's default; a search opens matches
+  const chosen = usePlugins((s) => s.treeState[stateKey]?.[item.id])
+  const open = forceOpen || (chosen ?? item.expanded ?? true)
+  const setOpen = (o: boolean) => usePlugins.getState().setOpen(stateKey, item.id, o)
   const hasChildren = tree && !!item.children?.length
   const cs = checkState(item)
   const cbRef = useRef<HTMLInputElement>(null)
@@ -184,7 +179,7 @@ function Node({ item, depth, tree, send, onMenu, graphWidth = 0 }: { item: ViewI
           </span>
         ) : null}
       </div>
-      {hasChildren && open && item.children!.map((c) => <Node key={c.id} item={c} depth={depth + 1} tree={tree} send={send} onMenu={onMenu} />)}
+      {hasChildren && open && item.children!.map((c) => <Node key={c.id} item={c} depth={depth + 1} tree={tree} send={send} onMenu={onMenu} stateKey={stateKey} forceOpen={forceOpen} />)}
     </>
   )
 }
@@ -206,7 +201,7 @@ export function PluginPopover({ id, anchorViewId, model, onClose }: { id: string
   const send: Send = (type, extra) => window.ct.plugins.event({ viewId: id, type, ...extra })
   return (
     <div className="menu ctx popover" ref={ref} style={{ left: pos.x, top: pos.y }}>
-      <PluginViewBody model={model} send={send} />
+      <PluginViewBody model={model} send={send} layoutKey={id} />
     </div>
   )
 }

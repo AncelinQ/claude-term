@@ -50,12 +50,12 @@ ${claudeFunction()}
   }
 }
 
-/** `claude` typed in an integrated shell: adds the linked-projects context when the project has one. */
+/** `claude` typed in an integrated shell: adds the project's linked folders (kept in the app's data) when it has some. */
 function claudeFunction() {
   return `claude() {
-  local f="$CLAUDETERM_ROOT/.claude/claudeterm-prompt.txt"
-  if [ -n "$CLAUDETERM_ROOT" ] && [ -s "$f" ]; then
-    command claude --append-system-prompt-file "$f" "$@"
+  local d="$CLAUDETERM_LINKS"
+  if [ -n "$d" ] && [ -s "$d/settings.json" ] && [ -s "$d/prompt.txt" ]; then
+    command claude --settings "$d/settings.json" --append-system-prompt-file "$d/prompt.txt" "$@"
   else
     command claude "$@"
   fi

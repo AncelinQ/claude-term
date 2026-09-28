@@ -123,7 +123,7 @@ const EN: Record<string, string> = {
   'Dossiers liés': 'Linked folders',
   'Rôles et accès': 'Roles and access',
   'Lier un dossier…': 'Link a folder…',
-  "Écrit dans .claude/settings.local.json du projet. Le rôle est transmis à Claude au lancement.": "Written to the project's .claude/settings.local.json. The role is passed to Claude at launch.",
+  "Gardé dans les données de l'app, rien n'est écrit dans le projet. Donné à Claude au lancement (nouvelles sessions).": "Kept in the app's data, nothing is written in the project. Given to Claude at launch (new sessions).",
   'rôle (API, design system…)': 'role (API, design system…)',
   'lecture seule': 'read-only',
   'Retirer': 'Remove',
