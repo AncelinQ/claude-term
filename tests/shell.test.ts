@@ -26,6 +26,7 @@ describe('shell command lines', () => {
     expect(quoteArg('say "hi"', 'powershell')).toBe("'say \\\"hi\\\"'")
     expect(quoteArg('c:\\dir\\"x', 'powershell')).toBe("'c:\\dir\\\\\\\"x'")
     expect(quoteArg('$env:X', 'powershell')).toBe("'$env:X'")
+    expect(quoteArg('', 'powershell')).toBe(`'""'`)
   })
 
   it('chains commands after an optional cd, each only if the previous succeeded', () => {

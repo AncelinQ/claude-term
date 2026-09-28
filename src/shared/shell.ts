@@ -14,6 +14,8 @@ const PS_BARE = /^[A-Za-z0-9_\-./:=%+]+$/
 export function quoteArg(a: string, d: Dialect): string {
   if (a !== '' && (d === 'posix' ? POSIX_BARE : PS_BARE).test(a)) return a
   if (d === 'posix') return "'" + a.replace(/'/g, "'\\''") + "'"
+  // Windows PowerShell 5.1 drops an empty argument to a native program; "" reaches it as an empty one
+  if (a === '') return `'""'`
   // PowerShell 5.1 hands native programs the raw quote characters: escape them for the program's own parser,
   // then double every quote PowerShell treats as a single-quote delimiter (typographic ones included)
   const native = a.replace(/(\\*)"/g, '$1$1\\"')
