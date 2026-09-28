@@ -58,3 +58,25 @@ describe('view search', () => {
     expect(filterItems(items, 'expo')[0].expanded).toBe(true)
   })
 })
+
+describe('runnables: running commands', () => {
+  const { withRuns, runOf } = require('../resources/plugins/runnables/runs.js')
+  const groups = [
+    { id: 'npm:/p', label: 'web · npm', children: [{ id: 'npm:/p:dev', label: 'dev', actions: [{ id: 'run' }] }, { id: 'npm:/p:build', label: 'build', actions: [{ id: 'run' }] }] },
+  ]
+  it('lists what runs first, marks the script, offers stop and show', () => {
+    const launched = new Map([['runnables:1', 'npm:/p:dev']])
+    const runs = [{ id: 'runnables:1', tabId: 't2', cwd: '/p', command: 'npm run dev', started: true }, { id: 'runnables:9', tabId: 't3', cwd: '/q', command: 'make x', label: 'x', started: false }]
+    const items = withRuns(groups, runs, launched)
+    expect(items[0]).toMatchObject({ id: 'g:running', label: 'En cours · 2', expanded: true })
+    expect(items[0].children.map((c: any) => [c.id, c.label, c.detail, c.badges])).toEqual([['run:runnables:1', 'dev', 'web', []], ['run:runnables:9', 'x', 'make x', ['démarrage']]])
+    expect(items[0].children[0].actions.map((a: any) => a.id)).toEqual(['stop', 'show'])
+    expect(items[1].children[0]).toMatchObject({ badges: ['en cours'] })
+    expect(items[1].children[0].actions.map((a: any) => a.id)).toEqual(['stop', 'show'])
+    expect(items[1].children[1].actions.map((a: any) => a.id)).toEqual(['run'])
+    expect(withRuns(groups, [], new Map())).toEqual(groups)
+    expect(runOf('run:runnables:9', runs, launched)).toBe('runnables:9')
+    expect(runOf('npm:/p:dev', runs, launched)).toBe('runnables:1')
+    expect(runOf('npm:/p:build', runs, launched)).toBeNull()
+  })
+})

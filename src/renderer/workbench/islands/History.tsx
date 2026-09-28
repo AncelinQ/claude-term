@@ -26,7 +26,7 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
         <div className="list">
           {shown.map((s) => (
             <div key={s.path} className="lrow" title={s.path} onDoubleClick={() => resume(s)}>
-              <span className="ico" style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(12)}</span>
+              <span className="ico">{Icons.claude(12)}</span>
               <div className="lbody">
                 <div className="head"><span className="name">{s.title}</span></div>
                 <div className="desc">{fmt(s.modified)}{s.messageCount ? ` · ${s.messageCount} msg` : ''}{s.gitBranch ? ` · ${s.gitBranch}` : ''}{scope === 'all' && s.projectPath ? ` · ${short(s.projectPath)}` : ''}</div>

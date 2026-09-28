@@ -107,6 +107,9 @@ const api: CtApi = {
     onNotify: (cb) => channel('plugins:notify', () => true, (p) => p, cb),
     projectChanged: (root) => ipcRenderer.send('plugins:project', root),
     commandEnd: (info) => ipcRenderer.send('plugins:commandEnd', info),
+    runs: (list) => ipcRenderer.send('plugins:runs', list),
+    onStopRun: (cb) => channel('plugins:stopRun', () => true, (p) => p.id as string, cb),
+    onShowRun: (cb) => channel('plugins:showRun', () => true, (p) => p.id as string, cb),
     onPrompt: (cb) => channel('plugins:prompt', () => true, (p) => p, cb),
     promptReply: (id, value) => ipcRenderer.send('plugins:promptReply', { id, value }),
     onOpenFile: (cb) => channel('plugins:openFile', () => true, (p) => p.path as string, cb),
@@ -126,6 +129,7 @@ const api: CtApi = {
     install: (on) => ipcRenderer.invoke('usage:install', on),
     refresh: () => ipcRenderer.invoke('usage:refresh'),
     claude: (refresh) => ipcRenderer.invoke('usage:claude', !!refresh),
+    switchModel: (ptyId, alias) => ipcRenderer.invoke('claude:switchModel', { ptyId, alias }),
   },
   update: {
     state: () => ipcRenderer.invoke('update:state'),

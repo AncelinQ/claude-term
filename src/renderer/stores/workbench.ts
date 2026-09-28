@@ -17,6 +17,8 @@ export interface Tab {
   exitCode?: number
   /** a foreground command is running (shell integration) */
   busy: boolean
+  /** a command a plugin started here (terminal.run), until it ends: started once the shell reports it */
+  run?: { id: string; label?: string; started: boolean }
   lastCommand: string
   lastExit: number | null
   /** `claude` typed in a shell tab */
@@ -87,7 +89,7 @@ interface Workbench {
   captureScreen(projectId: string): Promise<void>
   /** runs a command in an idle shell tab of the project (or a new one), cd-ing first when needed */
   /** types commands into a shell tab (strings as is, argv arrays quoted for its shell), chained on success */
-  runCommand(projectId: string, cwd: string, cmds: (string | string[])[], tab?: 'reuse' | 'new'): Promise<void>
+  runCommand(projectId: string, cwd: string, cmds: (string | string[])[], tab?: 'reuse' | 'new', run?: { id: string; label?: string }): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
   /** closes every file tab (terminals stay), except `keep` */
   closeFiles(projectId: string, keep?: string): Promise<void>
@@ -225,7 +227,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       ;(await import('@/terminal/TerminalView')).focusTerminal(t.id)
     } else await get().insertPrompt(projectId, pathsForPrompt(paths))
   },
-  async runCommand(projectId, cwd, cmds, tab = 'reuse') {
+  async runCommand(projectId, cwd, cmds, tab = 'reuse', run) {
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
     let target = tab === 'reuse' ? (p.tabs.find((x) => x.id === p.currentTabId && x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning) ?? p.tabs.find((x) => x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning)) : undefined
@@ -238,6 +240,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     get().setCurrentTab(projectId, target.id)
     const s = get().settings
     const line = commandLine(dialectFor(window.ct.platform, s?.windowsMode ?? 'native'), cmds, target.cwd === cwd ? undefined : cwd)
+    if (run) patchTab(set, target.id, () => ({ run: { id: run.id, label: run.label, started: false } }))
     window.ct.pty.write(target.ptyId, '\x15' + line + '\r')   // ^U clears pending input
     ;(await import('@/terminal/TerminalView')).focusTerminal(target.id)
   },
@@ -298,7 +301,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     get().visibleChanged()
   },
   tabExited(ptyId, code) {
-    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code, busy: false, claudeRunning: false } : t)) })) }))
+    set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.ptyId === ptyId ? { ...t, alive: false, exitCode: code, busy: false, claudeRunning: false, run: undefined } : t)) })) }))
   },
   shellEvent(tabId, msg) {
     const [kind, rest = ''] = msg.split(/;(.*)/s)
@@ -312,12 +315,13 @@ export const useWorkbench = create<Workbench>((set, get) => ({
           set((s) => ({ lastClaudeTab: { ...s.lastClaudeTab, [projectOf(s, t.id)]: t.id } }))
           return { busy: true, lastCommand: rest, lastExit: null, claudeRunning: true, session: undefined }
         }
-        return { busy: true, lastCommand: rest, lastExit: null }
+        return { busy: true, lastCommand: rest, lastExit: null, ...(t.run ? { run: { ...t.run, started: true } } : {}) }
       }
       if (kind === 'end') {
         if (t.claudeRunning) window.ct.claude.untrack(t.id)
         window.ct.plugins.commandEnd({ command: t.lastCommand, exit: rest === '' ? null : +rest })
-        return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false, title: name(t.cwd) }
+        // a plugin's command is over once it has started (an end before its start is the previous prompt)
+        return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false, title: name(t.cwd), ...(t.run?.started ? { run: undefined } : {}) }
       }
       return {}
     })

@@ -1,4 +1,5 @@
 import { Icons } from './icons'
+import { TermBubble, attentionColor, attentionLabel } from './TermBubble'
 import { useReorder } from './useReorder'
 import { TerminalHost } from '@/terminal/TerminalView'
 import { useEffect, useState } from 'react'
@@ -12,14 +13,8 @@ import { MarkdownPreview } from '@/editor/MarkdownPreview'
 import { Gutter, useStoredSize } from './Split'
 import { t as tr } from '@/i18n'
 
-export function attentionColor(a: { kind: string }) {
-  return a.kind === 'permission' ? 'var(--ct-accent)' : a.kind === 'idle' ? 'var(--ct-badge-warn)' : 'var(--ct-badge-info)'
-}
-export function attentionLabel(a: { kind: string; message: string }) {
-  return a.kind === 'permission' ? (a.message || tr('Permission en attente')) : a.kind === 'idle' ? tr('Claude attend une réponse') : tr('Claude a terminé')
-}
 
-/** Compact state of the current tab, in the island header: attention, plan/permission, running command, tokens, file state. */
+/** File state of the current tab, in the island header (terminal tabs show theirs in a floating bubble: TermBubble). */
 function TabStatus({ tab }: { tab: Tab }) {
   const { reloadFile, saveFile } = useWorkbench()
   const badge = (text: string, color: string) => <span className="badge" style={{ background: `color-mix(in srgb, ${color} 20%, transparent)`, color }}>{text}</span>
@@ -32,19 +27,7 @@ function TabStatus({ tab }: { tab: Tab }) {
       </span>
     )
   }
-  const s = tab.session
-  return (
-    <span className="tstatus">
-      {tab.attention && badge(attentionLabel(tab.attention), attentionColor(tab.attention))}
-      {isClaude(tab) && s?.permissionMode && badge(s.permissionMode, 'var(--ct-accent)')}
-      {isClaude(tab) && s?.planMode && badge(tr('plan'), 'var(--ct-accent)')}
-      {isClaude(tab) && s && (s.runningTools.length > 0 ? <span className="item"><span className="spin" /><span className="cmd">{s.runningTools.map((r) => r.name).join(', ')}</span></span> : null)}
-      {isClaude(tab) && s && <span className="item">{s.inputTokens.toLocaleString()} ↓ {s.outputTokens.toLocaleString()} ↑</span>}
-      {!isClaude(tab) && tab.busy && <span className="item"><span className="spin" /><span className="cmd">{tab.lastCommand}</span></span>}
-      {!isClaude(tab) && !tab.busy && tab.lastExit !== null && <span className="item">{badge(tab.lastExit === 0 ? 'ok' : 'exit ' + tab.lastExit, tab.lastExit === 0 ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)')}<span className="cmd">{tab.lastCommand}</span></span>}
-      {!tab.alive && badge(tr('terminé'), 'var(--ct-badge-error)')}
-    </span>
-  )
+  return null
 }
 
 function tabColor(t: Tab) {
@@ -82,7 +65,7 @@ export function Center({ project }: { project: Project }) {
               {project.tabs.map((t) => (
                 <div key={t.id} {...drag.props(t.id)} className={'tab' + (t.id === project.currentTabId ? ' on' : '') + (t.dirty ? ' dirty' : '') + drag.dropClass(t.id)} onClick={() => setCurrentTab(project.id, t.id)} onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, tab: t }) }} title={t.kind === 'file' ? t.path : t.busy ? t.lastCommand : t.cwd}>
                   <span style={{ color: t.kind === 'file' ? (t.changedOnDisk ? 'var(--ct-badge-warn)' : 'var(--ct-text-secondary)') : tabColor(t), display: 'inline-flex', position: 'relative' }} title={t.attention ? attentionLabel(t.attention) : undefined}>
-                    {t.kind === 'diff' ? Icons.columns(12) : t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.sparkle(12) : Icons.terminal(12)}
+                    {t.kind === 'diff' ? Icons.columns(12) : t.kind === 'file' ? (t.fileKind === 'image' ? Icons.image(12) : Icons.file(12)) : isClaude(t) ? Icons.claude(12) : Icons.terminal(12)}
                     {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
                   </span>
                   <span style={{ fontStyle: t.dirty ? 'italic' : undefined }}>{t.title}</span>
@@ -93,9 +76,9 @@ export function Center({ project }: { project: Project }) {
               ))}
             </div>}
           actions={<>
-            {current && <TabStatus tab={current} />}
+            {current?.kind === 'file' && <TabStatus tab={current} />}
             <MenuButton title={tr('Nouvel onglet')} items={[
-              { label: tr('Claude'), icon: <span style={{ color: 'var(--ct-accent)', display: 'inline-flex' }}>{Icons.sparkle(13)}</span>, shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
+              { label: tr('Claude'), icon: Icons.claude(13), shortcut: '⇧⌘T', onSelect: () => newTab(project.id, 'claude') },
               { label: tr('Shell'), icon: Icons.terminal(13), shortcut: '⌘T', onSelect: () => newTab(project.id, 'shell') },
               ...(window.ct.platform === 'darwin' ? ['sep' as const, { label: tr("Capture d'écran → prompt"), icon: Icons.camera(13), shortcut: '⌥⌘S', onSelect: () => useWorkbench.getState().captureScreen(project.id) }] : []),
             ]}>{Icons.plus()}</MenuButton>
@@ -121,7 +104,7 @@ export function Center({ project }: { project: Project }) {
               </div>
             ) : <div className="term-wrap editor-bg"><EditorHost tab={current} /></div>
           ) : current ? (
-            <TerminalHost key={current.id} tab={current} />
+            <div className="term-stack"><TerminalHost key={current.id} tab={current} /><TermBubble tab={current} /></div>
           ) : (
             <div className="term-wrap">
               <div className="welcome">
@@ -130,7 +113,7 @@ export function Center({ project }: { project: Project }) {
                   <h1>{tr('Aucune session')}</h1>
                   <p>{short(project.selectedFolder)}</p>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                    <button className="btn primary" onClick={() => newTab(project.id, 'claude')}>{Icons.sparkle(14)} Démarrer Claude</button>
+                    <button className="btn primary" onClick={() => newTab(project.id, 'claude')}>{Icons.claude(14)} Démarrer Claude</button>
                     <button className="btn" onClick={() => newTab(project.id, 'shell')}>{Icons.terminal(14)} Shell</button>
                   </div>
                 </div>

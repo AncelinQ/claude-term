@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { attachRunGutter } from './runGutter'
 import { monaco, applyMonacoTheme } from './monaco'
 import { useWorkbench, type Tab } from '@/stores/workbench'
 import { ACTIONS, binding, parse } from '@shared/keymap'
@@ -29,6 +30,7 @@ function ensureEditor(s: Parameters<typeof editorOptions>[0]) {
     scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }, fixedOverflowWidgets: true,
   })
   applyKeymap(useWorkbench.getState().settings?.keybindings ?? {})
+  attachRunGutter(editor)
   editor.onDidBlurEditorWidget(() => useWorkbench.getState().autoSaveAll())
   editor.onDidChangeModelContent(() => {
     const m = editor!.getModel()

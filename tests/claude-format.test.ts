@@ -37,6 +37,16 @@ describe('transcript parsing', () => {
     expect(u.planMode).toBe(true); expect(u.planPath).toBe('/Users/j/.claude/plans/x.md')
     expect(u.aiTitle).toBe('Un titre')
   })
+  it('keeps the model and the context of the last main-thread message', () => {
+    const u = parseTranscript(jsonl([
+      { type: 'assistant', message: { model: 'claude-opus-5-5', usage: { input_tokens: 10, cache_read_input_tokens: 50_000, cache_creation_input_tokens: 2_000, output_tokens: 5 }, content: [] } },
+      { type: 'assistant', isSidechain: true, message: { model: 'claude-haiku-4-5', usage: { input_tokens: 900_000, output_tokens: 1 }, content: [] } },
+      { type: 'assistant', message: { model: '<synthetic>', content: [] } },
+    ]), opts)
+    expect(u.model).toBe('claude-opus-5-5')
+    expect(u.contextTokens).toBe(52_010)
+    expect(isEmptyUpdate(parseTranscript(jsonl([{ type: 'assistant', message: { model: 'claude-fable-5-1', content: [] } }]), opts))).toBe(false)
+  })
   it('ignores system-style user messages and partial lines', () => {
     const u = parseTranscript(jsonl([{ type: 'user', message: { content: '<command-name>/clear</command-name>' } }]), opts)
     expect(u.events).toHaveLength(0)

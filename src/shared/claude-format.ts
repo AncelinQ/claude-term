@@ -16,6 +16,10 @@ export interface TranscriptUpdate {
   events: ToolEvent[]
   inputTokens: number
   outputTokens: number
+  /** model of the last assistant message (as the API names it: no [1m] suffix) */
+  model?: string
+  /** tokens in the context at the last assistant message: input + cache read + cache creation */
+  contextTokens?: number
   planPath?: string
   planMode?: boolean
   aiTitle?: string
@@ -34,7 +38,7 @@ export function emptyUpdate(): TranscriptUpdate {
 
 export function isEmptyUpdate(u: TranscriptUpdate): boolean {
   return u.events.length === 0 && u.inputTokens === 0 && u.outputTokens === 0 && u.planPath === undefined
-    && u.planMode === undefined && u.aiTitle === undefined && u.permissionMode === undefined
+    && u.planMode === undefined && u.aiTitle === undefined && u.permissionMode === undefined && u.model === undefined && u.contextTokens === undefined
     && u.startedTools.length === 0 && u.finishedTools.length === 0
     && Object.keys(u.backups).length === 0 && Object.keys(u.bashDiffs).length === 0
 }
@@ -105,7 +109,10 @@ export function parseTranscript(lines: string[], opts: { plansDir: string; home:
         if (msg.usage) {
           u.inputTokens += msg.usage.input_tokens ?? 0
           u.outputTokens += msg.usage.output_tokens ?? 0
+          // sidechains (subagents) have their own context
+          if (!obj.isSidechain) u.contextTokens = (msg.usage.input_tokens ?? 0) + (msg.usage.cache_read_input_tokens ?? 0) + (msg.usage.cache_creation_input_tokens ?? 0)
         }
+        if (typeof msg.model === 'string' && msg.model && msg.model !== '<synthetic>' && !obj.isSidechain) u.model = msg.model
         if (!Array.isArray(msg.content)) break
         for (const item of msg.content) {
           if (item?.type === 'tool_use') {

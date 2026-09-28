@@ -50,7 +50,13 @@ export interface Context {
      * is; `argv` commands are quoted for the tab's shell (zsh / bash / PowerShell) and chained: each one runs only
      * when the previous one succeeded. Prefer argv for anything built from user input.
      */
-    run(req: { cwd: string; command?: string; argv?: string[][]; label?: string; tab?: 'reuse' | 'new' }): void
+    run(req: { cwd: string; command?: string; argv?: string[][]; label?: string; tab?: 'reuse' | 'new' }): string
+    /** commands this plugin started that are still running (started: the shell has begun running it) */
+    runs(): { id: string; tabId: string; cwd: string; command: string; label?: string; started: boolean }[]
+    onDidChangeRuns(cb: (runs: { id: string; tabId: string; cwd: string; command: string; label?: string; started: boolean }[]) => void): () => void
+    /** Ctrl+C in the tab running it (requires "process"); show: brings its tab to the front */
+    stop(id: string): void
+    show(id: string): void
     /** a foreground command ended in a shell tab of the active project */
     onCommandEnd(cb: (info: { command: string; exit: number | null }) => void): () => void
   }

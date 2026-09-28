@@ -18,7 +18,7 @@ export interface PolicyCtx {
   real: (p: string) => string
 }
 
-const NEEDS: Record<string, PluginPermission> = { 'process.exec': 'process', 'terminal.run': 'process' }
+const NEEDS: Record<string, PluginPermission> = { 'process.exec': 'process', 'terminal.run': 'process', 'terminal.stop': 'process' }
 
 export function permissionError(method: string, ctx: PolicyCtx): string | null {
   const need = NEEDS[method]

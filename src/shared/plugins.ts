@@ -117,7 +117,10 @@ export interface PromptRequest { id: number; title: string; placeholder?: string
  * Host → renderer: a terminal command request. `command` is typed as is; `argv` commands are quoted for the tab's
  * shell and chained (each runs only if the previous one succeeded). Both may be given: command first.
  */
-export interface RunRequest { cwd: string; command?: string; argv?: string[][]; label?: string; tab?: 'reuse' | 'new' }
+export interface RunRequest { cwd: string; command?: string; argv?: string[][]; label?: string; tab?: 'reuse' | 'new'; /** set by the host: `<pluginId>:<n>`, returned by terminal.run */ id?: string }
+
+/** A command a plugin started in a shell tab, until it ends (shell integration): what terminal.runs() lists. */
+export interface RunInfo { id: string; tabId: string; cwd: string; command: string; label?: string; started: boolean }
 
 export const FILE_COLORS: Record<string, string> = {
   ts: '#3178c6', tsx: '#3178c6', js: '#e8c547', jsx: '#e8c547', mjs: '#e8c547', json: '#e8c547', py: '#4b8bbe', md: '#8a8f9e', css: '#a074c4', scss: '#c6538c',
@@ -126,7 +129,7 @@ export const FILE_COLORS: Record<string, string> = {
   png: '#b45fd6', jpg: '#b45fd6', jpeg: '#b45fd6', svg: '#ffb13b', lock: '#8a8f9e', txt: '#8a8f9e',
 }
 
-export const VIEW_ICONS = ['play', 'box', 'terminal', 'file', 'folder', 'sparkle', 'plug', 'puzzle', 'search', 'list', 'activity', 'gear', 'cpu', 'clock', 'link', 'code', 'image'] as const
+export const VIEW_ICONS = ['play', 'box', 'terminal', 'file', 'folder', 'sparkle', 'plug', 'puzzle', 'search', 'list', 'activity', 'gear', 'cpu', 'clock', 'link', 'code', 'image', 'stop'] as const
 
 /** Items matching the query (label or detail); a matching group keeps all its children (a folder found by name). */
 export function filterItems(items: ViewItem[], q: string): ViewItem[] {

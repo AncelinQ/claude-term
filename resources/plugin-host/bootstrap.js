@@ -61,6 +61,10 @@
     terminal: {
       run: (req) => call('terminal.run', req),
       onCommandEnd: (cb) => on('commandEnd', cb),
+      runs: () => call('terminal.runs'),
+      onDidChangeRuns: (cb) => on('runs', cb),
+      stop: (id) => call('terminal.stop', { id }),
+      show: (id) => call('terminal.show', { id }),
     },
     process: {
       exec: (file, args, opts) => callAsync('process.exec', { file, args: args || [], cwd: opts && opts.cwd }),

@@ -19,6 +19,7 @@ export interface UsageState {
   /** last usage API call: when it answered, or why it failed */
   api?: { at?: number; error?: string; busy?: boolean }
 }
+import type { RunInfo } from './plugins'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -46,6 +47,9 @@ export interface SessionState {
   bashDiffs: Record<string, string[]>
   inputTokens: number
   outputTokens: number
+  /** model of the last assistant message and context tokens at that point (transcript) */
+  model?: string
+  contextTokens?: number
   planPath?: string
   planText: string
   planMode: boolean
@@ -298,6 +302,10 @@ export interface CtApi {
     /** tells the host which project root is active */
     projectChanged(root: string | null): void
     commandEnd(info: { command: string; exit: number | null }): void
+    /** commands started by plugins that are still running (tabs with a run) */
+    runs(list: RunInfo[]): void
+    onStopRun(cb: (id: string) => void): () => void
+    onShowRun(cb: (id: string) => void): () => void
     onPrompt(cb: (r: PromptRequest) => void): () => void
     promptReply(id: number, value: string | null): void
     onOpenFile(cb: (path: string) => void): () => void
@@ -321,6 +329,8 @@ export interface CtApi {
     refresh(): Promise<UsageState>
     /** version, default model, latest published Claude Code, Anthropic status (refresh: skip the caches) */
     claude(refresh?: boolean): Promise<ClaudeInfo>
+    /** `/model <alias>` in a Claude tab, keeping the default model of ~/.claude/settings.json */
+    switchModel(ptyId: string, alias: string): Promise<void>
   }
   update: {
     state(): Promise<UpdateState>

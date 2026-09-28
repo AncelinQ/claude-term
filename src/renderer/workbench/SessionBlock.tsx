@@ -46,7 +46,7 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
       {bottomViews.map((v) => <span key={v.id} style={{ display: 'contents' }}>{modeBtn(v.id, v.title, false)}</span>)}
     </span>
   )
-  const actions = tab ? <span className="session-title">{Icons.sparkle(11)} {tab.title}</span> : null
+  const actions = tab ? <span className="session-title">{Icons.claude(11)} {tab.title}</span> : null
   return (
     <Island title={title} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
       {mode.includes(':') ? (
@@ -101,7 +101,7 @@ function ActivityView({ tab }: { tab: Tab }) {
   const icon = (kind: string) => {
     switch (kind) {
       case 'user': return Icons.terminal(12)
-      case 'text': return Icons.sparkle(12)
+      case 'text': return Icons.claude(12)
       case 'Edit': case 'Write': case 'MultiEdit': case 'NotebookEdit': case 'Edit (bash)': return Icons.file(12)
       case 'Read': return Icons.file(12)
       case 'Bash': return Icons.terminal(12)

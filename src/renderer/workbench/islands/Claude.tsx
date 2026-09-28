@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { ClaudeInfo, UsageState } from '@shared/ipc'
 import { level, untilReset, type UsageLimit } from '@shared/usage'
+import { modelName } from '@shared/models'
 import { STATUS_PAGE, statusLabel, statusTone, updateAvailable } from '@shared/claude-info'
 import { Icons } from '../icons'
 import { Island } from '../Island'
@@ -74,7 +75,7 @@ export function ClaudeIsland() {
               <button className="btn primary" disabled={!activeProjectId} onClick={update}>{Icons.download(13)} {t('Mettre à jour Claude Code')}</button>
             </div>
           )}
-          <Row k={t('Modèle par défaut')} v={info ? info.model ?? t('celui du compte') : '…'} mono />
+          <Row k={t('Modèle par défaut')} v={info ? (info.model ? modelName(info.model) : t('celui du compte')) : '…'} />
         </Block>
 
         <Block title={t('Services Anthropic')}>

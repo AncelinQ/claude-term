@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session, net } from 'electron'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { execFile } from 'node:child_process'
+import { execFile, spawnSync } from 'node:child_process'
 import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs'
 import { SettingsService } from './services/settings'
 import { ThemeService } from './services/themes'
@@ -28,7 +28,14 @@ import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
 import type { DirEntry } from '@shared/ipc'
 
 // Chrome DevTools Protocol for scripted UI checks (scripts/ui.ts): always in dev, on demand (CT_CDP_PORT) when packaged
-if (!app.isPackaged || process.env.CT_CDP_PORT) app.commandLine.appendSwitch('remote-debugging-port', process.env.CT_CDP_PORT || '9333')
+if (!app.isPackaged || process.env.CT_CDP_PORT) {
+  const port = process.env.CT_CDP_PORT || '9333'
+  // dev restarts (electron-vite) start the new app before the old one has let go of the port: wait for it (≤ 3 s)
+  if (!app.isPackaged && process.platform !== 'win32') {
+    for (let i = 0; i < 30 && spawnSync('lsof', ['-ti', `tcp:${port}`, '-sTCP:LISTEN']).stdout?.length; i++) spawnSync('sleep', ['0.1'])
+  }
+  app.commandLine.appendSwitch('remote-debugging-port', port)
+}
 
 const settings = new SettingsService()
 const builtinThemes = app.isPackaged ? join(process.resourcesPath, 'themes') : join(app.getAppPath(), 'resources', 'themes')
@@ -128,6 +135,24 @@ usage.start()
 ipcMain.handle('usage:state', () => usage.state())
 ipcMain.handle('usage:install', (_e, on: boolean) => usage.setInstalled(on))
 ipcMain.handle('usage:refresh', () => usage.refresh())
+// the terminal bubble's model menu: `/model <alias>` changes the session, but Claude Code also saves it as the default
+// for new sessions in ~/.claude/settings.json; the previous default is put back as soon as it has been rewritten
+ipcMain.handle('claude:switchModel', async (_e, { ptyId, alias }: { ptyId: string; alias: string }) => {
+  if (!/^[a-z0-9.[\]-]+$/i.test(alias)) return
+  const read = () => { const r = claudeSettingsFile.read(); return r.ok ? r.data : null }
+  const before = read()
+  if (!before) return
+  const prev = before.model
+  ptys.write(ptyId, `/model ${alias}\r`)
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 250))
+    const now = read()
+    if (!now || now.model === prev) continue
+    if (prev === undefined) delete now.model; else now.model = prev
+    try { claudeSettingsFile.write(now) } catch { /* left as Claude Code wrote it */ }
+    return
+  }
+})
 let claudeVersion: Promise<string | null> | null = null
 const cached = <T,>(ttl: number, load: () => Promise<T>) => { let v: { at: number; p: Promise<T> } | null = null; return (force = false) => { if (force || !v || Date.now() - v.at > ttl) v = { at: Date.now(), p: load() }; return v.p } }
 const getPublicJson = async (url: string) => { const r = await net.fetch(url, { cache: 'no-store', headers: { 'User-Agent': `ClaudeTerm/${app.getVersion()}` } }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }
@@ -191,6 +216,7 @@ ipcMain.handle('plugins:viewModel', (_e, id: string) => pluginHost.viewModel(id)
 ipcMain.on('plugins:event', (_e, ev) => pluginHost.viewEvent(ev))
 ipcMain.on('plugins:project', (_e, root: string | null) => { if (root !== activeRoot) { activeRoot = root; pluginHost.projectChanged(root) } })
 ipcMain.on('plugins:commandEnd', (_e, info) => pluginHost.commandEnd(info))
+ipcMain.on('plugins:runs', (_e, list) => pluginHost.runsChanged(Array.isArray(list) ? list : []))
 ipcMain.on('plugins:promptReply', (_e, { id, value }) => pluginHost.promptReply(id, value))
 
 // plugin catalogue (DESIGN.md §7.1)

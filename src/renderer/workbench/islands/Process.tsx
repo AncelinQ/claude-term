@@ -32,7 +32,7 @@ export function ProcessIsland() {
             return (
               <div key={p.pid}>
                 <div className="lrow" onClick={() => setOpen(open === p.pid ? null : p.pid)}>
-                  <span className="ico" style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(12)}</span>
+                  <span className="ico">{Icons.claude(12)}</span>
                   <div className="lbody">
                     <div className="head"><span className="name">{short(p.cwd).split('/').pop() || p.cwd}</span><span className="badge dim">PID {p.pid}</span>{tab && <span className="badge dim">{t('onglet')}</span>}</div>
                     <div className="desc">{short(p.cwd)} · {p.elapsed} · {p.cpu}% · {p.memMB} Mo{p.children.length ? ` · ${p.children.length} ${t('sous-process')}` : ''}</div>

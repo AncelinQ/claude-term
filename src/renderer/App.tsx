@@ -12,6 +12,7 @@ import { setLanguage } from './i18n'
 import { ACTIONS, binding, matches } from '@shared/keymap'
 import { runAppAction } from './actions'
 import { useUpdate } from './stores/update'
+import { useUsage } from './stores/usage'
 import { usePlugins } from './stores/plugins'
 import { PluginPopover } from './workbench/PluginView'
 import { t } from '@/i18n'
@@ -26,11 +27,22 @@ export function App() {
   useEffect(() => {
     init()
     usePlugins.getState().init()
+    useUsage.getState().init()
     useUpdate.getState().init()
-    window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, [...(r.command ? [r.command] : []), ...(r.argv ?? [])], r.tab) })
+    window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, [...(r.command ? [r.command] : []), ...(r.argv ?? [])], r.tab, r.id ? { id: r.id, label: r.label } : undefined) })
     window.ct.plugins.onNotify((n) => { new Notification(n.title, { body: n.body }) })
     window.ct.plugins.onOpenFile((path) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openFile(s.activeProjectId, path) })
     window.ct.plugins.onPrompt((r) => setPrompt(r))
+    // commands plugins started (terminal.run): the list goes to the host at each change, stop = Ctrl+C in the tab
+    let lastRuns = ''
+    useWorkbench.subscribe((s) => {
+      const runs = s.projects.flatMap((p) => p.tabs.filter((t) => t.run && t.alive).map((t) => ({ id: t.run!.id, tabId: t.id, cwd: t.cwd, command: t.lastCommand, label: t.run!.label, started: t.run!.started })))
+      const key = JSON.stringify(runs)
+      if (key !== lastRuns) { lastRuns = key; window.ct.plugins.runs(runs) }
+    })
+    const tabOfRun = (id: string) => { for (const p of useWorkbench.getState().projects) { const t = p.tabs.find((x) => x.run?.id === id); if (t) return { p, t } } return null }
+    window.ct.plugins.onStopRun((id) => { const f = tabOfRun(id); if (f?.t.ptyId) window.ct.pty.write(f.t.ptyId, '\x03') })
+    window.ct.plugins.onShowRun((id) => { const f = tabOfRun(id); if (f) { const s = useWorkbench.getState(); s.setActiveProject(f.p.id); s.setCurrentTab(f.p.id, f.t.id) } })
     window.ct.plugins.onOpenDiff((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openDiff(s.activeProjectId, r) })
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_state = () => {

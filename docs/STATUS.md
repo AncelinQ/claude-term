@@ -33,6 +33,14 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   without restart, approval of pending permissions. `services/tar.ts` (safe .tgz reader), `services/plugin-store.ts`,
   `shared/plugin-registry.ts`, tests in `tests/plugin-store.test.ts`. Checked end to end with a local `file:` catalogue.
 - **Packaging**: electron-builder (dmg / nsis / AppImage), GitHub Actions workflow, `CT_CDP_PORT` test hooks.
+- **Terminal bubble** (top right of a terminal, like the markdown modes): shell = running command or exit code;
+  Claude = attention, permission / plan mode, running tools, model (menu: `/model <alias>` typed in the tab, the
+  default of ~/.claude/settings.json put back since Claude Code saves it), context % (status line figure per session,
+  else ≈ from the transcript), tokens. The island header keeps only the file state.
+- **Lanceur**: collapsed groups (state kept), filter, "En cours" group with stop (Ctrl+C) / show; plugin API
+  `terminal.run` returns an id, `terminal.runs / onDidChangeRuns / stop / show`. package.json gets WebStorm-like ▶ in
+  the editor gutter (■ while running), through the Lanceur.
+- Claude icon: the terminal icon in orange (`Icons.claude`) everywhere it means Claude; skills keep the sparkle.
 - **Claude panel** (right bar): subscription usage from Claude Code's status line (5 h session, week, per-model
   week, extra credit; gauges with reset delays), Claude Code version and default model (global data only), a
   button to the artifacts gallery (claude.ai/code/artifacts, default browser). The status line is ours only

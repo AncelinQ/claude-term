@@ -116,7 +116,8 @@ sync / async calls to main, which identifies the caller by its webContents and c
 (`resources/plugins/claudeterm.d.ts`) on it and provides `require` for the plugin's own files. Disabling a plugin
 destroys its window. Permissions for user plugins (built-ins are trusted): `process` = `process.exec` and
 `terminal.run`; fs = its folder and the open project, `fs:home` = the home folder (symlinks resolved); `network` and
-`secrets` = nothing yet. Events reach the owning plugin only; a plugin can only set its own views and popovers. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
+`secrets` = nothing yet. `terminal.run` returns an id: the tab carries it until the command ends (shell integration),
+`terminal.runs()` / `onDidChangeRuns` list the plugin's running commands, `terminal.stop(id)` sends Ctrl+C ("process"). Events reach the owning plugin only; a plugin can only set its own views and popovers. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
 after a separator line in the bar. First built-in plugins: **Lanceur** (`resources/plugins/runnables`),
 which detects npm scripts (workspaces included), make targets, cargo, go, python and shell scripts,
 and **Git** (`resources/plugins/git`, decided 2026-09-27 with a zero-bug rule): no git logic of our

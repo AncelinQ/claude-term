@@ -4,7 +4,7 @@ import { homedir } from 'node:os'
 import { join, dirname, relative, sep } from 'node:path'
 import { execFile } from 'node:child_process'
 import { missingPermissions } from '@shared/plugin-registry'
-import { validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type PromptRequest } from '@shared/plugins'
+import { validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type PromptRequest, type RunInfo } from '@shared/plugins'
 import { fsError, permissionError, type PolicyCtx } from './plugin-policy'
 
 export { validateManifest }
@@ -35,6 +35,8 @@ export class PluginHost {
   private promptSeq = 0
   private popoverSeq = 0
   private watchSeq = 0
+  private runSeq = 0
+  private runs: RunInfo[] = []
   private bootstrap: string
 
   constructor(private builtinDir: string, private bridge: HostBridge, private hostDir: string, userDir = join(app.getPath('userData'), 'plugins')) {
@@ -226,7 +228,14 @@ export class PluginHost {
         const argv = Array.isArray(a.argv) ? a.argv : undefined
         if (argv && argv.some((c: unknown) => !Array.isArray(c) || c.some((x) => typeof x !== 'string'))) throw new Error('run: argv must be string[][]')
         if (a.command !== undefined && typeof a.command !== 'string') throw new Error('run: command must be a string')
-        return void this.bridge.send('plugins:run', { cwd: a.cwd, command: a.command, argv, label: a.label, tab: a.tab === 'new' ? 'new' : 'reuse' })
+        const runId = `${id}:${++this.runSeq}`
+        this.bridge.send('plugins:run', { cwd: a.cwd, command: a.command, argv, label: typeof a.label === 'string' ? a.label : undefined, tab: a.tab === 'new' ? 'new' : 'reuse', id: runId })
+        return runId
+      }
+      case 'terminal.runs': return this.runs.filter((r) => r.id.startsWith(id + ':'))
+      case 'terminal.stop': case 'terminal.show': {
+        if (typeof a.id !== 'string' || !a.id.startsWith(id + ':')) throw new Error('not a command of this plugin')
+        return void this.bridge.send(method === 'terminal.stop' ? 'plugins:stopRun' : 'plugins:showRun', { id: a.id })
       }
       case 'settings.get': { const s = this.bridge.settings(); return s.plugins?.[id]?.[a.key] ?? p.info.manifest.contributes?.settings?.[a.key]?.default }
       case 'storage.get': return readStorage(this.storageFile(id))[a.key]
@@ -253,6 +262,11 @@ export class PluginHost {
   }
   projectChanged(root: string | null) { for (const p of this.plugins.values()) this.emit(p, 'project', root) }
   commandEnd(info: { command: string; exit: number | null }) { for (const p of this.plugins.values()) this.emit(p, 'commandEnd', info) }
+  /** commands started by plugins still running: each plugin hears about its own */
+  runsChanged(list: RunInfo[]) {
+    this.runs = list.filter((r) => r && typeof r.id === 'string')
+    for (const p of this.plugins.values()) { const pid = p.info.manifest.id + ':'; this.emit(p, 'runs', this.runs.filter((r) => r.id.startsWith(pid))) }
+  }
   promptReply(id: number, value: string | null) { this.prompts.get(id)?.(value); this.prompts.delete(id) }
   dispose() { for (const p of this.plugins.values()) { p.watchers.forEach((w) => w.close()); if (p.win && !p.win.isDestroyed()) p.win.destroy() } }
 }

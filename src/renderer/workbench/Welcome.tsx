@@ -12,7 +12,7 @@ export function Welcome({ project }: { project: Project }) {
       <div className="island grow">
         <div className="welcome">
           <div>
-            <div style={{ color: 'var(--ct-accent)' }}>{Icons.sparkle(40)}</div>
+            <div>{Icons.claude(40)}</div>
             <h1>ClaudeTerm</h1>
             <p>{t('Ouvre un dossier pour démarrer un projet.')}</p>
             <button className="btn primary" onClick={pick}>{Icons.folder(14)} Ouvrir un dossier…</button>
