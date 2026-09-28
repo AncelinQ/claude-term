@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, basename } from 'node:path'
 import { TempDir } from './helpers'
 import { TestsService } from '../src/main/services/tests'
 import { testKey } from '../src/shared/tests'
@@ -21,9 +21,9 @@ describe('tests discovery', () => {
     t.write('api/tests/test_api.py', 'def test_get():\n    pass\n')
     const s = new TestsService(join(t.path, 'app'), fsApi, () => {})
     const suites = s.discover(t.path)
-    expect(suites.map((x) => [x.framework, x.label, x.manager, x.files.map((f) => f.path.slice(t.path.length))])).toEqual([
-      ['vitest', t.path.split('/').pop(), 'pnpm', ['/tests/a.test.ts']],
-      ['pytest', t.path.split('/').pop(), null, ['/api/tests/test_api.py']],
+    expect(suites.map((x) => [x.framework, x.label, x.manager, x.files.map((f) => f.path.slice(t.path.length).replace(/\\/g, '/'))])).toEqual([
+      ['vitest', basename(t.path), 'pnpm', ['/tests/a.test.ts']],
+      ['pytest', basename(t.path), null, ['/api/tests/test_api.py']],
       ['jest', 'web', 'pnpm', ['/apps/web/src/b.spec.tsx']],
     ])
     expect(suites[0].files[0].tests[0]).toMatchObject({ name: 'a', children: [{ name: 'x' }] })

@@ -14,6 +14,8 @@ describe('checkers output', () => {
       { file: '/abs/b.tsx', line: 3, col: 1, severity: 'error', code: 'TS2304', message: "Cannot find name 'foo'.", source: 'tsc' },
     ])
     expect(parseTscOutput('', '/p')).toEqual([])
+    // Windows: the editor's separators, whatever tsc prints
+    expect(parseTscOutput("src/a.ts(1,7): error TS2322: X\nC:/w/b.ts(2,1): error TS1: Y", 'C:\\w').map((d) => d.file)).toEqual(['C:\\w\\src\\a.ts', 'C:\\w\\b.ts'])
   })
   it('reads eslint -f json', () => {
     const out = JSON.stringify([{ filePath: '/p/a.ts', messages: [{ line: 2, column: 7, severity: 2, message: "'x' is unused", ruleId: 'no-unused-vars' }, { line: 9, column: 1, severity: 1, message: 'Unexpected console', ruleId: 'no-console' }, { severity: 0, message: 'off' }] }, { filePath: '/p/b.ts', messages: [] }])

@@ -6,7 +6,7 @@ import { FileOps, freeName } from '../src/main/services/file-ops'
 
 describe('file operations', () => {
   it('names copies like the Finder', () => {
-    const taken = new Set(['/d/a.ts', '/d/a copie.ts', '/d/.env', '/d/dir'])
+    const taken = new Set(['a.ts', 'a copie.ts', '.env', 'dir'].map((n) => join('/d', n)))
     const ex = (p: string) => taken.has(p)
     expect(freeName('/d', 'b.ts', ex)).toBe('b.ts')
     expect(freeName('/d', 'a.ts', ex)).toBe('a copie 2.ts')

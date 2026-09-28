@@ -17,7 +17,7 @@ describe('problems service', () => {
     const s = new ProblemsService(fsApi, () => process.env)
     const r = await s.check(t.path)
     expect(r.tools).toEqual([{ tool: 'tsc', dir: t.path, config: 'tsconfig.app.json', ok: true }])
-    expect(r.diagnostics).toEqual([expect.objectContaining({ file: join(t.path, 'src/a.ts'), line: 1, col: 7, severity: 'error', code: 'TS2322', source: 'tsc' })])
+    expect(r.diagnostics).toEqual([expect.objectContaining({ file: join(t.path, 'src', 'a.ts'), line: 1, col: 7, severity: 'error', code: 'TS2322', source: 'tsc' })])
     t.dispose()
   }, 60_000)
 
@@ -30,7 +30,7 @@ describe('problems service', () => {
     t.write('package-lock.json', '"TODO"')
     const s = new ProblemsService(fsApi, () => process.env)
     expect(await s.check(t.path)).toMatchObject({ diagnostics: [], tools: [] })
-    expect(s.todos(t.path).map((x) => [x.file.slice(t.path.length), x.line, x.text]).sort()).toEqual([['/README.md', 1, 'document'], ['/src/a.ts', 1, 'first']])
+    expect(s.todos(t.path).map((x) => [x.file.slice(t.path.length).replace(/\\/g, '/'), x.line, x.text]).sort()).toEqual([['/README.md', 1, 'document'], ['/src/a.ts', 1, 'first']])
     t.dispose()
   })
 })

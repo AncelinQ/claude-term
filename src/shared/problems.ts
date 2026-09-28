@@ -7,7 +7,12 @@ import type { ViewAction, ViewItem } from './plugins'
 export interface Diagnostic { file: string; line: number; col: number; severity: 'error' | 'warning'; message: string; source: 'tsc' | 'eslint'; code?: string }
 export interface Todo { file: string; line: number; tag: 'TODO' | 'FIXME' | 'HACK' | 'XXX'; text: string }
 
-const abs = (cwd: string, p: string) => (p.startsWith('/') || /^[a-z]:[\\/]/i.test(p) ? p : cwd.replace(/[\\/]+$/, '') + '/' + p.replace(/^\.\//, ''))
+/** absolute, with the separators of `cwd` (tsc prints "src/a.ts" or "C:/x/a.ts" on Windows: editor paths use "\\") */
+const abs = (cwd: string, p: string) => {
+  const win = /^[a-z]:\\/i.test(cwd)
+  const full = p.startsWith('/') || /^[a-z]:[\\/]/i.test(p) ? p : cwd.replace(/[\\/]+$/, '') + '/' + p.replace(/^\.[\\/]/, '')
+  return win ? full.replace(/\//g, '\\') : full
+}
 
 /** `tsc --pretty false` output: "file(line,col): error TS2322: message" (+ indented continuation lines) */
 export function parseTscOutput(text: string, cwd: string): Diagnostic[] {
