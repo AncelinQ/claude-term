@@ -28,9 +28,15 @@ const cdTo = (cwd: string, d: Dialect) => (d === 'posix' ? `cd ${quoteArg(cwd, d
  * A string is typed as is (a user-visible command such as "npm run dev"); an array is an argv to quote.
  */
 export function commandLine(d: Dialect, cmds: (string | string[])[], cwd?: string): string {
-  const parts = [...(cwd ? [cdTo(cwd, d)] : []), ...cmds.map((c) => (typeof c === 'string' ? c : c.map((a) => quoteArg(a, d)).join(' ')))]
+  const parts = [...(cwd ? [cdTo(cwd, d)] : []), ...cmds.map((c) => (typeof c === 'string' ? c : argvLine(c, d)))]
   if (!parts.length) return ''
   if (d === 'posix') return parts.join(' && ')
   // Windows PowerShell 5.1 has no &&: nest on $? (true when the previous cmdlet / native exit code succeeded)
   return parts.reduceRight((rest, p) => (rest ? `${p}; if ($?) { ${rest} }` : p), '')
+}
+
+/** A quoted program is a string expression in PowerShell: the call operator makes it a command again. */
+function argvLine(argv: string[], d: Dialect): string {
+  const line = argv.map((a) => quoteArg(a, d)).join(' ')
+  return d === 'powershell' && argv.length && quoteArg(argv[0], d) !== argv[0] ? '& ' + line : line
 }

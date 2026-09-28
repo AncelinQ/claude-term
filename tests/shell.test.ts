@@ -36,5 +36,8 @@ describe('shell command lines', () => {
     expect(commandLine('posix', ['npm run dev'])).toBe('npm run dev')
     expect(commandLine('powershell', ['npm run dev'], 'C:\\p')).toBe("Set-Location -LiteralPath 'C:\\p'; if ($?) { npm run dev }")
     expect(commandLine('posix', [])).toBe('')
+    // a quoted program needs the call operator in PowerShell, not in sh
+    expect(commandLine('powershell', [['C:\\Program Files\\node.exe', '-v']])).toBe("& 'C:\\Program Files\\node.exe' -v")
+    expect(commandLine('posix', [['/opt/my app/node', '-v']])).toBe("'/opt/my app/node' -v")
   })
 })
