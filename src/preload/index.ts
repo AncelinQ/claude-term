@@ -130,6 +130,8 @@ const api: CtApi = {
     refresh: () => ipcRenderer.invoke('usage:refresh'),
     claude: (refresh) => ipcRenderer.invoke('usage:claude', !!refresh),
     switchModel: (ptyId, alias) => ipcRenderer.invoke('claude:switchModel', { ptyId, alias }),
+    defaultModel: () => ipcRenderer.invoke('claude:defaultModel'),
+    setDefaultModel: (model) => ipcRenderer.invoke('claude:setDefaultModel', model),
   },
   update: {
     state: () => ipcRenderer.invoke('update:state'),
@@ -143,6 +145,7 @@ const api: CtApi = {
     openExternal: (path) => ipcRenderer.send('app:openExternal', path),
     openUrl: (url) => ipcRenderer.send('app:openUrl', url),
     revealInFinder: (path) => ipcRenderer.send('app:reveal', path),
+    quickLook: (path) => ipcRenderer.send('app:quickLook', path),
   },
 }
 

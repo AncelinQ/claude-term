@@ -47,3 +47,23 @@ export function modelName(model: string | undefined): string {
   if (!model) return ''
   return MODEL_CHOICES.find((c) => c.alias === model.toLowerCase())?.label ?? modelLabel(model)
 }
+
+const family = (m: string) => /fable|opus|sonnet|haiku/i.exec(m)?.[0].toLowerCase()
+/**
+ * The transcript names the model without its window ("claude-opus-5-5" for an opus[1m] session): the alias the tab
+ * asked for, else the default, tells it when it is of the same family.
+ */
+export function withWindowHint(model: string | undefined, ...hints: (string | undefined)[]): string | undefined {
+  if (!model || /\[1m\]|1m context|1M/i.test(model)) return model
+  const hint = hints.find((h) => h && family(h) === family(model))
+  return hint && /\[1m\]/i.test(hint) ? model + '[1m]' : model
+}
+
+// subcommands and flags that do not open an interactive session
+const NOT_A_SESSION = /^(update|upgrade|mcp|config|doctor|install|migrate-installer|setup-token|plugin|plugins|agents|auth|--version|-v|--help|-h|-p|--print)$/
+/** a shell command line that starts an interactive Claude session ("claude", "claude --resume x"), not "claude update" */
+export function isInteractiveClaude(line: string): boolean {
+  const words = line.trim().split(/\s+/)
+  if (words[0] !== 'claude') return false
+  return !words.slice(1).some((w) => NOT_A_SESSION.test(w))
+}

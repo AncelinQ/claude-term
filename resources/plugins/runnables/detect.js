@@ -69,7 +69,8 @@ function detect(fs, root) {
   const rootNpm = npm(fs, root, null)
   if (rootNpm) {
     groups.push(rootNpm)
-    for (const ws of rootNpm.workspaces || []) {
+    // "./packages/*" and "packages/*" name the same folders
+    for (const ws of (rootNpm.workspaces || []).map((w) => String(w).replace(/^\.\//, '').replace(/\/+$/, ''))) {
       const dirs = ws.endsWith('/*') ? fs.list(join(root, ws.slice(0, -2))).filter((e) => e.dir).map((e) => join(join(root, ws.slice(0, -2)), e.name)) : [join(root, ws)]
       for (const d of dirs) { const g = npm(fs, d, d.split(/[\\/]/).pop()); if (g) groups.push(g) }
     }

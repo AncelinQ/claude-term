@@ -80,3 +80,15 @@ describe('runnables: running commands', () => {
     expect(runOf('npm:/p:build', runs, launched)).toBeNull()
   })
 })
+
+describe('runnables: workspace spellings', () => {
+  it('"./packages/*" names the same folders as "packages/*"', () => {
+    const t = new TempDir()
+    t.write('package.json', JSON.stringify({ name: 'root', workspaces: ['./packages/*'] }))
+    t.write('packages/a/package.json', JSON.stringify({ name: 'a', scripts: { build: 'tsc' } }))
+    const groups = detect(fsApi, t.path)
+    expect(groups.map((g: any) => g.id)).toEqual(['npm:' + t.path, 'npm:' + join(t.path, 'packages', 'a')])
+    expect(groups[1].children[0].id).toBe('npm:' + join(t.path, 'packages', 'a') + ':build')
+    t.dispose()
+  })
+})

@@ -16,6 +16,20 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 const EN: Record<string, string> = {
+  'Espace': 'Space',
+  "Afficher dans l'explorateur": 'Show in Explorer',
+  'dans {d} j {h} h': 'in {d} d {h} h',
+  'dans {h} h {m}': 'in {h} h {m}',
+  'dans {m} min': 'in {m} min',
+  'Changer de modèle (/model)': 'Change model (/model)',
+  'modèle': 'model',
+  'Estimé depuis le transcript (le suivi en continu donne le chiffre exact)': 'Estimated from the transcript (live tracking gives the exact figure)',
+  'Contexte utilisé': 'Context used',
+  'Tokens de la session : entrée ↓, sortie ↑': 'Session tokens: input ↓, output ↑',
+  'Choisir le modèle des nouvelles sessions': 'Choose the model of new sessions',
+  'Celui du compte': "The account's",
+  "Coup d'œil (Espace)": 'Quick Look (Space)',
+  "Coup d'œil": 'Quick Look',
   'Actualiser': 'Refresh',
   'Suivi en continu actif': 'Live tracking on',
   '{v} disponible': '{v} available',

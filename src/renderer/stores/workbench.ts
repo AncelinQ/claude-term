@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { isInteractiveClaude } from '@shared/models'
 import { reorder } from '@shared/order'
 import { commandLine, dialectFor } from '@shared/shell'
 import { t } from '@/i18n'
@@ -18,7 +19,7 @@ export interface Tab {
   /** a foreground command is running (shell integration) */
   busy: boolean
   /** a command a plugin started here (terminal.run), until it ends: started once the shell reports it */
-  run?: { id: string; label?: string; started: boolean }
+  run?: { id: string; label?: string; started: boolean; at: number }
   lastCommand: string
   lastExit: number | null
   /** `claude` typed in a shell tab */
@@ -141,7 +142,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     window.ct.themes.onChange((theme) => set({ theme }))
     window.ct.settings.onChange((settings) => set({ settings }))
     window.ct.claude.onUpdate(({ tabId, state, newEvents }) => {
-      patchTab(set, tabId, () => ({ session: state, title: state.title ?? undefined }))
+      // the session's title once it has one; until then the tab keeps its folder name
+      patchTab(set, tabId, () => ({ session: state, ...(state.title ? { title: state.title } : {}) }))
       if (newEvents.length) get().clearAttention(tabId)
     })
     window.ct.claude.onAttention(({ tabId, attention }) => patchTab(set, tabId, () => ({ attention })))
@@ -230,7 +232,9 @@ export const useWorkbench = create<Workbench>((set, get) => ({
   async runCommand(projectId, cwd, cmds, tab = 'reuse', run) {
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
-    let target = tab === 'reuse' ? (p.tabs.find((x) => x.id === p.currentTabId && x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning) ?? p.tabs.find((x) => x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning)) : undefined
+    // a tab waiting for a plugin's command to start is not free either (two ▶ in a row)
+    const free = (x: Tab) => x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning && !x.run
+    let target = tab === 'reuse' ? (p.tabs.find((x) => x.id === p.currentTabId && free(x)) ?? p.tabs.find(free)) : undefined
     if (!target) {
       await get().newTab(projectId, 'shell', cwd)
       await new Promise((r) => setTimeout(r, 700))
@@ -240,7 +244,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     get().setCurrentTab(projectId, target.id)
     const s = get().settings
     const line = commandLine(dialectFor(window.ct.platform, s?.windowsMode ?? 'native'), cmds, target.cwd === cwd ? undefined : cwd)
-    if (run) patchTab(set, target.id, () => ({ run: { id: run.id, label: run.label, started: false } }))
+    if (run) patchTab(set, target.id, () => ({ run: { id: run.id, label: run.label, started: false, at: Date.now() } }))
     window.ct.pty.write(target.ptyId, '\x15' + line + '\r')   // ^U clears pending input
     ;(await import('@/terminal/TerminalView')).focusTerminal(target.id)
   },
@@ -307,21 +311,23 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     const [kind, rest = ''] = msg.split(/;(.*)/s)
     patchTab(set, tabId, (t) => {
       if (kind === 'start') {
-        const claude = /^\s*claude(\s|$)/.test(rest)
+        const claude = isInteractiveClaude(rest)   // not `claude update`, `claude mcp …`
         if (claude) {
           const resume = rest.match(/(?:--resume|-r)\s+(\S+)/)?.[1]
           const reuse = /--continue|--resume|\s-c\b|\s-r\b/.test(rest)
           window.ct.claude.track(t.id, t.cwd, { resume, reuse })
           set((s) => ({ lastClaudeTab: { ...s.lastClaudeTab, [projectOf(s, t.id)]: t.id } }))
-          return { busy: true, lastCommand: rest, lastExit: null, claudeRunning: true, session: undefined }
+          return { busy: true, lastCommand: rest, lastExit: null, claudeRunning: true, session: undefined, ...(t.run ? { run: { ...t.run, started: true } } : {}) }
         }
         return { busy: true, lastCommand: rest, lastExit: null, ...(t.run ? { run: { ...t.run, started: true } } : {}) }
       }
       if (kind === 'end') {
         if (t.claudeRunning) window.ct.claude.untrack(t.id)
         window.ct.plugins.commandEnd({ command: t.lastCommand, exit: rest === '' ? null : +rest })
-        // a plugin's command is over once it has started (an end before its start is the previous prompt)
-        return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false, title: name(t.cwd), ...(t.run?.started ? { run: undefined } : {}) }
+        // a plugin's command is over once it has run; one that never started (cancelled with ^C, a shell that does not
+        // report it) goes at the next prompt too, except the prompt a new tab prints right after it opened
+        const over = t.run && (t.run.started || Date.now() - t.run.at > 1500)
+        return { busy: false, lastExit: rest === '' ? null : +rest, claudeRunning: false, title: name(t.cwd), ...(over ? { run: undefined } : {}) }
       }
       return {}
     })

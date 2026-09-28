@@ -17,7 +17,8 @@ export interface UsageState {
   /** subscription of the claude.ai login of Claude Code (from its credentials) */
   plan?: { subscription?: string; tier?: string }
   /** last usage API call: when it answered, or why it failed */
-  api?: { at?: number; error?: string; busy?: boolean }
+  /** at: last answer; attemptAt: last call, failed or not (the panel's throttle) */
+  api?: { at?: number; attemptAt?: number; error?: string; busy?: boolean }
 }
 import type { RunInfo } from './plugins'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
@@ -331,6 +332,9 @@ export interface CtApi {
     claude(refresh?: boolean): Promise<ClaudeInfo>
     /** `/model <alias>` in a Claude tab, keeping the default model of ~/.claude/settings.json */
     switchModel(ptyId: string, alias: string): Promise<void>
+    /** default model of new sessions (~/.claude/settings.json `model`; null: the account's) */
+    defaultModel(): Promise<string | null>
+    setDefaultModel(model: string | null): Promise<{ ok: boolean; error?: string }>
   }
   update: {
     state(): Promise<UpdateState>
@@ -347,5 +351,7 @@ export interface CtApi {
     /** an https link in the default browser */
     openUrl(url: string): void
     revealInFinder(path: string): void
+    /** macOS Quick Look (no-op elsewhere) */
+    quickLook(path: string): void
   }
 }

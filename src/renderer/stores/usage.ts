@@ -8,17 +8,19 @@ import type { UsageState } from '@shared/ipc'
  */
 interface UsageStore {
   bySession: Record<string, { model?: string; contextPercent?: number; at: number }>
-  requested: Record<string, { alias: string; from?: string }>
+  requested: Record<string, { alias: string; from?: string; sessionId?: string }>
   /** ~/.claude/settings.json model (what a new session starts with) */
   defaultModel?: string
-  request(tabId: string, alias: string, currentModel?: string): void
+  request(tabId: string, alias: string, currentModel?: string, sessionId?: string): void
+  setDefault(model: string | null): Promise<{ ok: boolean; error?: string }>
   init(): void
 }
 
 export const useUsage = create<UsageStore>((set) => ({
   bySession: {},
   requested: {},
-  request(tabId, alias, currentModel) { set((s) => ({ requested: { ...s.requested, [tabId]: { alias, from: currentModel } } })) },
+  request(tabId, alias, currentModel, sessionId) { set((s) => ({ requested: { ...s.requested, [tabId]: { alias, from: currentModel, sessionId } } })) },
+  async setDefault(model) { const r = await window.ct.usage.setDefaultModel(model); if (r.ok) set({ defaultModel: model ?? undefined }); return r },
   init() {
     const take = (u: UsageState) => {
       const ss = u.snapshot?.session
@@ -26,7 +28,7 @@ export const useUsage = create<UsageStore>((set) => ({
       set((s) => ({ bySession: { ...s.bySession, [ss.id!]: { model: ss.model, contextPercent: ss.contextPercent, at: u.snapshot!.at } } }))
     }
     window.ct.usage.state().then(take)
-    window.ct.usage.claude().then((i) => set({ defaultModel: i.model ?? undefined }))
+    window.ct.usage.defaultModel().then((m) => set({ defaultModel: m ?? undefined }))
     window.ct.usage.onChanged(take)
   },
 }))

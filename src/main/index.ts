@@ -21,6 +21,7 @@ import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
 import { UsageService } from './services/usage'
+import { DefaultModelGuard } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
@@ -135,24 +136,18 @@ usage.start()
 ipcMain.handle('usage:state', () => usage.state())
 ipcMain.handle('usage:install', (_e, on: boolean) => usage.setInstalled(on))
 ipcMain.handle('usage:refresh', () => usage.refresh())
-// the terminal bubble's model menu: `/model <alias>` changes the session, but Claude Code also saves it as the default
-// for new sessions in ~/.claude/settings.json; the previous default is put back as soon as it has been rewritten
-ipcMain.handle('claude:switchModel', async (_e, { ptyId, alias }: { ptyId: string; alias: string }) => {
+// the terminal bubble's model menu changes the session only: Claude Code's `/model` also saves the alias as the
+// default for new sessions, the guard puts the user's default back whenever that happens (even late)
+const defaultModel = new DefaultModelGuard(claudeSettingsFile)
+ipcMain.handle('claude:switchModel', (_e, { ptyId, alias }: { ptyId: string; alias: string }) => {
   if (!/^[a-z0-9.[\]-]+$/i.test(alias)) return
-  const read = () => { const r = claudeSettingsFile.read(); return r.ok ? r.data : null }
-  const before = read()
-  if (!before) return
-  const prev = before.model
-  ptys.write(ptyId, `/model ${alias}\r`)
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 250))
-    const now = read()
-    if (!now || now.model === prev) continue
-    if (prev === undefined) delete now.model; else now.model = prev
-    try { claudeSettingsFile.write(now) } catch { /* left as Claude Code wrote it */ }
-    return
-  }
+  defaultModel.beforeSwitch(alias)
+  // ^U clears what the user may have started typing (several lines: one per ^U), then the command
+  ptys.write(ptyId, '\x15'.repeat(10) + `/model ${alias}\r`)
 })
+// the Claude panel's default model (new sessions): settings.json, kept by the guard from then on
+ipcMain.handle('claude:setDefaultModel', (_e, model: string | null) => (model === null || /^[a-z0-9.[\]-]+$/i.test(model) ? defaultModel.setDefault(model) : { ok: false, error: 'modèle invalide' }))
+ipcMain.handle('claude:defaultModel', () => { const r = claudeSettingsFile.read(); return r.ok && typeof r.data.model === 'string' ? r.data.model : null })
 let claudeVersion: Promise<string | null> | null = null
 const cached = <T,>(ttl: number, load: () => Promise<T>) => { let v: { at: number; p: Promise<T> } | null = null; return (force = false) => { if (force || !v || Date.now() - v.at > ttl) v = { at: Date.now(), p: load() }; return v.p } }
 const getPublicJson = async (url: string) => { const r = await net.fetch(url, { cache: 'no-store', headers: { 'User-Agent': `ClaudeTerm/${app.getVersion()}` } }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }
@@ -318,6 +313,8 @@ ipcMain.on('app:openExternal', (_e, p: string) => { shell.openPath(p) })
 // web links go to the default browser (https only)
 ipcMain.on('app:openUrl', (_e, url: string) => { if (/^https:\/\//.test(url)) shell.openExternal(url) })
 ipcMain.on('app:reveal', (_e, p: string) => { shell.showItemInFolder(p) })
+// macOS Quick Look panel on a file or folder (Space in the explorer, like the Finder)
+ipcMain.on('app:quickLook', (_e, p: string) => { if (process.platform === 'darwin' && typeof p === 'string' && existsSync(p)) win?.previewFile(p) })
 
 app.whenReady().then(() => {
   // dev runs the stock Electron binary: show the app icon in the Dock (packaged builds carry icon.icns)

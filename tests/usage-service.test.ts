@@ -82,6 +82,7 @@ describe('usage service', () => {
     body = new Error('API d\'usage : HTTP 500')
     s = await u.refresh()
     expect(s.api?.error).toMatch(/500/)
+    expect(s.api?.attemptAt).toBeGreaterThanOrEqual(s.api!.at!)   // failures are dated too (the panel's throttle)
     expect(s.snapshot!.limits).toHaveLength(2)
     body = { unexpected: true }
     expect((await u.refresh()).api?.error).toMatch(/inattendue/)

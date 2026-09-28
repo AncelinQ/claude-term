@@ -1,6 +1,6 @@
 import { isClaude, type Tab } from '@/stores/workbench'
 import { useUsage } from '@/stores/usage'
-import { MODEL_CHOICES, contextInfo, currentChoice, modelLabel, modelName } from '@shared/models'
+import { MODEL_CHOICES, contextInfo, currentChoice, modelLabel, modelName, withWindowHint } from '@shared/models'
 import { level } from '@shared/usage'
 import { MenuButton } from './Menu'
 import { Icons } from './icons'
@@ -35,14 +35,16 @@ export function TermBubble({ tab }: { tab: Tab }) {
   }
   // the model the tab runs: status line name, else the transcript's; a request shows until the transcript changes
   const running = live?.model ?? (s?.model ? modelLabel(s.model) : undefined)
-  const pending = requested && (!s?.model || s.model === requested.from) ? requested.alias : undefined
+  // a request is pending in the session it was made in, until the transcript shows another model
+  const pending = requested && requested.sessionId === s?.sessionId && (!s?.model || s.model === requested.from) ? requested.alias : undefined
   const shown = pending ? modelName(pending) : running ?? (defaultModel ? modelName(defaultModel) : undefined)
-  const active = pending ?? currentChoice(live?.model ?? s?.model ?? defaultModel ?? undefined)
-  const ctx = contextInfo({ statusPercent: live?.contextPercent, tokens: s?.contextTokens, model: live?.model ?? s?.model ?? defaultModel ?? undefined })
+  const model = live?.model ?? withWindowHint(s?.model, requested?.sessionId === s?.sessionId ? requested?.alias : undefined, defaultModel) ?? defaultModel
+  const active = pending ?? currentChoice(model)
+  const ctx = contextInfo({ statusPercent: live?.contextPercent, tokens: s?.contextTokens, model })
   const setModel = (alias: string) => {
     if (!tab.ptyId) return
     window.ct.usage.switchModel(tab.ptyId, alias)
-    useUsage.getState().request(tab.id, alias, s?.model)
+    useUsage.getState().request(tab.id, alias, s?.model, s?.sessionId)
   }
   return (
     <div className="term-bubble">

@@ -519,3 +519,6 @@ input[type=checkbox]:disabled { opacity: .4; }
 .ct-glyph-run { --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3.5v17l14-8.5z'/%3E%3C/svg%3E"); }
 .ct-glyph-stop { --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='5' y='5' width='14' height='14' rx='2'/%3E%3C/svg%3E"); background: var(--ct-badge-error); }
 .ct-glyph-run:hover, .ct-glyph-stop:hover { filter: brightness(1.25); }
+.claude-panel .cp-select { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px 0 8px; margin: -3px -6px -3px 0; border-radius: 6px; color: var(--ct-text); font-size: 12px; }
+.claude-panel .cp-select:hover, .claude-panel .cp-select.on { background: var(--ct-hover-bg); }
+.tree:focus { outline: none; }

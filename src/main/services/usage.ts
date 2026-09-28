@@ -26,7 +26,7 @@ export class UsageService {
   readonly script: string
   private watcher?: FSWatcher
   private last: UsageSnapshot | null = null
-  private apiState: { at?: number; error?: string; busy?: boolean; limits?: UsageLimit[]; plan?: { subscription?: string; tier?: string } }
+  private apiState: { at?: number; attemptAt?: number; error?: string; busy?: boolean; limits?: UsageLimit[]; plan?: { subscription?: string; tier?: string } }
 
   constructor(base: string, private settings: ClaudeSettings, private emit: (s: UsageState) => void, private platform = process.platform, private deps?: UsageDeps) {
     this.dir = join(base, 'usage')
@@ -43,7 +43,7 @@ export class UsageService {
    */
   async refresh(): Promise<UsageState> {
     if (!this.deps || this.apiState.busy) return this.state()
-    this.apiState = { ...this.apiState, busy: true }
+    this.apiState = { ...this.apiState, busy: true, attemptAt: Date.now() }
     this.emit(this.state())
     try {
       const c = await this.deps.credentials()
@@ -53,7 +53,7 @@ export class UsageService {
       const at = Date.now()
       const limits = parseApiUsage(body, at)
       if (!limits.length) throw new Error("réponse de l'API d'usage inattendue")
-      this.apiState = { at, limits, plan: { subscription: c.subscriptionType, tier: c.rateLimitTier } }
+      this.apiState = { at, attemptAt: this.apiState.attemptAt, limits, plan: { subscription: c.subscriptionType, tier: c.rateLimitTier } }
     } catch (e) {
       this.apiState = { ...this.apiState, busy: false, error: String((e as Error)?.message ?? e) }
     }
@@ -83,8 +83,8 @@ export class UsageService {
     const limits = mergeLimits(line?.limits, this.apiState.limits)
     const at = Math.max(line?.at ?? 0, ...limits.map((l) => l.at ?? 0))
     const snapshot = line || limits.length ? { ...(line ?? {}), at, limits } : null
-    const { at: apiAt, error, busy, plan } = this.apiState
-    return { installed, ...(cmd && !installed ? { foreign: String(cmd) } : {}), snapshot, ...(plan ? { plan } : {}), api: { at: apiAt, error, busy } }
+    const { at: apiAt, attemptAt, error, busy, plan } = this.apiState
+    return { installed, ...(cmd && !installed ? { foreign: String(cmd) } : {}), snapshot, ...(plan ? { plan } : {}), api: { at: apiAt, attemptAt, error, busy } }
   }
 
   /** Declares (or removes) our status line; a foreign one is never replaced nor removed. */

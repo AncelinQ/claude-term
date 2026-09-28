@@ -6,6 +6,7 @@ exports.activate = (ctx) => {
   const view = ctx.ui.view('runnables')
   const commands = new Map()
   const launched = new Map()   // run id → item id
+  const seen = new Set()       // run ids the host has listed at least once
   let groups = [], runs = ctx.terminal.runs(), unwatch = null
 
   const render = () => {
@@ -45,7 +46,9 @@ exports.activate = (ctx) => {
   })
   ctx.terminal.onDidChangeRuns((list) => {
     runs = list
-    for (const id of [...launched.keys()]) if (!runs.some((r) => r.id === id)) launched.delete(id)
+    // a run is forgotten once it has been listed then left the list (a new one may not be reported yet)
+    for (const r of runs) seen.add(r.id)
+    for (const id of [...launched.keys()]) if (seen.has(id) && !runs.some((r) => r.id === id)) { launched.delete(id); seen.delete(id) }
     render()
   })
   ctx.workspace.onDidChangeProject(() => { refresh(); watchRoot() })

@@ -38,11 +38,11 @@ describe('usage from the status line', () => {
     expect(level(75).tone).toBe('warn')
     expect(level(95)).toEqual({ tone: 'error', text: 'presque atteinte' })
     const now = Date.parse('2026-09-28T10:00:00Z')
-    expect(untilReset('2026-09-28T12:05:00Z', now)).toBe('dans 2 h 05')
-    expect(untilReset('2026-10-01T14:00:00Z', now)).toBe('dans 3 j 4 h')
-    expect(untilReset('2026-09-28T10:20:00Z', now)).toBe('dans 20 min')
-    expect(untilReset('2026-09-28T09:00:00Z', now)).toBe('maintenant')
-    expect(untilReset(undefined, now)).toBe('')
+    expect(untilReset('2026-09-28T12:05:00Z', now)).toEqual({ key: 'dans {h} h {m}', vars: { h: 2, m: '05' } })
+    expect(untilReset('2026-10-01T14:00:00Z', now)).toEqual({ key: 'dans {d} j {h} h', vars: { d: 3, h: 4 } })
+    expect(untilReset('2026-09-28T10:20:00Z', now)).toEqual({ key: 'dans {m} min', vars: { m: 20 } })
+    expect(untilReset('2026-09-28T09:00:00Z', now)).toEqual({ key: 'maintenant' })
+    expect(untilReset(undefined, now)).toBeNull()
   })
 
   it('reads the usage API: its limits list (per-model weeks such as Fable), or the legacy fields', () => {

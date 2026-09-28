@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { ClaudeInfo, UsageState } from '@shared/ipc'
 import { level, untilReset, type UsageLimit } from '@shared/usage'
-import { modelName } from '@shared/models'
+import { MODEL_CHOICES, modelName } from '@shared/models'
+import { MenuButton } from '../Menu'
+import { useUsage } from '@/stores/usage'
 import { STATUS_PAGE, statusLabel, statusTone, updateAvailable } from '@shared/claude-info'
 import { Icons } from '../icons'
 import { Island } from '../Island'
@@ -30,7 +32,8 @@ export function ClaudeIsland() {
   useEffect(() => {
     const off = window.ct.usage.onChanged(setUsage)
     // the usage API is asked when the panel opens, at most every 10 min (and on the button)
-    window.ct.usage.state().then((s) => { setUsage(s); if (!s.api?.at || Date.now() - s.api.at > 10 * 60_000) window.ct.usage.refresh() })
+    // failed calls count too: a 429 must not be asked again at each opening
+    window.ct.usage.state().then((s) => { setUsage(s); const last = s.api?.attemptAt ?? s.api?.at; if (!last || Date.now() - last > 10 * 60_000) window.ct.usage.refresh() })
     refresh(false)
     const tick = setInterval(() => setNow(Date.now()), 30_000)   // reset delays and "il y a"
     return () => { off(); clearInterval(tick) }
@@ -38,6 +41,8 @@ export function ClaudeIsland() {
   const install = async (on: boolean) => { const r = await window.ct.usage.install(on); setError(r.ok ? null : r.error ?? 'erreur') }
   const update = () => { if (activeProjectId) useWorkbench.getState().runCommand(activeProjectId, root ?? window.ct.home, [['claude', 'update']], 'new') }
   const snap = usage?.snapshot
+  const defaultModel = useUsage((s) => s.defaultModel)
+  const setDefault = async (m: string | null) => { const r = await useUsage.getState().setDefault(m); if (!r.ok) setError(r.error ?? 'erreur') }
   const newer = updateAvailable(info?.version, info?.latest)
   const busy = loading || !!usage?.api?.busy
   const actions = <button title={t('Actualiser')} disabled={busy} onClick={() => refresh(true)}>{busy ? <span className="spin" /> : Icons.refresh(14)}</button>
@@ -75,7 +80,14 @@ export function ClaudeIsland() {
               <button className="btn primary" disabled={!activeProjectId} onClick={update}>{Icons.download(13)} {t('Mettre à jour Claude Code')}</button>
             </div>
           )}
-          <Row k={t('Modèle par défaut')} v={info ? (info.model ? modelName(info.model) : t('celui du compte')) : '…'} />
+          <div className="cp-row kv">
+            <span className="k">{t('Modèle par défaut')}</span>
+            <MenuButton className="cp-select" title={t('Choisir le modèle des nouvelles sessions')} items={[
+              ...MODEL_CHOICES.map((c) => ({ label: c.label, icon: c.alias === defaultModel ? Icons.check(12) : <span style={{ width: 12 }} />, onSelect: () => setDefault(c.alias) })),
+              'sep' as const,
+              { label: t('Celui du compte'), icon: !defaultModel ? Icons.check(12) : <span style={{ width: 12 }} />, onSelect: () => setDefault(null) },
+            ]}>{defaultModel ? modelName(defaultModel) : t('Celui du compte')}{Icons.chevronDown(11)}</MenuButton>
+          </div>
         </Block>
 
         <Block title={t('Services Anthropic')}>
@@ -115,7 +127,7 @@ function Gauge({ limit, now }: { limit: UsageLimit; now: number }) {
     <div className={'gauge ' + lv.tone} title={limit.resetsAt ? new Date(limit.resetsAt).toLocaleString() : undefined}>
       <div className="gauge-head"><span className="name">{t(limit.label)}</span><span className="pct">{Math.round(limit.percent)} %{lv.text && <em> · {t(lv.text)}</em>}</span></div>
       <div className="bar"><div style={{ width: `${limit.percent}%` }} /></div>
-      {reset && <div className="reset">{t('Réinitialisation {when}', { when: t(reset) })}</div>}
+      {reset && <div className="reset">{t('Réinitialisation {when}', { when: t(reset.key, reset.vars) })}</div>}
     </div>
   )
 }

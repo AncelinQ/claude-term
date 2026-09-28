@@ -1,5 +1,6 @@
 /** Global Claude information from public sources (pure, tested): Anthropic's status page, the latest Claude Code. */
 import { compareVersions } from './plugin-registry'
+import { obj } from './json'
 
 export const STATUS_URL = 'https://status.claude.com/api/v2/summary.json'
 export const STATUS_PAGE = 'https://status.claude.com'
@@ -14,8 +15,7 @@ export interface ServiceStatus {
   incidents: { name: string; status: string; impact: string; url?: string; updatedAt?: string }[]
 }
 
-const obj = (v: unknown): Record<string, any> | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, any>) : undefined)
-const str = (v: unknown) => (typeof v === 'string' ? v : '')
+const str = (v: unknown) => (typeof v === 'string' ? v : '')   // empty rather than undefined: status page texts
 
 /** Statuspage summary.json → what the panel shows (unresolved incidents, degraded components). */
 export function parseStatusPage(body: unknown): ServiceStatus {

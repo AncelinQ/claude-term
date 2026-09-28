@@ -44,3 +44,6 @@ export function packageScriptLines(text: string): { name: string; line: number }
   }
   return out
 }
+
+/** Lanceur item ids compared across path spellings: separators, Windows drive letter case, "/./" */
+export const normId = (id: string) => id.replace(/\\/g, '/').replace(/\/\.(?=\/)/g, '').replace(/^npm:([a-z]):/i, (_m, d: string) => `npm:${d.toLowerCase()}:`)

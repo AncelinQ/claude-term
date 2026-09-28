@@ -1,3 +1,5 @@
+import { num, obj, str } from './json'
+
 /**
  * Subscription usage as Claude Code hands it to the status line command (JSON on stdin at each refresh): rate
  * limits (5 h session, week, week of a model, extra credit) and the state of the session. Pure, tested.
@@ -33,9 +35,6 @@ export function normalizeKey(key: string): string {
   return key
 }
 
-const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
-const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined)
-const obj = (v: unknown): Record<string, any> | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, any>) : undefined)
 
 /** Label of a limit (raw or normalized key): "seven_day_fable" / "weekly:Fable" → "Semaine · Fable". */
 export function limitLabel(key: string): string {
@@ -123,13 +122,13 @@ export function level(percent: number): { tone: 'ok' | 'warn' | 'error'; text: s
   return { tone: 'ok', text: '' }
 }
 
-/** "dans 2 h 05", "dans 3 j 4 h", "maintenant" */
-export function untilReset(iso: string | undefined, now: number): string {
-  if (!iso) return ''
+/** delay before a reset as a translatable key (French is the source text) and its values: "dans {h} h {m}"… */
+export function untilReset(iso: string | undefined, now: number): { key: string; vars?: Record<string, string | number> } | null {
+  if (!iso) return null
   const ms = Date.parse(iso) - now
-  if (ms <= 0) return 'maintenant'
+  if (ms <= 0) return { key: 'maintenant' }
   const min = Math.round(ms / 60000), h = Math.floor(min / 60), dd = Math.floor(h / 24)
-  if (dd >= 1) return `dans ${dd} j ${h % 24} h`
-  if (h >= 1) return `dans ${h} h ${String(min % 60).padStart(2, '0')}`
-  return `dans ${min} min`
+  if (dd >= 1) return { key: 'dans {d} j {h} h', vars: { d: dd, h: h % 24 } }
+  if (h >= 1) return { key: 'dans {h} h {m}', vars: { h, m: String(min % 60).padStart(2, '0') } }
+  return { key: 'dans {m} min', vars: { m: min } }
 }

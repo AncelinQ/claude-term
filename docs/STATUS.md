@@ -40,6 +40,13 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
 - **Lanceur**: collapsed groups (state kept), filter, "En cours" group with stop (Ctrl+C) / show; plugin API
   `terminal.run` returns an id, `terminal.runs / onDidChangeRuns / stop / show`. package.json gets WebStorm-like ▶ in
   the editor gutter (■ while running), through the Lanceur.
+- Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
+  `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
+- Explorer: Quick Look on macOS (Space on the selection, file context menu).
+- Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
+  `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
+- Explorer: keyboard (↑ ↓ move, → open / enter, ← close / parent, Enter opens, Space = Quick Look on macOS) and a
+  file context menu (Quick Look, open, reveal).
 - Claude icon: the terminal icon in orange (`Icons.claude`) everywhere it means Claude; skills keep the sparkle.
 - **Claude panel** (right bar): subscription usage from Claude Code's status line (5 h session, week, per-model
   week, extra credit; gauges with reset delays), Claude Code version and default model (global data only), a

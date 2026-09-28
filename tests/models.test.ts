@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { contextInfo, contextWindow, currentChoice, modelLabel, modelName } from '../src/shared/models'
+import { contextInfo, contextWindow, currentChoice, isInteractiveClaude, modelLabel, modelName, withWindowHint } from '../src/shared/models'
 
 describe('models', () => {
   it('labels API model ids', () => {
@@ -25,6 +25,19 @@ describe('models', () => {
     expect(modelName('fable')).toBe('Fable')
     expect(modelName('claude-opus-5-5')).toBe('Opus 5.5')
     expect(modelName(undefined)).toBe('')
+  })
+  it('gets the 1M window of a transcript model from the alias asked for or the default', () => {
+    expect(withWindowHint('claude-opus-5-5', undefined, 'opus[1m]')).toBe('claude-opus-5-5[1m]')
+    expect(withWindowHint('claude-opus-5-5', 'opus', 'opus[1m]')).toBe('claude-opus-5-5')
+    expect(withWindowHint('claude-haiku-4-5', 'opus[1m]')).toBe('claude-haiku-4-5')
+    expect(withWindowHint('Opus 5.5 (1M context)', 'opus')).toBe('Opus 5.5 (1M context)')
+    expect(withWindowHint(undefined, 'opus[1m]')).toBeUndefined()
+    expect(contextInfo({ tokens: 180_000, model: withWindowHint('claude-opus-5-5', undefined, 'opus[1m]') })).toEqual({ percent: 18, estimated: true })
+    expect(currentChoice(withWindowHint('claude-opus-5-5', 'opus[1m]'))).toBe('opus[1m]')
+  })
+  it('tells an interactive Claude session from other claude commands', () => {
+    for (const l of ['claude', '  claude --resume abc', 'claude -c', 'claude --model haiku "fix it"']) expect(isInteractiveClaude(l)).toBe(true)
+    for (const l of ['claude update', 'claude mcp list', 'claude --version', 'claude -p "x"', 'claudeterm', 'npm run claude', 'claude doctor']) expect(isInteractiveClaude(l)).toBe(false)
   })
   it('matches the running model to a choice', () => {
     expect(currentChoice('claude-opus-5-5')).toBe('opus')
