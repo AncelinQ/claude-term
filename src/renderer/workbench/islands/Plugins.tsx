@@ -6,13 +6,12 @@ import { Island, Empty } from '../Island'
 import { usePlugins } from '@/stores/plugins'
 import { useWorkbench } from '@/stores/workbench'
 import { t } from '@/i18n'
+import { PanelTabs } from '../PanelTabs'
 
-type Tab = 'installed' | 'catalogue'
 
 /** Installed plugins (enable, approve, update, uninstall) and the catalogue (install), DESIGN.md §7.1. */
 export function PluginsIsland() {
   const plugins = usePlugins((s) => s.plugins)
-  const [tab, setTab] = useState<Tab>('installed')
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -32,15 +31,9 @@ export function PluginsIsland() {
     return r.ok
   }
   const install = (id: string) => run(id, () => window.ct.plugins.install({ id }))
-  const installUrl = async () => { if (fromUrl && (await run('url', () => window.ct.plugins.install({ url: fromUrl })))) { setFromUrl(null); setTab('installed') } }
+  const installUrl = async () => { if (fromUrl && (await run('url', () => window.ct.plugins.install({ url: fromUrl })))) { setFromUrl(null); useWorkbench.getState().setLayout('tab:plugins', 0) } }
   const updates = catalogue?.items.filter((i) => i.state === 'update') ?? []
 
-  const header = (
-    <div className="tabs">
-      <button className={'tab' + (tab === 'installed' ? ' on' : '')} onClick={() => setTab('installed')}>{t('Installés')}</button>
-      <button className={'tab' + (tab === 'catalogue' ? ' on' : '')} onClick={() => setTab('catalogue')}>{t('Catalogue')}{updates.length > 0 && <span className="badge accent">{updates.length}</span>}</button>
-    </div>
-  )
   const actions = (
     <>
       <button title={t('Actualiser le catalogue')} onClick={() => load(true)}>{loading ? <span className="spin" /> : Icons.refresh(14)}</button>
@@ -48,7 +41,7 @@ export function PluginsIsland() {
     </>
   )
   return (
-    <Island title={header} icon={Icons.puzzle(14)} actions={actions} grow dataView="plugins">
+    <Island title={t('Plugins')} icon={Icons.puzzle(14)} actions={actions} grow dataView="plugins">
       {fromUrl !== null && (
         <div className="form">
           <input autoFocus placeholder="https://…/plugin.tgz" value={fromUrl} onChange={(e) => setFromUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') installUrl(); if (e.key === 'Escape') setFromUrl(null) }} />
@@ -57,9 +50,10 @@ export function PluginsIsland() {
         </div>
       )}
       {error && <div className="pl-error" onClick={() => setError(null)}>{error}</div>}
-      {tab === 'installed'
-        ? <Installed plugins={plugins} updates={updates} busy={busy} run={run} install={install} />
-        : <CatalogueList catalogue={catalogue} loading={loading} busy={busy} install={install} />}
+      <PanelTabs storeKey="plugins" tabs={[
+        { id: 'installed', label: t('Installés'), content: <Installed plugins={plugins} updates={updates} busy={busy} run={run} install={install} /> },
+        { id: 'catalogue', label: t('Catalogue'), count: updates.length, content: <CatalogueList catalogue={catalogue} loading={loading} busy={busy} install={install} /> },
+      ]} />
     </Island>
   )
 }
