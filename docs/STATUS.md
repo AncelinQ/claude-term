@@ -37,9 +37,11 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   Claude = attention, permission / plan mode, running tools, model (menu: `/model <alias>` typed in the tab, the
   default of ~/.claude/settings.json put back since Claude Code saves it), context % (status line figure per session,
   else ≈ from the transcript), tokens. The island header keeps only the file state.
-- **Lanceur**: collapsed groups (state kept), filter, "En cours" group with stop (Ctrl+C) / show; plugin API
-  `terminal.run` returns an id, `terminal.runs / onDidChangeRuns / stop / show`. package.json gets WebStorm-like ▶ in
-  the editor gutter (■ while running), through the Lanceur.
+- **Exécuter panel** (core, ⌘7; the Lanceur plugin was removed 2026-09-28, its activity and open state migrated):
+  header tabs, Scripts (`shared/runnables.ts`), "En cours" with stop (Ctrl+C) / show, store `stores/runnables.ts`.
+  Editor gutter ▶ / ■ on every runnable line (`shared/run-lines.ts`: package.json scripts, Makefile targets, shell
+  scripts, shell commands of Markdown code blocks), through the same store. Next: Tests tab, then Errors / TODO as
+  tabs of the center bottom block. The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
 - Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
   `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
 - Explorer: Quick Look on macOS (Space on the selection, file context menu).

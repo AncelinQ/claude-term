@@ -51,7 +51,7 @@ export interface Project {
   selectedFolder: string
 }
 
-export type LeftActivity = 'explorer' | 'search' | 'history' | 'skills' | 'mcp' | 'plugins' | (string & {})
+export type LeftActivity = 'explorer' | 'search' | 'history' | 'skills' | 'mcp' | 'plugins' | 'run' | (string & {})
 export type RightActivity = 'claude' | 'process' | 'history' | 'skills' | (string & {})
 
 interface Workbench {
@@ -138,7 +138,9 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       if (await window.ct.fs.exists(root)) projects.push({ id: nid(), root, tabs: [], currentTabId: null, selectedPath: null, selectedFolder: root })
     }
     if (projects.length === 0) projects.push({ id: nid(), root: null, tabs: [], currentTabId: null, selectedPath: null, selectedFolder: window.ct.home })
-    set({ theme, settings, projects, activeProjectId: projects[0].id, leftActivity: settings.leftActivity as LeftActivity | null, rightActivity: settings.rightActivity as RightActivity | null, layout: settings.layout ?? {} })
+    // the Lanceur plugin became the Exécuter panel (2026-09-28)
+    const left = settings.leftActivity === 'claudeterm.runnables:run' ? 'run' : settings.leftActivity
+    set({ theme, settings, projects, activeProjectId: projects[0].id, leftActivity: left as LeftActivity | null, rightActivity: settings.rightActivity as RightActivity | null, layout: settings.layout ?? {} })
     window.ct.themes.onChange((theme) => set({ theme }))
     window.ct.settings.onChange((settings) => set({ settings }))
     window.ct.claude.onUpdate(({ tabId, state, newEvents }) => {

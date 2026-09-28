@@ -89,7 +89,7 @@ describe('plugin bootstrap (window side)', () => {
   })
 
   it('the built-in plugins load under the bootstrap', async () => {
-    for (const id of ['git', 'runnables']) {
+    for (const id of ['git']) {
       const dir = join(__dirname, '..', 'resources', 'plugins', id)
       const m = JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8'))
       const f = fakeBridge({ 'workspace.project': null })

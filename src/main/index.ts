@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session, net }
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { execFile, spawnSync } from 'node:child_process'
-import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs'
+import { readdirSync, statSync, existsSync, readFileSync, watch } from 'node:fs'
 import { SettingsService } from './services/settings'
 import { ThemeService } from './services/themes'
 import { PtyService } from './services/pty'
@@ -21,6 +21,7 @@ import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
 import { UsageService } from './services/usage'
+import { detectRunnables } from '@shared/runnables'
 import { DefaultModelGuard } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
@@ -189,6 +190,17 @@ ipcMain.handle('mcp:cli', (_e, { args, cwd }) => mcp.cli(args, cwd))
 ipcMain.handle('mcp:health', async (_e, cwd: string | null) => {
   const r = await mcp.cli(['list'], cwd)
   return Object.fromEntries(Mcp.parseList(r.output).map((x) => [x.name, x.health]))
+})
+// Exécuter panel (Scripts): what the project can run, re-detected when its root folder changes
+const runFs = { exists: (p: string) => existsSync(p), read: (p: string) => readFileSync(p, 'utf8'), list: (p: string) => { try { return readdirSync(p, { withFileTypes: true }).map((d) => ({ name: d.name, dir: d.isDirectory() })) } catch { return [] } } }
+let runWatch: { root: string; w: ReturnType<typeof watch> } | null = null
+ipcMain.handle('runnables:detect', (_e, root: string) => {
+  if (runWatch?.root !== root) {
+    runWatch?.w.close(); runWatch = null
+    let t: ReturnType<typeof setTimeout> | undefined
+    try { runWatch = { root, w: watch(root, { recursive: false }, () => { clearTimeout(t); t = setTimeout(() => send('runnables:changed', { root }), 400) }) } } catch { /* not watchable */ }
+  }
+  try { return detectRunnables(runFs, root) } catch { return [] }
 })
 ipcMain.handle('proc:scan', () => scanClaudeProcesses())
 ipcMain.on('proc:kill', (_e, { pid, signal }) => { try { process.kill(pid, signal ?? 'SIGTERM') } catch { /* gone */ } })

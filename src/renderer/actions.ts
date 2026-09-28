@@ -20,6 +20,7 @@ export function runAppAction(id: string): boolean {
     case 'app.save': st.saveCurrentFile(); return true
     case 'app.screenshot': if (!p?.root) return false; st.captureScreen(p.id); return true
     case 'app.explorer': if (!p?.root) return false; st.setLeft(st.leftActivity === 'explorer' ? null : 'explorer'); return true
+    case 'app.run': if (!p?.root) return false; st.setLeft(st.leftActivity === 'run' ? null : 'run'); return true
     case 'app.git': if (!p?.root) return false; st.setLeft(st.leftActivity === 'claudeterm.git:git' ? null : 'claudeterm.git:git'); return true
     case 'app.commit': if (!p?.root) return false; st.setLeft('claudeterm.git:git'); setTimeout(() => (document.querySelector('.pv-footer textarea') as HTMLTextAreaElement | null)?.focus(), 150); return true
   }

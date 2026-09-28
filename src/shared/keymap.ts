@@ -15,6 +15,7 @@ export const ACTIONS: KeyAction[] = [
   { id: 'app.save', scope: 'general', label: 'Enregistrer', default: 'Mod+S' },
   { id: 'app.screenshot', scope: 'general', label: "Capture d'écran → prompt", default: 'Mod+Alt+S' },
   { id: 'app.explorer', scope: 'general', label: 'Explorateur', default: 'Mod+1' },
+  { id: 'app.run', scope: 'general', label: 'Exécuter', default: 'Mod+7' },
   { id: 'app.git', scope: 'general', label: 'Git', default: 'Mod+9' },
   { id: 'app.commit', scope: 'general', label: 'Commit', default: 'Mod+K' },
   // editor (Monaco commands)

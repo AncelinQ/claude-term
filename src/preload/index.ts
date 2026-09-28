@@ -85,6 +85,10 @@ const api: CtApi = {
     cli: (args, cwd) => ipcRenderer.invoke('mcp:cli', { args, cwd }),
     health: (cwd) => ipcRenderer.invoke('mcp:health', cwd),
   },
+  runnables: {
+    detect: (root) => ipcRenderer.invoke('runnables:detect', root),
+    onChanged: (cb) => channel('runnables:changed', () => true, (p) => p.root as string, cb),
+  },
   processes: {
     scan: () => ipcRenderer.invoke('proc:scan'),
     kill: (pid, signal) => ipcRenderer.send('proc:kill', { pid, signal }),

@@ -64,9 +64,12 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
   The top strip holds the project tabs and is the drag region. Menus: native menu bar on macOS,
   hidden on Windows (commands via palette and the ⋯ button), like VS Code's custom title bar.
 - **Left activity bar** (44 px): Explorer (2 islands: Finder, Linked folders), Search,
-  History (this project's sessions), Skills (project), MCP (project + personal), Plugins. Everything project-bound is on the left.
-  No "npm scripts" entry (decided 2026-09-27): a later **runnables plugin** will detect what a
-  project can run (npm scripts, make targets, python entry points, cargo…) and offer it in one place. Click active = collapse. The left bar and sidebar are **project-bound**:
+  History (this project's sessions), Skills (project), MCP (project + personal), Plugins, **Exécuter** (⌘7). Everything
+  project-bound is on the left. Exécuter (core since 2026-09-28, was the Lanceur plugin): header tabs, Scripts
+  (`shared/runnables.ts`: npm scripts with workspaces, make targets, cargo, go, python, shell scripts; "En cours" with
+  stop / show), Tests next. The editor's gutter ▶ comes from `shared/run-lines.ts` (package.json scripts, Makefile
+  targets, shell scripts, shell commands of Markdown code blocks) and runs through the same store. Errors and TODO will
+  be tabs of the center bottom block. Click active = collapse. The left bar and sidebar are **project-bound**:
   hidden while the active project has no folder (welcome screen).
 - **App settings**: gear button at the bottom of the right activity bar on every platform (the
   top-right corner belongs to the native caption buttons on Windows/Linux). Opens the Settings modal.
@@ -118,9 +121,7 @@ destroys its window. Permissions for user plugins (built-ins are trusted): `proc
 `terminal.run`; fs = its folder and the open project, `fs:home` = the home folder (symlinks resolved); `network` and
 `secrets` = nothing yet. `terminal.run` returns an id: the tab carries it until the command ends (shell integration),
 `terminal.runs()` / `onDidChangeRuns` list the plugin's running commands, `terminal.stop(id)` sends Ctrl+C ("process"). Events reach the owning plugin only; a plugin can only set its own views and popovers. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
-after a separator line in the bar. First built-in plugins: **Lanceur** (`resources/plugins/runnables`),
-which detects npm scripts (workspaces included), make targets, cargo, go, python and shell scripts,
-and **Git** (`resources/plugins/git`, decided 2026-09-27 with a zero-bug rule): no git logic of our
+after a separator line in the bar. Built-in plugin: **Git** (`resources/plugins/git`, decided 2026-09-27 with a zero-bug rule): no git logic of our
 own, reads through porcelain v2 / log formats parsed by tested code, every write is a plain `git`
 command typed into a visible shell tab (add, restore --staged, commit -m, checkout), nothing
 destructive (no reset --hard, checkout -- file, push --force, clean).

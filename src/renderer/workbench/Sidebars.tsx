@@ -13,6 +13,7 @@ import { ClaudeIsland } from './islands/Claude'
 import { HistoryIsland } from './islands/History'
 import { PluginViewIsland } from './PluginView'
 import { PluginsIsland } from './islands/Plugins'
+import { RunIsland } from './islands/Run'
 import { usePlugins } from '@/stores/plugins'
 
 function PluginViews({ activity }: { activity: string }) {
@@ -53,6 +54,7 @@ export function LeftSidebar({ project }: { project: Project }) {
         />
       )}
       {activity === 'plugins' && <PluginsIsland />}
+      {activity === 'run' && <RunIsland project={project} />}
       {activity.includes(':') && <PluginViews activity={activity} />}
     </div>
     <Gutter axis="x" className="left" onDrag={(d) => setWidth((w) => Math.max(180, Math.min(600, w + d)))} />

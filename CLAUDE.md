@@ -40,7 +40,8 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
   test hooks, so `CT_CDP_PORT=9444 npx tsx scripts/ui.ts …` drives it like the dev app. Icons in `build/`.
 - Plugins: host in `src/main/services/plugins.ts` (one hidden sandboxed BrowserWindow per plugin, bridge in
   `resources/plugin-host/`, permission checks in `plugin-policy.ts`), contract in `src/shared/plugins.ts`,
-  API typings in `resources/plugins/claudeterm.d.ts`, built-ins in `resources/plugins/<id>/`, user plugins in
+  API typings in `resources/plugins/claudeterm.d.ts`, built-ins in `resources/plugins/<id>/` (Git; core features such as the
+  Exécuter panel are not plugins: they need the editor), user plugins in
   `userData/plugins`. Views are declarative models rendered by `workbench/PluginView.tsx`; plugins never draw.
 - License: PolyForm Noncommercial 1.0.0.
 - File icons: Catppuccin SVGs in `src/renderer/assets/catppuccin`; their lavender neutrals were recolored to the theme's grey (hue/saturation of `island.bg`, lightness kept), recorded in `mapping.json` > `recolored`. Redo it if the icons are updated.

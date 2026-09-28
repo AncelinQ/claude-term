@@ -39,7 +39,12 @@ export const usePlugins = create<PluginStore>((set, get) => ({
     saveTimer = setTimeout(() => window.ct.settings.set({ treeState: get().treeState }), 400)
   },
   init() {
-    window.ct.settings.get().then((s) => set({ treeState: s.treeState ?? {} }))
+    window.ct.settings.get().then((s) => {
+      const ts = { ...(s.treeState ?? {}) }
+      // the Lanceur plugin's tree is the Exécuter panel's Scripts tab now (same item ids)
+      if (ts['claudeterm.runnables:runnables'] && !ts['run:scripts']) { ts['run:scripts'] = ts['claudeterm.runnables:runnables']; delete ts['claudeterm.runnables:runnables']; window.ct.settings.set({ treeState: ts }) }
+      set({ treeState: ts })
+    })
     window.ct.plugins.list().then((plugins) => set({ plugins }))
     window.ct.plugins.onChanged((plugins) => {
       set({ plugins })

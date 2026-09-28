@@ -21,6 +21,7 @@ export interface UsageState {
   api?: { at?: number; attemptAt?: number; error?: string; busy?: boolean }
 }
 import type { RunInfo } from './plugins'
+import type { RunGroup } from './runnables'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -276,6 +277,11 @@ export interface CtApi {
     cli(args: string[], cwd: string | null): Promise<{ code: number; output: string }>
     /** `claude mcp list` parsed: name → health */
     health(cwd: string | null): Promise<Record<string, 'connected' | 'needsAuth' | 'failed'>>
+  }
+  runnables: {
+    /** what the project can run (Scripts tab), and a change of its root folder */
+    detect(root: string): Promise<RunGroup[]>
+    onChanged(cb: (root: string) => void): () => void
   }
   processes: {
     scan(): Promise<ClaudeProcess[]>
