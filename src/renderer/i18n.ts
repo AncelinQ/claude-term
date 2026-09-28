@@ -16,6 +16,11 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 const EN: Record<string, string> = {
+  'Nouvel onglet Claude ici': 'New Claude tab here',
+  'Nouveau shell ici': 'New shell here',
+  'Recherche des tests…': 'Looking for tests…',
+  'Aucun test trouvé : ni Vitest, ni Jest, ni pytest dans ce projet.': 'No tests found: no Vitest, Jest or pytest in this project.',
+  'Corriger avec Claude': 'Fix with Claude',
   'Exécuteurs': 'Runners',
   'Exécuteurs (⌘7)': 'Runners (⌘7)',
   'Scripts': 'Scripts',

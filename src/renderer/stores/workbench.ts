@@ -100,7 +100,8 @@ interface Workbench {
   shellEvent(tabId: string, msg: string): void
   clearAttention(tabId: string): void
   /** opens a text or image file in the center (anything else goes to the default app) */
-  openFile(projectId: string, path: string): Promise<void>
+  /** opens (or shows) a file tab; `line`: 1-based line to reveal and put the cursor on */
+  openFile(projectId: string, path: string, line?: number): Promise<void>
   reloadFile(path: string): Promise<void>
   saveCurrentFile(): Promise<void>
   saveFile(path: string): Promise<void>
@@ -334,9 +335,10 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       return {}
     })
   },
-  async openFile(projectId, path) {
+  async openFile(projectId, path, line) {
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
+    if (line) (await import('@/editor/EditorHost')).revealWhenShown(path, line)
     const existing = p.tabs.find((t) => t.kind === 'file' && t.path === path)
     if (existing) { get().setCurrentTab(projectId, existing.id); return }
     const r = await window.ct.fs.readFile(path)

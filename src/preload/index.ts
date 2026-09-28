@@ -89,6 +89,11 @@ const api: CtApi = {
     detect: (root) => ipcRenderer.invoke('runnables:detect', root),
     onChanged: (cb) => channel('runnables:changed', () => true, (p) => p.root as string, cb),
   },
+  tests: {
+    discover: (root) => ipcRenderer.invoke('tests:discover', root),
+    results: () => ipcRenderer.invoke('tests:results'),
+    onResults: (cb) => channel('tests:results', () => true, (p) => p, cb),
+  },
   processes: {
     scan: () => ipcRenderer.invoke('proc:scan'),
     kill: (pid, signal) => ipcRenderer.send('proc:kill', { pid, signal }),

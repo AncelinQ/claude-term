@@ -82,12 +82,21 @@ function DirRow({ project, entry, depth }: { project: Project; entry: DirEntry; 
   const select = useWorkbench((s) => s.select)
   const newTab = useWorkbench((s) => s.newTab)
   const sel = project.selectedPath === entry.path
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   return (
     <>
+      <ContextMenu at={menu} onClose={() => setMenu(null)} items={[
+        { label: tr('Nouvel onglet Claude ici'), icon: Icons.claude(13), onSelect: () => newTab(project.id, 'claude', entry.path) },
+        { label: tr('Nouveau shell ici'), icon: Icons.terminal(13), onSelect: () => newTab(project.id, 'shell', entry.path) },
+        'sep',
+        ...(mac ? [{ label: tr("Coup d'œil"), shortcut: tr('Espace'), onSelect: () => window.ct.app.quickLook(entry.path) }] : []),
+        { label: tr(mac ? 'Afficher dans le Finder' : "Afficher dans l'explorateur"), onSelect: () => window.ct.app.revealInFinder(entry.path) },
+        { label: tr('Copier le chemin'), onSelect: () => navigator.clipboard.writeText(entry.path) },
+      ]} />
       <div className={'row dir' + (sel ? ' sel' : '')} style={{ paddingLeft: 6 + depth * 14 }} data-path={entry.path} data-dir="1"
         onClick={() => { select(project.id, entry.path, true) }}
         onDoubleClick={() => setOpen(entry.path, !open)}
-        onContextMenu={(e) => { e.preventDefault(); newTab(project.id, 'claude', entry.path) }}
+        onContextMenu={(e) => { e.preventDefault(); select(project.id, entry.path, true); setMenu({ x: e.clientX, y: e.clientY }) }}
         draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', entry.path); e.dataTransfer.effectAllowed = 'copy' }}
         title={entry.path}>
         <span className={'chev' + (open ? ' open' : '')} onClick={(e) => { e.stopPropagation(); setOpen(entry.path, !open) }}>{Icons.chevron(10)}</span>
@@ -110,6 +119,7 @@ function FileRow({ project, entry, depth }: { project: Project; entry: DirEntry;
       ...(mac ? [{ label: tr("Coup d'œil"), shortcut: tr('Espace'), onSelect: () => window.ct.app.quickLook(entry.path) }, 'sep' as const] : []),
       { label: tr('Ouvrir'), onSelect: () => openFile(project.id, entry.path) },
       { label: tr(mac ? 'Afficher dans le Finder' : "Afficher dans l'explorateur"), onSelect: () => window.ct.app.revealInFinder(entry.path) },
+      { label: tr('Copier le chemin'), onSelect: () => navigator.clipboard.writeText(entry.path) },
     ]} />
     <div className={'row file' + (sel ? ' sel' : '')} style={{ paddingLeft: 6 + depth * 14 + 19 }} data-path={entry.path}
       onClick={() => select(project.id, entry.path, false)}

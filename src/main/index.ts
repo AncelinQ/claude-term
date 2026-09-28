@@ -21,6 +21,7 @@ import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
 import { UsageService } from './services/usage'
+import { TestsService } from './services/tests'
 import { detectRunnables } from '@shared/runnables'
 import { DefaultModelGuard } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
@@ -202,6 +203,10 @@ ipcMain.handle('runnables:detect', (_e, root: string) => {
   }
   try { return detectRunnables(runFs, root) } catch { return [] }
 })
+// Exécuteurs panel (Tests): suites, tests read from the files, results from the reports of the runs
+const testsService = new TestsService(app.getPath('userData'), runFs, (results) => send('tests:results', results))
+ipcMain.handle('tests:discover', (_e, root: string) => { try { return testsService.discover(root) } catch { return [] } })
+ipcMain.handle('tests:results', () => testsService.results())
 ipcMain.handle('proc:scan', () => scanClaudeProcesses())
 ipcMain.on('proc:kill', (_e, { pid, signal }) => { try { process.kill(pid, signal ?? 'SIGTERM') } catch { /* gone */ } })
 const index = new FileIndex()
@@ -342,4 +347,4 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => { ptys.killAll(); app.quit() })
-app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose(); updater.onQuit(); usage.dispose() })
+app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose(); updater.onQuit(); usage.dispose(); testsService.dispose() })

@@ -111,6 +111,21 @@ export function languageOf(path: string): string {
   return monaco.editor.getModel(monaco.Uri.file(path))?.getLanguageId() ?? ''
 }
 
+/** a line to show once the file is in the editor (openFile with a line: Tests, Errors, TODO) */
+const pendingReveal = new Map<string, number>()
+export function revealWhenShown(path: string, line: number) {
+  pendingReveal.set(path, line)
+  if (editor?.getModel()?.uri.fsPath === path) applyReveal(path)
+}
+function applyReveal(path: string) {
+  const line = pendingReveal.get(path)
+  if (!editor || !line) return
+  pendingReveal.delete(path)
+  editor.revealLineInCenter(line)
+  editor.setPosition({ lineNumber: line, column: 1 })
+  editor.focus()
+}
+
 export function EditorHost({ tab }: { tab: Tab }) {
   const ref = useRef<HTMLDivElement>(null)
   const theme = useWorkbench((s) => s.theme)!
@@ -128,6 +143,7 @@ export function EditorHost({ tab }: { tab: Tab }) {
       e.setModel(m)
       const vs = viewStates.get(tab.path!)
       if (vs) e.restoreViewState(vs)
+      applyReveal(tab.path!)
     }
     e.layout()
     e.focus()

@@ -7,6 +7,8 @@ import { PluginViewBody, type Send } from '../PluginView'
 import { PanelTabs } from '../PanelTabs'
 import { useWorkbench, type Project } from '@/stores/workbench'
 import { useRunnables } from '@/stores/runnables'
+import { useTests } from '@/stores/tests'
+import { failedCount, testsTree } from '@shared/tests'
 import { t } from '@/i18n'
 
 /**
@@ -18,7 +20,7 @@ export function RunIsland({ project }: { project: Project }) {
   const groups = useRunnables((s) => s.groups)
   const launched = useRunnables((s) => s.launched)
   const tabs = useWorkbench((s) => s.projects)   // runs follow the tabs (started, ended)
-  useEffect(() => { useRunnables.getState().load(project.root) }, [project.root])
+  useEffect(() => { useRunnables.getState().load(project.root); useTests.getState().load(project.root) }, [project.root])
   useEffect(() => window.ct.runnables.onChanged((root) => { if (root === useRunnables.getState().root) useRunnables.getState().load(root) }), [])
   const running = useMemo(() => useRunnables.getState().running(), [launched, tabs])
   const model: ViewModel = !project.root ? { kind: 'empty', text: t('Ouvre un projet') }
@@ -33,13 +35,28 @@ export function RunIsland({ project }: { project: Project }) {
     if (type === 'open' && id.startsWith('run:')) return r.show(id.slice(4))
     if ((type === 'action' && extra?.actionId === 'run') || type === 'open') r.runItem(id)
   }
-  const actions = <button title={t('Actualiser')} onClick={() => r.load(project.root)}>{Icons.refresh(14)}</button>
+  // Tests: suites → files → describes → tests, with the last results
+  const suites = useTests((s) => s.suites)
+  const results = useTests((s) => s.results)
+  const testsLoading = useTests((s) => s.loading)
+  const tm = useTests.getState()
+  const testModel: ViewModel = testsLoading && !suites.length ? { kind: 'empty', text: t('Recherche des tests…') }
+    : !suites.length ? { kind: 'empty', text: t('Aucun test trouvé : ni Vitest, ni Jest, ni pytest dans ce projet.') }
+    : { kind: 'tree', search: true, items: testsTree(suites, results, tm.runningIds(), project.root ?? '') }
+  const sendTests: Send = (type, extra) => {
+    const id = extra?.itemId ?? ''
+    if (type === 'action' && extra?.actionId === 'run') return tm.run(id)
+    if (type === 'action' && extra?.actionId === 'stop') return tm.stop(id)
+    if (type === 'action' && extra?.actionId === 'fix') return tm.fix(id)
+    if (type === 'select' || type === 'open') { const at = tm.locate(id); if (at) useWorkbench.getState().openFile(project.id, at.path, at.line) }
+  }
+  const actions = <button title={t('Actualiser')} onClick={() => { r.load(project.root); tm.load(project.root) }}>{Icons.refresh(14)}</button>
   return (
     <Island title={t('Exécuteurs')} icon={Icons.play(14)} actions={actions} grow dataView="run">
       {project.root ? (
         <PanelTabs storeKey="run" tabs={[
           { id: 'scripts', label: t('Scripts'), count: running.length, content: <PluginViewBody model={model} send={send} layoutKey="run:scripts" /> },
-          { id: 'tests', label: t('Tests'), content: <Empty>{t('Les tests du projet arrivent ici : détection de Vitest, Jest et pytest à la prochaine étape.')}</Empty> },
+          { id: 'tests', label: t('Tests'), count: failedCount(results), content: <PluginViewBody model={testModel} send={sendTests} layoutKey="run:tests" /> },
         ]} />
       ) : <Empty>{t('Ouvre un projet')}</Empty>}
     </Island>

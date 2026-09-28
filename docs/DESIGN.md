@@ -67,7 +67,7 @@ Renderer ↔ main through a typed IPC contract (`src/shared/ipc.ts`), exposed by
   History (this project's sessions), Skills (project), MCP (project + personal), Plugins, **Exécuter** (⌘7). Everything
   project-bound is on the left. Exécuter (core since 2026-09-28, was the Lanceur plugin): header tabs, Scripts
   (`shared/runnables.ts`: npm scripts with workspaces, make targets, cargo, go, python, shell scripts; "En cours" with
-  stop / show), Tests next. The editor's gutter ▶ comes from `shared/run-lines.ts` (package.json scripts, Makefile
+  stop / show) and Tests (Vitest, Jest, pytest; results from the runs' machine reports kept in userData). The editor's gutter ▶ comes from `shared/run-lines.ts` (package.json scripts, Makefile
   targets, shell scripts, shell commands of Markdown code blocks) and runs through the same store. Errors and TODO will
   be tabs of the center bottom block. Click active = collapse. The left bar and sidebar are **project-bound**:
   hidden while the active project has no folder (welcome screen).

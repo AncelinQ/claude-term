@@ -534,3 +534,4 @@ input[type=checkbox]:disabled { opacity: .4; }
 .panel-tabs-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .panel-tabs-body > .pv-main, .panel-tabs-body > .empty { flex: 1; min-height: 0; }
 .panel-tabs-body > .list { flex: 1; min-height: 0; overflow: auto; }
+.ct-glyph-run.ct-glyph-fail { background: var(--ct-badge-error); }

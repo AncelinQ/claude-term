@@ -2,6 +2,9 @@ import { monaco } from './monaco'
 import { runLines, type RunLine } from '@shared/run-lines'
 import { useRunnables } from '@/stores/runnables'
 import { useWorkbench } from '@/stores/workbench'
+import { useTests } from '@/stores/tests'
+
+type GutterLine = RunLine & { test?: boolean; status?: 'passed' | 'failed' | 'skipped' }
 
 /**
  * WebStorm-like ▶ in the glyph margin of every line that can be run (runLines: package.json scripts, Makefile
@@ -11,12 +14,17 @@ import { useWorkbench } from '@/stores/workbench'
 export function attachRunGutter(editor: monaco.editor.IStandaloneCodeEditor) {
   const decorations = editor.createDecorationsCollection()
   // parsed once per version of the text (updates also come from run and tab changes)
-  let cache: { key: string; lines: RunLine[] } | null = null
-  const current = (): RunLine[] => {
+  let cache: { key: string; lines: GutterLine[] } | null = null
+  const current = (): GutterLine[] => {
     const m = editor.getModel()
     if (!m) return []
     const key = m.uri.toString() + '@' + m.getVersionId()
-    if (cache?.key !== key) cache = { key, lines: runLines(m.uri.fsPath, m.getValue()) }
+    if (cache?.key !== key) {
+      const path = m.uri.fsPath, text = m.getValue()
+      // test files of a discovered suite: one ▶ per describe / test (Tests tab); other files: runLines
+      const tests = useTests.getState().lines(path, text)
+      cache = { key, lines: tests.length ? tests.map((l) => ({ line: l.line, label: l.label, command: '', cwd: '', itemId: l.itemId, test: true, status: l.status })) : runLines(path, text) }
+    }
     return cache.lines
   }
   const update = () => {
@@ -26,7 +34,7 @@ export function attachRunGutter(editor: monaco.editor.IStandaloneCodeEditor) {
     decorations.set(lines.map((l) => {
       const run = !!r.runOf(l.itemId)
       return { range: new monaco.Range(l.line, 1, l.line, 1), options: {
-        glyphMarginClassName: run ? 'ct-glyph-stop' : 'ct-glyph-run',
+        glyphMarginClassName: run ? 'ct-glyph-stop' : l.status === 'failed' ? 'ct-glyph-run ct-glyph-fail' : 'ct-glyph-run',
         glyphMarginHoverMessage: { value: run ? `Arrêter « ${l.label} »` : `Lancer « ${l.label} »` },
       } }
     }))
@@ -36,6 +44,8 @@ export function attachRunGutter(editor: monaco.editor.IStandaloneCodeEditor) {
   editor.onDidChangeModelContent(() => { clearTimeout(timer); timer = setTimeout(update, 300) })
   // runs start and end with the tabs
   useRunnables.subscribe(update)
+  // results change the colour; a new discovery can make a file a test file
+  useTests.subscribe((st, prev) => { if (st.results !== prev.results || st.suites !== prev.suites) { cache = null; update() } })
   useWorkbench.subscribe((s, prev) => { if (s.projects !== prev.projects) update() })
   editor.onMouseDown((e) => {
     if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) return
@@ -44,7 +54,9 @@ export function attachRunGutter(editor: monaco.editor.IStandaloneCodeEditor) {
     if (!l) return
     const r = useRunnables.getState()
     const runId = r.runOf(l.itemId)
-    if (runId) r.stop(runId); else r.runLine(l)
+    if (runId) r.stop(runId)
+    else if (l.test) useTests.getState().run(l.itemId)
+    else r.runLine(l)
   })
   update()
 }

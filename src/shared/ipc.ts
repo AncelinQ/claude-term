@@ -22,6 +22,7 @@ export interface UsageState {
 }
 import type { RunInfo } from './plugins'
 import type { RunGroup } from './runnables'
+import type { TestNode, TestResult, TestSuite } from './tests'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -282,6 +283,13 @@ export interface CtApi {
     /** what the project can run (Scripts tab), and a change of its root folder */
     detect(root: string): Promise<RunGroup[]>
     onChanged(cb: (root: string) => void): () => void
+  }
+  tests: {
+    /** suites of the project (Vitest, Jest, pytest) with their files and tests; report: where runs write their results */
+    discover(root: string): Promise<(TestSuite & { report: string; files: { path: string; tests: TestNode[] }[] })[]>
+    /** results of the last reports, by testKey */
+    results(): Promise<[string, TestResult][]>
+    onResults(cb: (r: [string, TestResult][]) => void): () => void
   }
   processes: {
     scan(): Promise<ClaudeProcess[]>

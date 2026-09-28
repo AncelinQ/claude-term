@@ -164,7 +164,7 @@ function Node({ item, depth, tree, send, onMenu, graphWidth = 0, stateKey, force
   useEffect(() => { if (cbRef.current) cbRef.current.indeterminate = cs === 'mixed' }, [cs])
   return (
     <>
-      <div className={'lrow pv-row' + (hasChildren && !item.folder ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '') + (item.selected ? ' sel' : '') + (item.tone ? ' tone-' + item.tone : '')} style={{ paddingLeft: 8 + depth * 20 }}
+      <div className={'lrow pv-row' + (hasChildren && !item.folder && !item.file && depth === 0 ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '') + (item.selected ? ' sel' : '') + (item.tone ? ' tone-' + item.tone : '')} style={{ paddingLeft: 8 + depth * 20 }}
         onClick={() => (hasChildren ? setOpen(!open) : send('select', { itemId: item.id }))} onDoubleClick={() => !hasChildren && send('open', { itemId: item.id })}
         onContextMenu={(e) => item.contextMenu?.length && onMenu(e, item)} title={item.detail}>
         {graphWidth > 0 && item.graph ? <GraphCell g={item.graph} width={graphWidth} /> : null}

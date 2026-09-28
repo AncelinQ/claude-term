@@ -44,13 +44,13 @@ export const useRunnables = create<RunnablesStore>((set, get) => ({
   },
   runItem(itemId) {
     const it = get().item(itemId)
-    if (it) start(it.id, it.label, it.cwd, it.command)
+    if (it) startRun(it.id, it.label, it.cwd, it.command)
   },
   runLine(line) {
     // a script the tab lists runs as its item (its package manager), any other line as is
     const it = get().item(line.itemId)
-    if (it) start(it.id, it.label, it.cwd, it.command)
-    else start(line.itemId, line.label, line.cwd, line.command)
+    if (it) startRun(it.id, it.label, it.cwd, it.command)
+    else startRun(line.itemId, line.label, line.cwd, line.command)
   },
   stop(runId) { const t = tabOfRun(runId); if (t?.ptyId) window.ct.pty.write(t.ptyId, '\x03') },
   show(runId) {
@@ -68,11 +68,12 @@ export const useRunnables = create<RunnablesStore>((set, get) => ({
   },
 }))
 
-function start(itemId: string, label: string, cwd: string, command: string) {
+/** runs a command (a string typed as is, or an argv quoted for the tab's shell), followed until it ends */
+export function startRun(itemId: string, label: string, cwd: string, command: string | string[]) {
   const st = useWorkbench.getState()
   if (!st.activeProjectId) return
   const id = `run:${++seq}`
-  useRunnables.setState((s) => ({ launched: { ...s.launched, [id]: { itemId, label, command } } }))
+  useRunnables.setState((s) => ({ launched: { ...s.launched, [id]: { itemId, label, command: typeof command === 'string' ? command : command.join(' ') } } }))
   st.runCommand(st.activeProjectId, cwd, [command], 'reuse', { id, label })
 }
 

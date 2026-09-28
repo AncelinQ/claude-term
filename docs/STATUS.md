@@ -40,8 +40,12 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
 - **Exécuter panel** (core, ⌘7; the Lanceur plugin was removed 2026-09-28, its activity and open state migrated):
   header tabs, Scripts (`shared/runnables.ts`), "En cours" with stop (Ctrl+C) / show, store `stores/runnables.ts`.
   Editor gutter ▶ / ■ on every runnable line (`shared/run-lines.ts`: package.json scripts, Makefile targets, shell
-  scripts, shell commands of Markdown code blocks), through the same store. Next: Tests tab, then Errors / TODO as
-  tabs of the center bottom block. The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
+  scripts, shell commands of Markdown code blocks), through the same store. **Tests tab**: Vitest / Jest / pytest
+  suites per package (`shared/tests.ts`: detection, tests read from the files, commands, JSON / JUnit reports;
+  `services/tests.ts`: discovery, reports in userData watched), run all / file / test in a shell tab, statuses, failures
+  count on the tab, "Corriger avec Claude" (prompt typed in the Claude tab, not sent), ▶ in test files' gutter (red when
+  the last run failed). Next: Errors / TODO as tabs of the center bottom block (Monaco does not resolve the project's
+  modules yet: its import squiggles are wrong, to address with Errors). The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
 - Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
   `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
 - Explorer: Quick Look on macOS (Space on the selection, file context menu).
