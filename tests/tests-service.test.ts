@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { TempDir, sleep } from './helpers'
+import { TempDir } from './helpers'
 import { TestsService } from '../src/main/services/tests'
 import { testKey } from '../src/shared/tests'
 
@@ -31,7 +31,7 @@ describe('tests discovery', () => {
     t.dispose()
   })
 
-  it('reads the reports on disk and emits a finished run', async () => {
+  it('reads the reports of the runs from disk', () => {
     const t = new TempDir()
     t.write('package.json', JSON.stringify({ devDependencies: { vitest: '3' } }))
     t.write('a.test.ts', "it('ok', () => {})")
@@ -40,9 +40,8 @@ describe('tests discovery', () => {
     const [suite] = s.discover(t.path)
     expect(s.results()).toEqual([])
     t.write(suite.report, JSON.stringify({ testResults: [{ name: join(t.path, 'a.test.ts'), assertionResults: [{ ancestorTitles: [], title: 'ok', status: 'passed' }] }] }))
-    for (let i = 0; i < 20 && !got.length; i++) await sleep(100)
-    expect(got[0]).toEqual([[testKey(join(t.path, 'a.test.ts'), ['ok']), { status: 'passed' }]])
-    expect(s.results()).toEqual(got[0])
+    // read on demand (the renderer asks when a run ends); the watcher's event is a bonus FSEvents may drop
+    expect(s.results()).toEqual([[testKey(join(t.path, 'a.test.ts'), ['ok']), { status: 'passed' }]])
     s.dispose()
     t.dispose()
   })

@@ -535,3 +535,6 @@ input[type=checkbox]:disabled { opacity: .4; }
 .panel-tabs-body > .pv-main, .panel-tabs-body > .empty { flex: 1; min-height: 0; }
 .panel-tabs-body > .list { flex: 1; min-height: 0; overflow: auto; }
 .ct-glyph-run.ct-glyph-fail { background: var(--ct-badge-error); }
+/* keyboard cursor of a list / tree (arrows): visible only while the list has the focus */
+.list.pv:focus { outline: none; }
+.list.pv:focus .pv-row.kbd { background: var(--ct-selection-bg); outline: 1px solid var(--ct-accent); outline-offset: -1px; }

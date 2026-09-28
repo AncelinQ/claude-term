@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { ViewAction, ViewItem, ViewModel } from '@shared/plugins'
 import { FILE_COLORS, filterItems } from '@shared/plugins'
 import { marked } from 'marked'
@@ -46,6 +46,37 @@ export function PluginViewIsland({ viewId, title, grow }: { viewId: string; titl
 export function PluginViewBody({ model, send, wide, layoutKey = 'pv' }: { model: ViewModel | undefined; send: Send; wide?: boolean; layoutKey?: string }) {
   const [q, setQ] = useState('')
   const [ctx, setCtx] = useState<{ x: number; y: number; item: ViewItem } | null>(null)
+  // keyboard: a cursor over the visible rows (DOM order); Enter does what a double click does
+  const [cursor, setCursor] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const rowsOf = () => [...(listRef.current?.querySelectorAll<HTMLElement>('.pv-row[data-id]') ?? [])]
+  const onListKey = (e: React.KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+    const rows = rowsOf()
+    const i = rows.findIndex((r) => r.dataset.id === cursor)
+    const at = i >= 0 ? rows[i] : null
+    const go = (r?: HTMLElement) => { if (!r) return; setCursor(r.dataset.id!); r.scrollIntoView({ block: 'nearest' }) }
+    const group = at?.dataset.group === '1', open = at?.dataset.open === '1'
+    const toggle = (o: boolean) => at && usePlugins.getState().setOpen(layoutKey, at.dataset.id!, o)
+    switch (e.key) {
+      case 'ArrowDown': e.preventDefault(); go(i < 0 ? rows[0] : rows[i + 1]); break
+      case 'ArrowUp':
+        e.preventDefault()
+        if (i <= 0 && model && 'search' in model && model.search) { setCursor(null); (listRef.current?.parentElement?.querySelector('.search input') as HTMLInputElement | null)?.focus() }
+        else go(rows[i - 1])
+        break
+      case 'ArrowRight': e.preventDefault(); if (group && !open) toggle(true); else if (group) go(rows[i + 1]); break
+      case 'ArrowLeft': {
+        e.preventDefault()
+        if (group && open) { toggle(false); break }
+        const depth = Number(at?.dataset.depth ?? 0)
+        for (let j = i - 1; j >= 0; j--) if (Number(rows[j].dataset.depth) < depth) { go(rows[j]); break }
+        break
+      }
+      case 'Enter': e.preventDefault(); if (at) { if (group) toggle(!open); else send('open', { itemId: at.dataset.id }) } break
+      case ' ': if (at?.dataset.check) { e.preventDefault(); send('check', { itemId: at.dataset.id, value: at.dataset.check !== '1' }) } break
+    }
+  }
   if (!model) return <Empty>{t('Chargement…')}</Empty>
   if (model.kind === 'empty') return <Empty>{model.text}</Empty>
   if (model.kind === 'markdown') return <div className="md" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(model.text, { async: false }) as string) }} />
@@ -60,10 +91,13 @@ export function PluginViewBody({ model, send, wide, layoutKey = 'pv' }: { model:
   const items = q ? filterItems(model.items, q.toLowerCase()) : model.items
   const list = (
     <div className="pv-main">
-      {model.search && <div className="search"><input value={q} placeholder={t('filtrer…')} onChange={(e) => setQ(e.target.value)} autoFocus /></div>}
-      <div className={'list pv' + (model.kind === 'list' && model.graph ? ' graph' : '')}>
+      {model.search && <div className="search"><input value={q} placeholder={t('filtrer…')} onChange={(e) => setQ(e.target.value)} autoFocus
+        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); listRef.current?.focus(); const first = rowsOf()[0]; if (first) setCursor(first.dataset.id!) } }} /></div>}
+      <div className={'list pv' + (model.kind === 'list' && model.graph ? ' graph' : '')} tabIndex={0} ref={listRef} onKeyDown={onListKey}>
+        <Cursor.Provider value={{ cursor, setCursor }}>
         {items.length === 0 && <Empty>{q ? t('Aucun résultat') : '—'}</Empty>}
         {items.map((it) => <Node key={it.id} item={it} depth={0} tree={model.kind === 'tree'} send={send} stateKey={layoutKey} forceOpen={!!q} graphWidth={model.kind === 'list' && model.graph && !q ? Math.max(1, ...model.items.map((x) => x.graph?.width ?? 1)) : 0} onMenu={(e, item) => { e.preventDefault(); e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, item }) }} />)}
+        </Cursor.Provider>
       </div>
       {model.footer && <Footer footer={model.footer} send={send} />}
       <ContextMenu at={ctx} onClose={() => setCtx(null)} items={(ctx?.item.contextMenu ?? []).map((a): MenuItem | 'sep' => a === 'sep' ? 'sep' : { label: a.title, icon: a.icon ? icon(a.icon, 13) : undefined, shortcut: a.shortcut, disabled: a.disabled, onSelect: () => send('menu', { itemId: ctx!.item.id, actionId: a.id }) })} />
@@ -153,18 +187,24 @@ function checkState(item: ViewItem): boolean | 'mixed' | undefined {
   return item.checked
 }
 
+/** the keyboard cursor of a list (see onListKey) */
+const Cursor = createContext<{ cursor: string | null; setCursor: (id: string) => void }>({ cursor: null, setCursor: () => {} })
+
 function Node({ item, depth, tree, send, onMenu, graphWidth = 0, stateKey, forceOpen }: { item: ViewItem; depth: number; tree: boolean; send: Send; onMenu: (e: React.MouseEvent, item: ViewItem) => void; graphWidth?: number; stateKey: string; forceOpen?: boolean }) {
   // the user's choice (kept per view in settings.treeState) wins over the plugin's default; a search opens matches
   const chosen = usePlugins((s) => s.treeState[stateKey]?.[item.id])
   const open = forceOpen || (chosen ?? item.expanded ?? true)
   const setOpen = (o: boolean) => usePlugins.getState().setOpen(stateKey, item.id, o)
   const hasChildren = tree && !!item.children?.length
+  const kbd = useContext(Cursor)
   const cs = checkState(item)
   const cbRef = useRef<HTMLInputElement>(null)
   useEffect(() => { if (cbRef.current) cbRef.current.indeterminate = cs === 'mixed' }, [cs])
   return (
     <>
-      <div className={'lrow pv-row' + (hasChildren && !item.folder && !item.file && depth === 0 ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '') + (item.selected ? ' sel' : '') + (item.tone ? ' tone-' + item.tone : '')} style={{ paddingLeft: 8 + depth * 20 }}
+      <div className={'lrow pv-row' + (hasChildren && !item.folder && !item.file && depth === 0 ? ' group' : '') + (item.folder ? ' folder' : '') + (item.muted ? ' muted' : '') + (item.selected ? ' sel' : '') + (item.tone ? ' tone-' + item.tone : '') + (kbd.cursor === item.id ? ' kbd' : '')} style={{ paddingLeft: 8 + depth * 20 }}
+        data-id={item.id} data-depth={depth} data-group={hasChildren ? '1' : undefined} data-open={hasChildren && open ? '1' : undefined} data-check={cs === undefined ? undefined : cs === true ? '1' : '0'}
+        onMouseDown={() => kbd.setCursor(item.id)}
         onClick={() => (hasChildren ? setOpen(!open) : send('select', { itemId: item.id }))} onDoubleClick={() => !hasChildren && send('open', { itemId: item.id })}
         onContextMenu={(e) => item.contextMenu?.length && onMenu(e, item)} title={item.detail}>
         {graphWidth > 0 && item.graph ? <GraphCell g={item.graph} width={graphWidth} /> : null}

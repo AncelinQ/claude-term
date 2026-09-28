@@ -29,6 +29,16 @@ interface TestsStore {
 
 let listening = false
 
+// when a test run ends (its tab reports the end), its report is read again: deterministic, the report watcher in main
+// can miss an event (FSEvents drops some under load)
+let testRuns = new Set<string>()
+useRunnables.subscribe(() => {
+  const now = new Set(useRunnables.getState().running().filter((r) => r.itemId?.startsWith('t')).map((r) => r.runId))
+  const ended = [...testRuns].some((id) => !now.has(id))
+  testRuns = now
+  if (ended) setTimeout(() => window.ct.tests.results().then((r) => useTests.setState((s) => { const m = new Map(s.results); for (const [k, v] of r) m.set(k, v); return { results: m } })), 300)
+})
+
 export const useTests = create<TestsStore>((set, get) => ({
   root: null,
   suites: [],
