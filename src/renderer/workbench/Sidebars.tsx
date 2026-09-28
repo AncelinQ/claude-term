@@ -9,6 +9,7 @@ import { SearchIsland } from './islands/Search'
 import { SkillsIsland } from './islands/Skills'
 import { McpIsland } from './islands/Mcp'
 import { ProcessIsland } from './islands/Process'
+import { ClaudeIsland } from './islands/Claude'
 import { HistoryIsland } from './islands/History'
 import { PluginViewIsland } from './PluginView'
 import { PluginsIsland } from './islands/Plugins'
@@ -68,6 +69,7 @@ export function RightSidebar() {
     <>
     <Gutter axis="x" className="right" onDrag={(d) => setWidth((w) => Math.max(220, Math.min(700, w - d)))} />
     <div className="sidebar right" style={{ width }}>
+      {activity === 'claude' && <ClaudeIsland />}
       {activity === 'process' && <ProcessIsland />}
       {activity === 'history' && <HistoryIsland scope="all" />}
       {activity.includes(':') && <PluginViews activity={activity} />}

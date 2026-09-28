@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session, net } from 'electron'
 import { join } from 'node:path'
-import { readdirSync, statSync, existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { execFile } from 'node:child_process'
+import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs'
 import { SettingsService } from './services/settings'
 import { ThemeService } from './services/themes'
 import { PtyService } from './services/pty'
@@ -18,6 +20,8 @@ import { FileIndex } from './services/search'
 import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
+import { UsageService } from './services/usage'
+import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
 import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
@@ -103,6 +107,43 @@ ipcMain.handle('hooks:installed', () => hooks.installed())
 const claudeSettingsFile = new ClaudeSettings(claudeData.settingsPath)
 ipcMain.handle('claudeSettings:read', () => ({ ...claudeSettingsFile.read(), path: claudeData.settingsPath }))
 ipcMain.handle('claudeSettings:write', (_e, data) => { try { claudeSettingsFile.write(data); return { ok: true } } catch (e) { return { ok: false, error: String(e) } } })
+
+// Claude panel: subscription usage (status line), Claude Code version and default model
+const usage = new UsageService(app.getPath('userData'), claudeSettingsFile, (s) => send('usage:changed', s), process.platform, {
+  // Claude Code's claude.ai login: the Keychain on macOS, its credentials file elsewhere (read only, never refreshed here)
+  credentials: () => new Promise((res) => {
+    const parse = (raw: string) => { try { const o = JSON.parse(raw).claudeAiOauth; return o?.accessToken ? { accessToken: o.accessToken, expiresAt: o.expiresAt, subscriptionType: o.subscriptionType, rateLimitTier: o.rateLimitTier } : null } catch { return null } }
+    if (process.platform === 'darwin') execFile('/usr/bin/security', ['find-generic-password', '-s', 'Claude Code-credentials', '-w'], { timeout: 30_000 }, (err, out) => res(err ? null : parse(String(out))))
+    else { try { res(parse(readFileSync(join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), '.credentials.json'), 'utf8'))) } catch { res(null) } }
+  }),
+  getJson: async (url, headers) => {
+    const r = await net.fetch(url, { headers: { ...headers, 'User-Agent': `ClaudeTerm/${app.getVersion()}` }, cache: 'no-store' })
+    if (r.status === 401) throw new Error('connexion refusée (401) : ouvre une session Claude pour renouveler le jeton')
+    if (r.status === 429) throw new Error('trop de demandes (429) : réessaie dans quelques minutes')
+    if (!r.ok) throw new Error(`API d'usage : HTTP ${r.status}`)
+    return r.json()
+  },
+})
+usage.start()
+ipcMain.handle('usage:state', () => usage.state())
+ipcMain.handle('usage:install', (_e, on: boolean) => usage.setInstalled(on))
+ipcMain.handle('usage:refresh', () => usage.refresh())
+let claudeVersion: Promise<string | null> | null = null
+const cached = <T,>(ttl: number, load: () => Promise<T>) => { let v: { at: number; p: Promise<T> } | null = null; return (force = false) => { if (force || !v || Date.now() - v.at > ttl) v = { at: Date.now(), p: load() }; return v.p } }
+const getPublicJson = async (url: string) => { const r = await net.fetch(url, { cache: 'no-store', headers: { 'User-Agent': `ClaudeTerm/${app.getVersion()}` } }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }
+const latestClaude = cached(3600_000, () => getPublicJson(NPM_LATEST).then((d: any) => (typeof d?.version === 'string' ? d.version : null)).catch(() => null))
+const serviceStatus = cached(300_000, () => getPublicJson(STATUS_URL).then((d) => ({ status: parseStatusPage(d) })).catch((e) => ({ error: String((e as Error)?.message ?? e) })))
+ipcMain.handle('usage:claude', async (_e, refresh?: boolean) => {
+  if (refresh) claudeVersion = null
+  claudeVersion ??= new Promise((res) => {
+    const inv = ptys.claudeCommand(['--version'], false)
+    if (!inv) return res(null)
+    execFile(inv.file, inv.args, { env: { ...process.env, ...inv.env }, timeout: 15_000, windowsVerbatimArguments: inv.verbatim }, (err, out) => res(err ? null : String(out).trim().split(/\s/)[0] || null))
+  })
+  const r = claudeSettingsFile.read()
+  const [version, latest, services] = await Promise.all([claudeVersion, latestClaude(!!refresh), serviceStatus(!!refresh)])
+  return { version, latest, model: r.ok && typeof r.data.model === 'string' ? r.data.model : null, ...services }
+})
 ipcMain.handle('hooks:set', (_e, on: boolean) => hooks.setInstalled(on))
 
 // npm, links, skills, mcp, processes, search
@@ -248,6 +289,8 @@ ipcMain.handle('app:pickFolder', async () => {
   return r.canceled ? null : r.filePaths[0]
 })
 ipcMain.on('app:openExternal', (_e, p: string) => { shell.openPath(p) })
+// web links go to the default browser (https only)
+ipcMain.on('app:openUrl', (_e, url: string) => { if (/^https:\/\//.test(url)) shell.openExternal(url) })
 ipcMain.on('app:reveal', (_e, p: string) => { shell.showItemInFolder(p) })
 
 app.whenReady().then(() => {
@@ -264,4 +307,4 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => { ptys.killAll(); app.quit() })
-app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose(); updater.onQuit() })
+app.on('before-quit', () => { ptys.killAll(); pluginHost.dispose(); updater.onQuit(); usage.dispose() })

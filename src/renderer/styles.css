@@ -455,3 +455,39 @@ input[type=checkbox]:disabled { opacity: .4; }
 }
 .tab.drop-before::before, .ptab.drop-before::before { left: -3px; }
 .tab.drop-after::after, .ptab.drop-after::after { right: -3px; }
+
+/* Claude panel (right): blocks like the settings (.sgroup), rows inside */
+.claude-panel { overflow: auto; height: 100%; padding: 10px 10px 4px; }
+.claude-panel .sgroup { margin-bottom: 14px; }
+.claude-panel .cp-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--ct-island-border); font-size: 12px; text-align: left; color: var(--ct-text); }
+.claude-panel .cp-row:last-child { border-bottom: 0; }
+.claude-panel .cp-row.col { flex-direction: column; align-items: flex-start; gap: 8px; }
+.claude-panel .cp-row.foot { flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 7px; padding-bottom: 7px; }
+.claude-panel .cp-row.link { cursor: pointer; color: var(--ct-text-secondary); }
+.claude-panel .cp-row.link:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
+.claude-panel .sgroup-body > .cp-row.link:last-child { border-radius: 0 0 8px 8px; }
+.claude-panel .cp-row.incident { flex-direction: column; align-items: flex-start; gap: 2px; color: var(--ct-text); }
+.claude-panel .hint { color: var(--ct-text-secondary); font-size: 11.5px; line-height: 1.45; }
+.claude-panel .hint.dim, .claude-panel .dim { color: var(--ct-text-tertiary); font-size: 11px; }
+.claude-panel .error { color: var(--ct-badge-error); font-size: 11.5px; }
+.claude-panel .status .dot { width: 8px; height: 8px; border-radius: 4px; flex: none; background: var(--ct-badge-ok); }
+.claude-panel .status { justify-content: flex-start; }
+.claude-panel .status.warn .dot { background: var(--ct-badge-warn); }
+.claude-panel .status.error .dot { background: var(--ct-badge-error); }
+.claude-panel .kv.warn .v { color: var(--ct-badge-warn); }
+.claude-panel .gauge { width: 100%; display: flex; flex-direction: column; gap: 5px; }
+.claude-panel .gauge-head { display: flex; justify-content: space-between; gap: 8px; }
+.claude-panel .gauge-head .pct { font-variant-numeric: tabular-nums; color: var(--ct-text-secondary); }
+.claude-panel .gauge-head em { font-style: normal; }
+.claude-panel .gauge .bar { height: 6px; border-radius: 3px; background: var(--ct-hover-bg); overflow: hidden; }
+.claude-panel .gauge .bar > div { height: 100%; border-radius: 3px; background: var(--ct-badge-ok); transition: width .3s; }
+.claude-panel .gauge.warn .bar > div { background: var(--ct-badge-warn); }
+.claude-panel .gauge.error .bar > div { background: var(--ct-badge-error); }
+.claude-panel .gauge.warn .pct { color: var(--ct-badge-warn); }
+.claude-panel .gauge.error .pct { color: var(--ct-badge-error); }
+.claude-panel .gauge .reset { font-size: 11px; color: var(--ct-text-tertiary); }
+.claude-panel .kv .k { color: var(--ct-text-secondary); flex: none; }
+.claude-panel .kv .v-wrap { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.claude-panel .kv .v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.claude-panel .kv .v.mono { font-family: var(--ct-font-mono); font-size: 11.5px; }
+.claude-panel .btn { height: 26px; padding: 0 12px; font-size: 12px; }

@@ -49,7 +49,7 @@ export interface Project {
 }
 
 export type LeftActivity = 'explorer' | 'search' | 'history' | 'skills' | 'mcp' | 'plugins' | (string & {})
-export type RightActivity = 'process' | 'history' | 'skills' | (string & {})
+export type RightActivity = 'claude' | 'process' | 'history' | 'skills' | (string & {})
 
 interface Workbench {
   theme: ResolvedTheme | null

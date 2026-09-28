@@ -120,6 +120,13 @@ const api: CtApi = {
     clipboardImage: () => ipcRenderer.invoke('att:clipboardImage'),
     captureScreen: () => ipcRenderer.invoke('att:captureScreen'),
   },
+  usage: {
+    state: () => ipcRenderer.invoke('usage:state'),
+    onChanged: (cb) => channel('usage:changed', () => true, (p) => p, cb),
+    install: (on) => ipcRenderer.invoke('usage:install', on),
+    refresh: () => ipcRenderer.invoke('usage:refresh'),
+    claude: (refresh) => ipcRenderer.invoke('usage:claude', !!refresh),
+  },
   update: {
     state: () => ipcRenderer.invoke('update:state'),
     onState: (cb) => channel('update:state', () => true, (p) => p, cb),
@@ -130,6 +137,7 @@ const api: CtApi = {
     confirmSave: (name) => ipcRenderer.invoke('app:confirmSave', name),
     pickFolder: () => ipcRenderer.invoke('app:pickFolder'),
     openExternal: (path) => ipcRenderer.send('app:openExternal', path),
+    openUrl: (url) => ipcRenderer.send('app:openUrl', url),
     revealInFinder: (path) => ipcRenderer.send('app:reveal', path),
   },
 }

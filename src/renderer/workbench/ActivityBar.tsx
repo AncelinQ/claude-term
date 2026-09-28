@@ -31,6 +31,7 @@ const LEFT: { id: LeftActivity; title: string; icon: () => React.ReactElement }[
   { id: 'plugins', title: 'Plugins (⌘6)', icon: () => Icons.puzzle() },
 ]
 const RIGHT: { id: RightActivity; title: string; icon: () => React.ReactElement }[] = [
+  { id: 'claude', title: 'Claude : usage, version, artifacts', icon: () => Icons.gauge() },
   { id: 'process', title: 'Process Claude', icon: () => Icons.cpu() },
   { id: 'history', title: 'Historique (toutes les sessions)', icon: () => Icons.clock() },
   { id: 'skills', title: 'Skills perso et plugins', icon: () => Icons.sparkle() },

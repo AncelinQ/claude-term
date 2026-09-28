@@ -3,6 +3,22 @@ import type { ThemeSpec, ResolvedTheme } from './theme'
 import type { ToolEvent } from './claude-format'
 import { DEFAULT_REGISTRY, type Catalogue } from './plugin-registry'
 import type { UpdateState } from './update'
+import type { UsageSnapshot } from './usage'
+import type { ServiceStatus } from './claude-info'
+
+export interface ClaudeInfo { version: string | null; latest: string | null; model: string | null; status?: ServiceStatus; error?: string }
+
+export interface UsageState {
+  /** our status line is declared in ~/.claude/settings.json; foreign: another one is (never replaced) */
+  installed: boolean
+  foreign?: string
+  /** limits merged from the status line and the usage API (per limit, the most recent reading) */
+  snapshot: UsageSnapshot | null
+  /** subscription of the claude.ai login of Claude Code (from its credentials) */
+  plan?: { subscription?: string; tier?: string }
+  /** last usage API call: when it answered, or why it failed */
+  api?: { at?: number; error?: string; busy?: boolean }
+}
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -296,6 +312,16 @@ export interface CtApi {
     clipboardImage(): Promise<string | null>
     captureScreen(): Promise<string | null>
   }
+  usage: {
+    state(): Promise<UsageState>
+    onChanged(cb: (s: UsageState) => void): () => void
+    /** declares / removes our status line in ~/.claude/settings.json (never a foreign one) */
+    install(on: boolean): Promise<{ ok: boolean; error?: string }>
+    /** asks the usage API of /usage with Claude Code's login (on demand) */
+    refresh(): Promise<UsageState>
+    /** version, default model, latest published Claude Code, Anthropic status (refresh: skip the caches) */
+    claude(refresh?: boolean): Promise<ClaudeInfo>
+  }
   update: {
     state(): Promise<UpdateState>
     onState(cb: (s: UpdateState) => void): () => void
@@ -308,6 +334,8 @@ export interface CtApi {
     confirmSave(name: string): Promise<'save' | 'discard' | 'cancel'>
     pickFolder(): Promise<string | null>
     openExternal(path: string): void
+    /** an https link in the default browser */
+    openUrl(url: string): void
     revealInFinder(path: string): void
   }
 }

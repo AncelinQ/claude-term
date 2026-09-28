@@ -33,6 +33,12 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   without restart, approval of pending permissions. `services/tar.ts` (safe .tgz reader), `services/plugin-store.ts`,
   `shared/plugin-registry.ts`, tests in `tests/plugin-store.test.ts`. Checked end to end with a local `file:` catalogue.
 - **Packaging**: electron-builder (dmg / nsis / AppImage), GitHub Actions workflow, `CT_CDP_PORT` test hooks.
+- **Claude panel** (right bar): subscription usage from Claude Code's status line (5 h session, week, per-model
+  week, extra credit; gauges with reset delays), Claude Code version and default model (global data only), a
+  button to the artifacts gallery (claude.ai/code/artifacts, default browser). The status line is ours only
+  on demand (`services/usage.ts`: a script copies the JSON Claude Code pipes to it into `userData/usage/status.json`,
+  prints nothing). Artifacts cannot be listed natively: the Artifact tools exist only in interactive sessions, not in
+  `claude -p`.
 - **Automatic updates**: GitHub releases of `sunstan/claude-term` (v2 on `main` since 2026-09-27, Swift v1 kept in
   the `v1` branch and `v1-swift` tag). Windows / Linux through electron-updater; macOS through our own updater
   (unsigned builds): feed, zip sha512, bundle version check, swap after quit + reopen. Checked end to end with a
