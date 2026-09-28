@@ -25,7 +25,7 @@ export function App() {
     init()
     usePlugins.getState().init()
     useUpdate.getState().init()
-    window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, r.command, r.tab) })
+    window.ct.plugins.onRun((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.runCommand(s.activeProjectId, r.cwd, [...(r.command ? [r.command] : []), ...(r.argv ?? [])], r.tab) })
     window.ct.plugins.onNotify((n) => { new Notification(n.title, { body: n.body }) })
     window.ct.plugins.onOpenFile((path) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openFile(s.activeProjectId, path) })
     window.ct.plugins.onPrompt((r) => setPrompt(r))

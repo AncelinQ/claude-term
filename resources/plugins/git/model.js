@@ -209,20 +209,20 @@ const groupPaths = (s, gid) => {
 }
 const localName = (fullRemote) => fullRemote.slice(fullRemote.indexOf('/') + 1)
 
-/** Commit command sequence for the checked files. */
+/** Commit of the checked files as one chained run: add (untracked) → commit → push, each only if the previous succeeded. */
 function commitCommands(s, push) {
   const files = checkedPaths(s)
   const untracked = files.filter((p) => s.status.entries.some((e) => e.path === p && e.untracked))
-  const cmds = []
-  if (untracked.length) cmds.push(RUN(['add', '--', ...untracked]))
-  cmds.push(RUN(['commit', ...(s.amend ? ['--amend'] : []), '-m', s.message.trim(), '--', ...files]))
-  if (push) cmds.push(RUN(['push']))
-  return cmds
+  const seq = []
+  if (untracked.length) seq.push(['add', '--', ...untracked])
+  seq.push(['commit', ...(s.amend ? ['--amend'] : []), '-m', s.message.trim(), '--', ...files])
+  if (push) seq.push(['push'])
+  return [{ type: 'run', seq }]
 }
 
 /**
  * Reduces an event. Returns { state, effects }. Effects:
- *  run {args} · refresh · detailFile {path} · detailCommit {hash} · diffFile {path} · diffRef {ref} · diffCommit {hash}
+ *  run {args} or {seq: args[]} (chained on success) · refresh · detailFile {path} · detailCommit {hash} · diffFile {path} · diffRef {ref} · diffCommit {hash}
  *  openFile {path} · prompt {req, then} (then: event to dispatch with value) · popover {model} · closePopover · notify {title, body} · copy {text}
  */
 function reduce(s, e) {

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { commandLine, dialectFor } from '@shared/shell'
 import { t } from '@/i18n'
 import { pathsForPrompt } from '@shared/paths'
 import type { ResolvedTheme } from '@shared/theme'
@@ -71,7 +72,7 @@ interface Workbench {
   setRight(a: RightActivity | null): void
   newProject(root?: string | null): Project
   setRoot(id: string, root: string): void
-  closeProject(id: string): void
+  closeProject(id: string): Promise<void>
   setActiveProject(id: string): void
   select(projectId: string, path: string, isDir: boolean): void
   newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string): Promise<void>
@@ -81,7 +82,8 @@ interface Workbench {
   sendPaths(projectId: string, paths: string[], tabId?: string): Promise<void>
   captureScreen(projectId: string): Promise<void>
   /** runs a command in an idle shell tab of the project (or a new one), cd-ing first when needed */
-  runCommand(projectId: string, cwd: string, command: string, tab?: 'reuse' | 'new'): Promise<void>
+  /** types commands into a shell tab (strings as is, argv arrays quoted for its shell), chained on success */
+  runCommand(projectId: string, cwd: string, cmds: (string | string[])[], tab?: 'reuse' | 'new'): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
   /** closes every file tab (terminals stay), except `keep` */
   closeFiles(projectId: string, keep?: string): Promise<void>
@@ -174,9 +176,13 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     const st = get().settings
     if (st) window.ct.settings.set({ recentProjects: [root, ...st.recentProjects.filter((r) => r !== root)].slice(0, 15) })
   },
-  closeProject(id) {
+  async closeProject(id) {
     const p = get().projects.find((x) => x.id === id)
-    p?.tabs.forEach((t) => t.ptyId && window.ct.pty.kill(t.ptyId))
+    // tab by tab: unsaved files are confirmed (cancel keeps the project open), trackers, watchers and terminals released
+    for (const t of p?.tabs ?? []) {
+      await get().closeTab(id, t.id)
+      if (get().projects.find((x) => x.id === id)?.tabs.some((y) => y.id === t.id)) return
+    }
     set((s) => {
       const projects = s.projects.filter((x) => x.id !== id)
       const active = s.activeProjectId === id ? projects[0]?.id ?? null : s.activeProjectId
@@ -213,7 +219,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       ;(await import('@/terminal/TerminalView')).focusTerminal(t.id)
     } else await get().insertPrompt(projectId, pathsForPrompt(paths))
   },
-  async runCommand(projectId, cwd, command, tab = 'reuse') {
+  async runCommand(projectId, cwd, cmds, tab = 'reuse') {
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
     let target = tab === 'reuse' ? (p.tabs.find((x) => x.id === p.currentTabId && x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning) ?? p.tabs.find((x) => x.kind === 'shell' && x.alive && !x.busy && !x.claudeRunning)) : undefined
@@ -224,8 +230,9 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     }
     if (!target?.ptyId) return
     get().setCurrentTab(projectId, target.id)
-    const prefix = target.cwd === cwd ? '' : `cd ${cwd.replace(/(["\s'$`\\])/g, '\\$1')} && `
-    window.ct.pty.write(target.ptyId, '\x15' + prefix + command + '\n')   // ^U clears pending input
+    const s = get().settings
+    const line = commandLine(dialectFor(window.ct.platform, s?.windowsMode ?? 'native'), cmds, target.cwd === cwd ? undefined : cwd)
+    window.ct.pty.write(target.ptyId, '\x15' + line + '\r')   // ^U clears pending input
     ;(await import('@/terminal/TerminalView')).focusTerminal(target.id)
   },
   async captureScreen(projectId) {
@@ -255,6 +262,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
       if (!stillOpen) { window.ct.fs.unwatch(t.path); (await import('@/editor/EditorHost')).disposeFile(t.path) }
     }
     if (t?.ptyId) window.ct.pty.kill(t.ptyId)
+    // xterm, its WebGL context, scrollback and pty listener (every close path goes through here)
+    if (t && t.kind !== 'file' && t.kind !== 'diff') (await import('@/terminal/TerminalView')).disposeTerminal(tabId)
     window.ct.claude.untrack(tabId)
     set((s) => ({
       projects: s.projects.map((x) => {

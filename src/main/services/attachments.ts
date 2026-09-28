@@ -10,10 +10,17 @@ export class Attachments {
     this.dir = join(base, 'drops')
     mkdirSync(this.dir, { recursive: true })
   }
-  newPath(ext = 'png'): string {
-    const d = new Date(), p = (n: number) => String(n).padStart(2, '0')
-    return join(this.dir, `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`)
+  /** A free path named by date and time; several in the same second get -2, -3… (a burst of drops must not overwrite). */
+  newPath(ext = 'png', now = new Date()): string {
+    const d = now, p = (n: number) => String(n).padStart(2, '0')
+    const base = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+    for (let i = 1; ; i++) {
+      const path = join(this.dir, `${base}${i > 1 ? '-' + i : ''}.${ext}`)
+      if (!existsSync(path) && !this.reserved.has(path)) { this.reserved.add(path); setTimeout(() => this.reserved.delete(path), 5000).unref?.(); return path }
+    }
   }
+  /** paths handed out but maybe not written yet (async clipboard / capture) */
+  private reserved = new Set<string>()
   /** Saves a data URL (image/*) and returns the file path. */
   saveDataUrl(dataUrl: string): string | null {
     const m = dataUrl.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/s)

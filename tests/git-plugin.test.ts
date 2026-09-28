@@ -25,7 +25,8 @@ function repo() {
   return { t, r }
 }
 /** Runs the `run` effects of a reduce result against the repo (what the shell tab would do). */
-const runEffects = (r: string, effects: any[]) => effects.filter((f) => f.type === 'run').map((f) => git(r, ...f.args))
+// a seq runs like the terminal chain: in order, stopping at the first failure (execFileSync throws)
+const runEffects = (r: string, effects: any[]) => effects.filter((f) => f.type === 'run').flatMap((f) => (f.seq ?? [f.args]).map((a: string[]) => git(r, ...a)))
 const stateOf = (r: string, extra = {}) => M.withData({ ...M.initialState(), ...extra }, r, status(r), log(r), refs(r))
 
 describe('parsers against real repositories', () => {
@@ -192,7 +193,7 @@ describe('model: reduce (events → state and effects)', () => {
     s = { ...s, message: ' feat: x ' }
     expect(M.reduce(s, ev('button', { actionId: 'other' })).effects).toEqual([])
     const res = M.reduce(s, ev('button', { actionId: 'commitPush' }))
-    expect(res.effects).toEqual([{ type: 'run', args: ['add', '--', 'new.txt'] }, { type: 'run', args: ['commit', '-m', 'feat: x', '--', 'a.txt', 'new.txt'] }, { type: 'run', args: ['push'] }])
+    expect(res.effects).toEqual([{ type: 'run', seq: [['add', '--', 'new.txt'], ['commit', '-m', 'feat: x', '--', 'a.txt', 'new.txt'], ['push']] }])
     expect(res.state).toMatchObject({ message: '', amend: false, checked: {} })
     runEffects(r, res.effects)
     expect(log(r)[0].subject).toBe('feat: x')
@@ -202,7 +203,7 @@ describe('model: reduce (events → state and effects)', () => {
     // amend without untracked and without push
     s = { ...stateOf(r), checked: { 'b.txt': true }, message: 'feat: x amended', amend: true }
     const res2 = M.reduce(s, ev('button', { actionId: 'commit' }))
-    expect(res2.effects).toEqual([{ type: 'run', args: ['commit', '--amend', '-m', 'feat: x amended', '--', 'b.txt'] }])
+    expect(res2.effects).toEqual([{ type: 'run', seq: [['commit', '--amend', '-m', 'feat: x amended', '--', 'b.txt']] }])
     runEffects(r, res2.effects)
     expect(parseLog(git(r, 'log', '--format=' + LOG_FORMAT)).map((c: any) => c.subject)).toEqual(['feat: x amended', 'first'])
     t.dispose()

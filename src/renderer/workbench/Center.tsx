@@ -1,5 +1,5 @@
 import { Icons } from './icons'
-import { TerminalHost, disposeTerminal } from '@/terminal/TerminalView'
+import { TerminalHost } from '@/terminal/TerminalView'
 import { useEffect, useState } from 'react'
 import { useWorkbench, isClaude, type Project, type Tab } from '@/stores/workbench'
 import { VStack, useCollapsed } from './Split'
@@ -68,7 +68,7 @@ export function Center({ project }: { project: Project }) {
   return (
     <div className="center">
       <ContextMenu at={ctx} onClose={() => setCtx(null)} items={ctx ? [
-        { label: tr('Fermer'), shortcut: '⌘W', onSelect: () => { if (ctx.tab.kind !== 'file') disposeTerminal(ctx.tab.id); closeTab(project.id, ctx.tab.id) } },
+        { label: tr('Fermer'), shortcut: '⌘W', onSelect: () => closeTab(project.id, ctx.tab.id) },
         'sep',
         { label: tr('Fermer les autres fichiers'), disabled: fileCount < (ctx.tab.kind === 'file' ? 2 : 1), onSelect: () => closeFiles(project.id, ctx.tab.kind === 'file' ? ctx.tab.id : undefined) },
         { label: tr('Fermer tous les fichiers'), disabled: fileCount === 0, onSelect: () => closeFiles(project.id) },
@@ -84,7 +84,7 @@ export function Center({ project }: { project: Project }) {
                     {t.attention && <span className="attn" style={{ background: attentionColor(t.attention) }} />}
                   </span>
                   <span style={{ fontStyle: t.dirty ? 'italic' : undefined }}>{t.title}</span>
-                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); if (t.kind !== 'file' && t.kind !== 'diff') disposeTerminal(t.id); closeTab(project.id, t.id) }} title={t.dirty ? tr('Modifications non enregistrées (⌘S)') : tr('Fermer (⌘W)')}>
+                  <button className={'close' + (t.dirty ? ' dot' : '')} onClick={(e) => { e.stopPropagation(); closeTab(project.id, t.id) }} title={t.dirty ? tr('Modifications non enregistrées (⌘S)') : tr('Fermer (⌘W)')}>
                     {t.dirty ? <span className="dirty-dot" /> : Icons.x(10)}
                   </button>
                 </div>

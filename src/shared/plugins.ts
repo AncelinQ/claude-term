@@ -20,10 +20,10 @@ export interface PluginManifest {
 
 export type PluginPermission = NonNullable<PluginManifest['permissions']>[number]
 export const PLUGIN_PERMISSIONS: Record<PluginPermission, string> = {
-  process: 'lancer des programmes',
-  'fs:home': 'lire les fichiers du dossier personnel',
-  network: 'accès réseau',
-  secrets: 'secrets (trousseau)',
+  process: 'lancer des programmes et des commandes dans le terminal',
+  'fs:home': 'lire les fichiers du dossier personnel (sinon : le projet ouvert seulement)',
+  network: 'accès réseau (pas encore disponible : bloqué)',
+  secrets: 'secrets du trousseau (pas encore disponible)',
 }
 
 /** enabled = activated; disabled = turned off by the user; pendingPermissions = asked by the manifest, not approved yet */
@@ -113,8 +113,11 @@ export interface DiffRequest { title: string; path?: string; original?: string; 
 /** Host → renderer: a text prompt (modal); answered with `plugins:promptReply`. */
 export interface PromptRequest { id: number; title: string; placeholder?: string; options?: string[] }
 
-/** Host → renderer: a terminal command request. */
-export interface RunRequest { cwd: string; command: string; label?: string; tab?: 'reuse' | 'new' }
+/**
+ * Host → renderer: a terminal command request. `command` is typed as is; `argv` commands are quoted for the tab's
+ * shell and chained (each runs only if the previous one succeeded). Both may be given: command first.
+ */
+export interface RunRequest { cwd: string; command?: string; argv?: string[][]; label?: string; tab?: 'reuse' | 'new' }
 
 export const FILE_COLORS: Record<string, string> = {
   ts: '#3178c6', tsx: '#3178c6', js: '#e8c547', jsx: '#e8c547', mjs: '#e8c547', json: '#e8c547', py: '#4b8bbe', md: '#8a8f9e', css: '#a074c4', scss: '#c6538c',

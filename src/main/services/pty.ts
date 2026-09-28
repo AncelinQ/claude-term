@@ -1,9 +1,9 @@
 import * as pty from 'node-pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { delimiter, join } from 'node:path'
 import type { PtyCreate, Settings } from '@shared/ipc'
 import { ShellIntegration } from './shell-integration'
+import { claudeInvocation, findClaude, type Invocation } from './claude-bin'
 
 export interface PtyHandle {
   id: string
@@ -36,35 +36,31 @@ export class PtyService {
     return this.integration.shell(process.env.SHELL || '/bin/zsh')
   }
 
-  /** Where `claude` is (PATH from the login shell, then the usual npm/bun locations). */
-  claudeBinary(): string | null {
-    const env = this.env()
-    const names = process.platform === 'win32' ? ['claude.cmd', 'claude.exe', 'claude'] : ['claude']
-    for (const dir of (env.PATH || '').split(delimiter)) {
-      for (const n of names) if (dir && existsSync(join(dir, n))) return join(dir, n)
-    }
-    const home = process.env.HOME || process.env.USERPROFILE || ''
-    for (const p of [join(home, '.claude', 'local', 'claude'), join(home, '.bun', 'bin', 'claude'), '/opt/homebrew/bin/claude', '/usr/local/bin/claude']) {
-      if (existsSync(p)) return p
-    }
-    return null
+  /** Where `claude` is (PATH from the login shell, then the npm / bun / native / local install locations). */
+  claudeBinary(): string | null { return findClaude(this.env(), process.platform, existsSync) }
+
+  /** How to start `claude <args>` from main (see claudeInvocation for Windows npm shims). */
+  claudeCommand(args: string[], interactive: boolean): Invocation | null {
+    const bin = this.claudeBinary()
+    return bin ? claudeInvocation(bin, args, { interactive, execPath: process.execPath, comspec: process.env.ComSpec, exists: existsSync }) : null
   }
 
   create(opts: PtyCreate): { id: string; error?: string } {
     const id = 'pty' + ++this.seq
     const env = this.env()
     if (opts.projectRoot) env.CLAUDETERM_ROOT = opts.projectRoot
-    let file: string, args: string[]
+    let file: string, args: string[], verbatim = false
     const settings = this.getSettings()
     if (opts.kind === 'claude') {
       if (process.platform === 'win32' && settings.windowsMode === 'wsl') {
         file = 'wsl.exe'
         args = [...(settings.wslDistro ? ['-d', settings.wslDistro] : []), '--cd', opts.cwd, '--', 'claude', ...(opts.resume ? ['--resume', opts.resume] : [])]
       } else {
-        const bin = this.claudeBinary()
-        if (!bin) return { id, error: 'claude introuvable dans le PATH (installe Claude Code : npm i -g @anthropic-ai/claude-code)' }
-        file = bin
-        args = opts.resume ? ['--resume', opts.resume] : []
+        const inv = this.claudeCommand(opts.resume ? ['--resume', opts.resume] : [], true)
+        if (!inv) return { id, error: 'claude introuvable dans le PATH (installe Claude Code : npm i -g @anthropic-ai/claude-code)' }
+        file = inv.file
+        args = inv.args
+        verbatim = !!inv.verbatim
       }
     } else {
       const sh = this.shell()
@@ -75,7 +71,8 @@ export class PtyService {
       }
     }
     try {
-      const proc = pty.spawn(file, args, { name: 'xterm-256color', cols: 120, rows: 30, cwd: opts.cwd, env: env as Record<string, string> })
+      // a verbatim Windows command line is passed as one string, which node-pty does not re-quote
+      const proc = pty.spawn(file, verbatim ? args.join(' ') : args, { name: 'xterm-256color', cols: 120, rows: 30, cwd: opts.cwd, env: env as Record<string, string> })
       proc.onData((d) => this.onData(id, d))
       proc.onExit(({ exitCode }) => { this.handles.delete(id); this.onExit(id, exitCode) })
       this.handles.set(id, { id, proc })

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import type { Invocation } from './claude-bin'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
@@ -10,7 +11,7 @@ import type { MCPServer } from '@shared/ipc'
  */
 export class Mcp {
   readonly userConfigPath: string
-  constructor(home = homedir(), private claudeBinary: () => string | null = () => null) {
+  constructor(home = homedir(), private claudeCommand: (args: string[]) => Invocation | null = () => null) {
     this.userConfigPath = join(home, '.claude.json')
   }
 
@@ -97,10 +98,10 @@ export class Mcp {
   /** `claude mcp <args>` in the project (user-scope changes and health checks). */
   cli(args: string[], cwd: string | null): Promise<{ code: number; output: string }> {
     return new Promise((resolve) => {
-      const bin = this.claudeBinary() ?? 'claude'
-      const env = { ...process.env }
+      const inv = this.claudeCommand(['mcp', ...args]) ?? { file: 'claude', args: ['mcp', ...args] }
+      const env: NodeJS.ProcessEnv = { ...process.env, ...inv.env }
       for (const k of Object.keys(env)) if (k.startsWith('CLAUDE_CODE_') || k === 'CLAUDECODE') delete env[k]
-      execFile(bin, ['mcp', ...args], { cwd: cwd ?? undefined, env, timeout: 60_000, maxBuffer: 4_000_000 }, (err, stdout, stderr) => {
+      execFile(inv.file, inv.args, { cwd: cwd ?? undefined, env, timeout: 60_000, maxBuffer: 4_000_000, windowsVerbatimArguments: inv.verbatim }, (err, stdout, stderr) => {
         resolve({ code: err && typeof (err as any).code === 'number' ? (err as any).code : err ? 1 : 0, output: String(stdout) + String(stderr) })
       })
     })

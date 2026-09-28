@@ -5,23 +5,26 @@ const M = require('./model')
 exports.activate = (ctx) => {
   const changes = ctx.ui.view('changes'), branches = ctx.ui.view('branches'), commits = ctx.ui.view('commits')
   let s = { ...M.initialState(), groupByDir: !!ctx.storage.get('groupByDir') }, popover = null, unwatch = [], timer = null
-  const git = (args) => ctx.process.exec('git', args, { cwd: s.root || ctx.workspace.project || undefined })
-  const q = (x) => "'" + String(x).replace(/'/g, "'\\''") + "'"
+  // reads never take .git/index.lock: a status refresh would otherwise fire the .git watcher, which refreshes again
+  const git = (args) => ctx.process.exec('git', ['--no-optional-locks', ...args], { cwd: s.root || ctx.workspace.project || undefined })
   const render = () => { changes.set(M.changesView(s)); branches.set(M.branchesView(s)); commits.set(M.commitsView(s)) }
 
   async function refresh() {
     const root = ctx.workspace.project
     if (!root) { s = M.withData(s, null, null, [], { local: [], remote: [] }); return render() }
-    const top = await git(['rev-parse', '--show-toplevel'])
+    const top = await ctx.process.exec('git', ['rev-parse', '--show-toplevel'], { cwd: root })
     if (top.code !== 0) { s = M.withData(s, root, null, [], { local: [], remote: [] }); return render() }
+    // porcelain paths are relative to the repository, which may be above the project folder (monorepo package)
+    const repo = top.stdout.trim()
+    if (repo !== s.root) { s = { ...s, root: repo }; watchRepo() }
     const [st, lg, rf] = await Promise.all([git(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all']), git(['log', '--all', '--topo-order', '-n', '400', '--format=' + LOG_FORMAT]), git(['for-each-ref', '--format=' + REF_FORMAT, 'refs/heads', 'refs/remotes'])])
     if (st.code !== 0) { changes.set({ kind: 'empty', text: 'git status a échoué : ' + st.stderr.trim() }); return }
-    s = M.withData(s, root, parseStatus(st.stdout), lg.code === 0 ? parseLog(lg.stdout) : [], rf.code === 0 ? parseRefs(rf.stdout) : { local: [], remote: [] })
+    s = M.withData(s, repo, parseStatus(st.stdout), lg.code === 0 ? parseLog(lg.stdout) : [], rf.code === 0 ? parseRefs(rf.stdout) : { local: [], remote: [] })
     render()
   }
 
   async function effect(f) {
-    if (f.type === 'run') return ctx.terminal.run({ cwd: s.root, command: 'git ' + f.args.map(q).join(' '), tab: 'reuse' })
+    if (f.type === 'run') return ctx.terminal.run({ cwd: s.root, argv: (f.seq || [f.args]).map((a) => ['git', ...a]), tab: 'reuse' })
     if (f.type === 'refresh') return refresh()
     if (f.type === 'persist') return ctx.storage.set(f.key, f.value)
     if (f.type === 'notify') return ctx.ui.notify(f.title, f.body)
@@ -66,10 +69,11 @@ exports.activate = (ctx) => {
   function watchRepo() {
     unwatch.forEach((u) => u()); unwatch = []
     if (!s.root) return
-    const bump = () => { clearTimeout(timer); timer = setTimeout(refresh, 500) }
+    // lock files come and go with every git command (ours included): they are not changes
+    const bump = (name) => { if (name && /\.lock$/.test(name)) return; clearTimeout(timer); timer = setTimeout(refresh, 500) }
     for (const p of [s.root, s.root + '/.git', s.root + '/.git/refs/heads']) if (ctx.workspace.fs.exists(p)) unwatch.push(ctx.workspace.fs.watch(p, bump))
   }
-  ctx.workspace.onDidChangeProject(async () => { s = { ...M.initialState(), groupByDir: s.groupByDir }; await refresh(); watchRepo() })
+  ctx.workspace.onDidChangeProject(async () => { unwatch.forEach((u) => u()); unwatch = []; s = { ...M.initialState(), groupByDir: s.groupByDir }; await refresh(); watchRepo() })
   ctx.terminal.onCommandEnd(() => { if (s.root) { clearTimeout(timer); timer = setTimeout(refresh, 300) } })
   refresh().then(watchRepo)
 }
