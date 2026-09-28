@@ -108,9 +108,15 @@ is generated.
 
 ## 7. Plugins
 
-Phase 5.0 (2026-09-27): the host runs **in the main process**, one Node `vm` context per plugin,
-with the API in `resources/plugins/claudeterm.d.ts`; moving it to a utility process later keeps the
-same API. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
+Host (2026-09-28, replaces the `vm` contexts of phase 5.0, which were no security boundary): **each plugin runs in
+its own hidden sandboxed renderer** (Chromium sandbox, no Node, private in-memory session whose requests are all
+cancelled, navigation and window.open denied). Its only door is `window.ctPlugin` (`resources/plugin-host/preload.js`):
+sync / async calls to main, which identifies the caller by its webContents and checks each call
+(`src/main/services/plugin-policy.ts`); `resources/plugin-host/bootstrap.js` rebuilds the `ctx` API
+(`resources/plugins/claudeterm.d.ts`) on it and provides `require` for the plugin's own files. Disabling a plugin
+destroys its window. Permissions for user plugins (built-ins are trusted): `process` = `process.exec` and
+`terminal.run`; fs = its folder and the open project, `fs:home` = the home folder (symlinks resolved); `network` and
+`secrets` = nothing yet. Events reach the owning plugin only; a plugin can only set its own views and popovers. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
 after a separator line in the bar. First built-in plugins: **Lanceur** (`resources/plugins/runnables`),
 which detects npm scripts (workspaces included), make targets, cargo, go, python and shell scripts,
 and **Git** (`resources/plugins/git`, decided 2026-09-27 with a zero-bug rule): no git logic of our

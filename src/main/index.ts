@@ -94,7 +94,8 @@ ipcMain.handle('claude:readText', (_e, path: string) => claudeData.readText(path
 let visibleTab: string | null = null
 ipcMain.on('ui:visibleTab', (_e, { tabId }) => { visibleTab = tabId })
 const hooks = new HookHub(new ClaudeSettings(claudeData.settingsPath), () => trackers, send, (id) => id === visibleTab,
-  () => { const s = settings.get(); return { notifyOS: s.notifyOS, dockBadge: s.dockBadge } }, (tabId) => send('claude:focusTab', { tabId }))
+  () => { const s = settings.get(); return { notifyOS: s.notifyOS, dockBadge: s.dockBadge } }, (tabId) => send('claude:focusTab', { tabId }),
+  () => (win && !win.isDestroyed() ? win : null))   // not getAllWindows(): plugin windows are hidden BrowserWindows too
 ipcMain.on('claude:clearAttention', (_e, { tabId }) => hooks.clear(tabId))
 ipcMain.on('claude:untrack', (_e, { tabId }) => hooks.clear(tabId))
 ipcMain.handle('hooks:installed', () => hooks.installed())
@@ -114,7 +115,7 @@ ipcMain.handle('skills:personal', () => skills.personal())
 ipcMain.handle('skills:plugins', () => skills.plugins())
 ipcMain.handle('skills:create', (_e, { name, description, root }) => ok(() => skills.create(name, description, root)))
 ipcMain.handle('skills:remove', (_e, s) => ok(() => skills.remove(s)))
-const mcp = new Mcp(undefined, () => ptys.claudeBinary())
+const mcp = new Mcp(undefined, (args) => ptys.claudeCommand(args, false))
 ipcMain.handle('mcp:project', (_e, root: string) => mcp.project(root))
 ipcMain.handle('mcp:linked', (_e, root: string) => Links.load(root).flatMap((l) => mcp.project(l.path, 'linked')))
 ipcMain.handle('mcp:user', () => mcp.user())
@@ -141,7 +142,8 @@ ipcMain.handle('att:captureScreen', async () => { const p = await attachments.ca
 // plugins
 let activeRoot: string | null = null
 const builtinPlugins = app.isPackaged ? join(process.resourcesPath, 'plugins') : join(app.getAppPath(), 'resources', 'plugins')
-const pluginHost = new PluginHost(builtinPlugins, { send, projectRoot: () => activeRoot, settings: () => settings.get() as any })
+const pluginHostDir = app.isPackaged ? join(process.resourcesPath, 'plugin-host') : join(app.getAppPath(), 'resources', 'plugin-host')
+const pluginHost = new PluginHost(builtinPlugins, { send, projectRoot: () => activeRoot, settings: () => settings.get() as any }, pluginHostDir)
 ipcMain.handle('plugins:list', () => pluginHost.list())
 ipcMain.handle('plugins:viewModel', (_e, id: string) => pluginHost.viewModel(id))
 ipcMain.on('plugins:event', (_e, ev) => pluginHost.viewEvent(ev))
@@ -255,9 +257,9 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'local-fonts'))
   nativeTheme.themeSource = settings.get().themeFollowSystem ? 'system' : themes.current().type
   win = createWindow(themes.current())
-  win.on('closed', () => { win = null })
+  // plugin windows are hidden BrowserWindows too: closing the workbench window quits
   win.webContents.once('did-finish-load', () => { pluginStore.cleanStaging(); pluginHost.loadAll(); updater.start() })
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) win = createWindow(themes.current()) })
+  win.on('closed', () => { win = null; app.quit() })
 })
 
 app.on('window-all-closed', () => { ptys.killAll(); app.quit() })

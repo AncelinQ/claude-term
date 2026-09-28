@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { TempDir } from './helpers'
-import { validateManifest } from '../src/main/services/plugins'
+import { validateManifest } from '../src/shared/plugins'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 
 const require = createRequire(import.meta.url)

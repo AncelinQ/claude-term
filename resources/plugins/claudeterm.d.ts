@@ -1,4 +1,11 @@
-/** ClaudeTerm plugin API (phase 5.0). A plugin is a folder with plugin.json and main.js exporting activate(ctx). */
+/**
+ * ClaudeTerm plugin API. A plugin is a folder with plugin.json and main.js exporting activate(ctx) (optionally
+ * deactivate()). It runs in a sandboxed browser context: no Node, no network, `require` only for its own .js files
+ * (relative paths). Everything else goes through ctx, checked against the permissions of plugin.json:
+ * - "process": process.exec and terminal.run
+ * - fs (exists / read / list / watch, openFile): the plugin folder and the open project; "fs:home" widens it to the
+ *   home folder. Absolute paths only.
+ */
 export interface ViewAction { id: string; title: string; icon?: string; primary?: boolean }
 export interface ViewItem {
   id: string; label: string; detail?: string; extra?: string; icon?: string; color?: string
@@ -26,7 +33,8 @@ export interface Context {
       exists(path: string): boolean
       read(path: string): string
       list(path: string): { name: string; dir: boolean }[]
-      watch(path: string, cb: () => void): () => void
+      /** non-recursive; cb gets the changed entry name when the OS reports it */
+      watch(path: string, cb: (name?: string) => void): () => void
     }
   }
   ui: {
@@ -37,8 +45,12 @@ export interface Context {
     prompt(req: { title: string; placeholder?: string; options?: string[] }): Promise<string | null>
   }
   terminal: {
-    /** types a command into a shell tab of the active project ('reuse' an idle one, or 'new') */
-    run(req: { cwd: string; command: string; label?: string; tab?: 'reuse' | 'new' }): void
+    /**
+     * Types a command into a shell tab of the active project ('reuse' an idle one, or 'new'). `command` is typed as
+     * is; `argv` commands are quoted for the tab's shell (zsh / bash / PowerShell) and chained: each one runs only
+     * when the previous one succeeded. Prefer argv for anything built from user input.
+     */
+    run(req: { cwd: string; command?: string; argv?: string[][]; label?: string; tab?: 'reuse' | 'new' }): void
     /** a foreground command ended in a shell tab of the active project */
     onCommandEnd(cb: (info: { command: string; exit: number | null }) => void): () => void
   }

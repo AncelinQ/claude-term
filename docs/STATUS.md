@@ -51,8 +51,8 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
 1. **Bug to reproduce**: the user sees the right icon column change size "when a tab is selected"; not reproduced
    (measured 38 px in every state). Waiting for before/after screenshots.
 2. Find bar for terminals (xterm search addon).
-3. Plugins: Thèmes plugin (list, preview, VS Code import), host in a utilityProcess before opening to
-   third-party plugins.
+3. Plugins: Thèmes plugin (list, preview, VS Code import); `network` (domain-scoped, through the plugin session) and
+   `secrets` permissions for the Linear plugin.
 4. Windows: test on a real machine (native and WSL), `hook.cmd`, screen capture, Ctrl shortcuts typed in a
    terminal go to the shell instead of the app.
 5. Formatter beyond Monaco's languages (Prettier); content search (rg) in the search island.

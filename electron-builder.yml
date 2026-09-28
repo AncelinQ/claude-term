@@ -13,6 +13,8 @@ extraResources:
     to: themes
   - from: resources/plugins
     to: plugins
+  - from: resources/plugin-host
+    to: plugin-host
 asarUnpack:
   - "**/node_modules/node-pty/**"
 mac:
