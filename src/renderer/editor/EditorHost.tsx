@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { attachRunGutter } from './runGutter'
+import { useProblems } from '@/stores/problems'
+import type { Diagnostic } from '@shared/problems'
 import { monaco, applyMonacoTheme } from './monaco'
 import { useWorkbench, type Tab } from '@/stores/workbench'
 import { ACTIONS, binding, parse } from '@shared/keymap'
@@ -110,6 +112,21 @@ export function disposeFile(path: string) {
 export function languageOf(path: string): string {
   return monaco.editor.getModel(monaco.Uri.file(path))?.getLanguageId() ?? ''
 }
+
+/** the Errors tab's problems as markers of the open files (tsc / ESLint of the project) */
+function applyMarkers() {
+  const byFile = new Map<string, Diagnostic[]>()
+  for (const d of useProblems.getState().diagnostics) (byFile.get(d.file) ?? byFile.set(d.file, []).get(d.file)!).push(d)
+  for (const m of monaco.editor.getModels()) {
+    if (m.uri.scheme !== 'file') continue
+    monaco.editor.setModelMarkers(m, 'ct-problems', (byFile.get(m.uri.fsPath) ?? []).map((d) => ({
+      startLineNumber: d.line, startColumn: d.col, endLineNumber: d.line, endColumn: m.getLineMaxColumn(Math.min(d.line, m.getLineCount())),
+      message: d.message, source: d.source + (d.code ? ' ' + d.code : ''), severity: d.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+    })))
+  }
+}
+useProblems.subscribe((s, prev) => { if (s.diagnostics !== prev.diagnostics) applyMarkers() })
+monaco.editor.onDidCreateModel(() => setTimeout(applyMarkers, 0))
 
 /** a line to show once the file is in the editor (openFile with a line: Tests, Errors, TODO) */
 const pendingReveal = new Map<string, number>()

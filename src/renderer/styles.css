@@ -538,3 +538,12 @@ input[type=checkbox]:disabled { opacity: .4; }
 /* keyboard cursor of a list / tree (arrows): visible only while the list has the focus */
 .list.pv:focus { outline: none; }
 .list.pv:focus .pv-row.kbd { background: var(--ct-selection-bg); outline: 1px solid var(--ct-accent); outline-offset: -1px; }
+
+/* Errors / TODO of the center bottom block */
+.island > .content > .pb-view { flex: 1; min-height: 0; }
+.pb-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.pb-view > .pv-main, .pb-view > .empty { flex: 1; min-height: 0; }
+.pb-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 12px; font-size: 11px; color: var(--ct-text-tertiary); border-bottom: 1px solid var(--ct-island-border); }
+.pb-status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-status button { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: var(--ct-text-secondary); flex: none; }
+.pb-status button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }

@@ -16,6 +16,10 @@ self.MonacoEnvironment = {
   },
 }
 
+// Monaco's TypeScript service does not see the project (its modules, its tsconfig): its semantic errors are wrong
+// ("cannot find module"). The project's own tsc gives them (Errors tab, markers below); Monaco keeps syntax errors.
+const ts = (monaco.languages as any).typescript
+if (ts) for (const d of [ts.typescriptDefaults, ts.javascriptDefaults]) d?.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: false })
 
 export { monaco }
 

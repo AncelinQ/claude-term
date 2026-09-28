@@ -201,5 +201,11 @@ export function testsTree(suites: SuiteFiles[], results: Map<string, TestResult>
   })
 }
 
-/** failed tests of the results (the tab's count) */
-export const failedCount = (results: Map<string, TestResult>) => [...results.values()].filter((r) => r.status === 'failed').length
+/** failed tests among those the suites still declare (a deleted test's old result does not count) */
+export function failedCount(results: Map<string, TestResult>, suites?: SuiteFiles[]): number {
+  if (!suites) return [...results.values()].filter((r) => r.status === 'failed').length
+  let n = 0
+  const go = (file: string, nodes: TestNode[], path: string[]) => { for (const x of nodes) { const p = [...path, x.name]; if (x.kind === 'test' && results.get(testKey(file, p))?.status === 'failed') n++; go(file, x.children, p) } }
+  for (const s of suites) for (const f of s.files) go(f.path, f.tests, [])
+  return n
+}

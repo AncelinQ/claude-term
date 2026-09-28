@@ -44,8 +44,12 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   suites per package (`shared/tests.ts`: detection, tests read from the files, commands, JSON / JUnit reports;
   `services/tests.ts`: discovery, reports in userData watched), run all / file / test in a shell tab, statuses, failures
   count on the tab, "Corriger avec Claude" (prompt typed in the Claude tab, not sent), ▶ in test files' gutter (red when
-  the last run failed). Next: Errors / TODO as tabs of the center bottom block (Monaco does not resolve the project's
-  modules yet: its import squiggles are wrong, to address with Errors). The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
+  the last run failed).
+- **Errors / TODO** (tabs of the center bottom block, after the session tabs): the project's own tsc (each tsconfig
+  that compiles) and ESLint (when configured), found in node_modules/.bin, run in the background (`services/problems.ts`,
+  one check at a time, each request gets its own project), on project open, save and end of a Claude turn; markers in
+  the editor (Monaco's own semantic errors are off: it does not see the project). TODO / FIXME / HACK / XXX in
+  comments and Markdown. Both grouped by file, click to the line, "Corriger / Demander à Claude" types the prompt. The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
 - Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
   `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
 - Explorer: Quick Look on macOS (Space on the selection, file context menu).

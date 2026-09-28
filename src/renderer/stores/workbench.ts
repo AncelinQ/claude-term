@@ -370,7 +370,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     if (text === null) return
     const r = await window.ct.fs.writeFile(path, text)
     set((s) => ({ projects: s.projects.map((p) => ({ ...p, tabs: p.tabs.map((t) => (t.kind === 'file' && t.path === path ? (r.ok ? { ...t, dirty: false, changedOnDisk: false, error: undefined } : { ...t, error: r.error }) : t)) })) }))
-    if (r.ok) ed.markSaved(path)
+    if (r.ok) { ed.markSaved(path); (await import('./problems')).useProblems.getState().soon() }
   },
   setMdMode(tabId, mode) { patchTab(set, tabId, () => ({ mdMode: mode })) },
   openDiff(projectId, req) {

@@ -56,7 +56,7 @@ export function RunIsland({ project }: { project: Project }) {
       {project.root ? (
         <PanelTabs storeKey="run" tabs={[
           { id: 'scripts', label: t('Scripts'), count: running.length, content: <PluginViewBody model={model} send={send} layoutKey="run:scripts" /> },
-          { id: 'tests', label: t('Tests'), count: failedCount(results), content: <PluginViewBody model={testModel} send={sendTests} layoutKey="run:tests" /> },
+          { id: 'tests', label: t('Tests'), count: failedCount(results, suites), content: <PluginViewBody model={testModel} send={sendTests} layoutKey="run:tests" /> },
         ]} />
       ) : <Empty>{t('Ouvre un projet')}</Empty>}
     </Island>

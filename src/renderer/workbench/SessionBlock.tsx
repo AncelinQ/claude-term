@@ -7,13 +7,15 @@ import { diffStats } from '@shared/claude-format'
 import { useWorkbench, sessionTab, type Project, type Tab } from '@/stores/workbench'
 import { usePlugins } from '@/stores/plugins'
 import { PluginViewBody } from './PluginView'
+import { ErrorsView, TodoView } from './ProblemsViews'
+import { useProblems } from '@/stores/problems'
 import { FileIcon } from './FileIcon'
 import { Gutter, useStoredSize } from './Split'
 import { t } from '@/i18n'
 
 const short = (p: string) => { const h = window.ct.home; return p.startsWith(h) ? '~' + p.slice(h.length) : p }
 
-/** Bottom block of the center: Plan / Activity / Files of the Claude session in front. */
+/** Bottom block of the center: Plan / Activity / Files of the Claude session in front | Errors, TODO of the project, plugin views (Commits). */
 export function SessionBlock({ project, collapsed, onCollapse }: { project: Project; collapsed: boolean; onCollapse: (c: boolean) => void }) {
   const mode = useWorkbench((s) => s.sessionMode)
   const setMode = useWorkbench((s) => s.setSessionMode)
@@ -22,6 +24,10 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
   const pluginModel = usePlugins((s) => (mode.includes(':') ? s.views[mode] : undefined))
   useEffect(() => { if (mode.includes(':') && !pluginModel) window.ct.plugins.view(mode).then((m) => { if (m) usePlugins.setState((s) => ({ views: { ...s.views, [mode]: m } })) }) }, [mode, pluginModel])
   const tab = useWorkbench((s) => sessionTab(s, project))
+  // Errors / TODO: project-wide, no Claude session needed
+  const errorCount = useProblems((s) => s.diagnostics.filter((d) => d.severity === 'error').length)
+  const todoCount = useProblems((s) => s.todos.length)
+  const checking = useProblems((s) => s.checking)
   const session = tab?.session
   // plan mode opens the block on the plan, once per plan file
   const [autoOpened, setAutoOpened] = useState<string | null>(null)
@@ -42,14 +48,16 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
       {modeBtn('plan', t('Plan'), !!session?.planMode)}
       {modeBtn('activity', t('Activité'), (session?.runningTools.length ?? 0) > 0)}
       {modeBtn('files', t('Fichiers'), false, Object.keys(session?.files ?? {}).length)}
-      {bottomViews.length > 0 && <span className="vsep" />}
+      <span className="vsep" />
+      {modeBtn('errors', t('Erreurs'), checking, errorCount)}
+      {modeBtn('todo', t('TODO'), false, todoCount)}
       {bottomViews.map((v) => <span key={v.id} style={{ display: 'contents' }}>{modeBtn(v.id, v.title, false)}</span>)}
     </span>
   )
   const actions = tab ? <span className="session-title">{Icons.claude(11)} {tab.title}</span> : null
   return (
     <Island title={title} actions={actions} collapsible collapsed={collapsed} onCollapse={onCollapse}>
-      {mode.includes(':') ? (
+      {mode === 'errors' ? <ErrorsView project={project} /> : mode === 'todo' ? <TodoView project={project} /> : mode.includes(':') ? (
         <PluginViewBody model={pluginModel} wide layoutKey={mode} send={(type, extra) => window.ct.plugins.event({ viewId: mode, type, ...extra })} />
       ) : !tab || !session ? (
         <Empty>{t('Sélectionne un onglet Claude, ou tape claude dans un shell')}</Empty>

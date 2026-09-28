@@ -22,6 +22,7 @@ import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
 import { UsageService } from './services/usage'
 import { TestsService } from './services/tests'
+import { ProblemsService } from './services/problems'
 import { detectRunnables } from '@shared/runnables'
 import { DefaultModelGuard } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
@@ -207,6 +208,10 @@ ipcMain.handle('runnables:detect', (_e, root: string) => {
 const testsService = new TestsService(app.getPath('userData'), runFs, (results) => send('tests:results', results))
 ipcMain.handle('tests:discover', (_e, root: string) => { try { return testsService.discover(root) } catch { return [] } })
 ipcMain.handle('tests:results', () => testsService.results())
+// Errors / TODO tabs of the center bottom block
+const problems = new ProblemsService(runFs, () => ptys.env())
+ipcMain.handle('problems:check', (_e, root: string) => problems.check(root))
+ipcMain.handle('problems:todos', (_e, root: string) => problems.todos(root))
 ipcMain.handle('proc:scan', () => scanClaudeProcesses())
 ipcMain.on('proc:kill', (_e, { pid, signal }) => { try { process.kill(pid, signal ?? 'SIGTERM') } catch { /* gone */ } })
 const index = new FileIndex()

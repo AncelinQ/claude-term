@@ -25,7 +25,7 @@ export class PtyService {
     if (process.platform !== 'win32') this.loginPath = loginShellPath()
   }
 
-  private env(): NodeJS.ProcessEnv {
+  env(): NodeJS.ProcessEnv {
     const env: NodeJS.ProcessEnv = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'ClaudeTerm', LANG: process.env.LANG || 'en_US.UTF-8' }
     if (this.loginPath) env.PATH = this.loginPath
     // inherited CLAUDE_CODE_* vars disable transcript saving in nested sessions

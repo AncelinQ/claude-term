@@ -38,7 +38,7 @@ export function claudeInvocation(bin: string, args: string[], opts: { interactiv
 }
 
 /** cmd.exe argument: quoted when needed, inner quotes doubled, % and ! neutralized. */
-function cmdQuote(a: string): string {
+export function cmdQuote(a: string): string {
   if (/^[A-Za-z0-9_\-.:\\/=]+$/.test(a)) return a
   return '"' + a.replace(/"/g, '""').replace(/%/g, '"^%"').replace(/!/g, '"^!"') + '"'
 }

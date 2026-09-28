@@ -16,6 +16,16 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 const EN: Record<string, string> = {
+  'Erreurs': 'Errors',
+  'TODO': 'TODO',
+  'Vérification en cours…': 'Checking…',
+  'Vérification…': 'Checking…',
+  'Aucune erreur': 'No errors',
+  'Aucun vérificateur dans ce projet : ni TypeScript (tsconfig) ni ESLint installés.': 'No checker in this project: neither TypeScript (tsconfig) nor ESLint installed.',
+  'Aucun TODO, FIXME, HACK ni XXX dans le projet.': 'No TODO, FIXME, HACK or XXX in the project.',
+  'Revérifier': 'Check again',
+  '{n} élément(s)': '{n} item(s)',
+  'Demander à Claude': 'Ask Claude',
   'Nouvel onglet Claude ici': 'New Claude tab here',
   'Nouveau shell ici': 'New shell here',
   'Recherche des tests…': 'Looking for tests…',

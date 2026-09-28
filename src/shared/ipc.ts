@@ -23,6 +23,7 @@ export interface UsageState {
 import type { RunInfo } from './plugins'
 import type { RunGroup } from './runnables'
 import type { TestNode, TestResult, TestSuite } from './tests'
+import type { Diagnostic, Todo } from './problems'
 import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest } from './plugins'
 
 export type TabKind = 'claude' | 'shell'
@@ -290,6 +291,11 @@ export interface CtApi {
     /** results of the last reports, by testKey */
     results(): Promise<[string, TestResult][]>
     onResults(cb: (r: [string, TestResult][]) => void): () => void
+  }
+  problems: {
+    /** the project's tsc / ESLint in the background (one check at a time) */
+    check(root: string): Promise<{ at: number; diagnostics: Diagnostic[]; tools: { tool: 'tsc' | 'eslint'; dir: string; config?: string; ok: boolean; error?: string }[] }>
+    todos(root: string): Promise<Todo[]>
   }
   processes: {
     scan(): Promise<ClaudeProcess[]>

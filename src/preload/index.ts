@@ -94,6 +94,10 @@ const api: CtApi = {
     results: () => ipcRenderer.invoke('tests:results'),
     onResults: (cb) => channel('tests:results', () => true, (p) => p, cb),
   },
+  problems: {
+    check: (root) => ipcRenderer.invoke('problems:check', root),
+    todos: (root) => ipcRenderer.invoke('problems:todos', root),
+  },
   processes: {
     scan: () => ipcRenderer.invoke('proc:scan'),
     kill: (pid, signal) => ipcRenderer.send('proc:kill', { pid, signal }),

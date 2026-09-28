@@ -118,6 +118,8 @@ describe('tests tree', () => {
     expect(b.actions!.map((x) => x.id)).toEqual(['stop'])
     expect(b.children![0].icon).toBe('code')
     expect(failedCount(results)).toBe(1)
+    expect(failedCount(results, [suite])).toBe(1)
+    expect(failedCount(new Map([[testKey('/p/gone.test.ts', ['x']), { status: 'failed' as const }]]), [suite])).toBe(0)
   })
   it('names a workspace suite and keeps several suites closed', () => {
     const two = testsTree([suite, { ...suite, framework: 'jest', dir: '/p/apps/web', label: 'web', files: [] }], new Map(), new Set(), '/p')
