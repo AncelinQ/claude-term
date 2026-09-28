@@ -59,3 +59,21 @@ export class FileService {
   }
   unwatch(path: string) { this.watchers.get(path)?.close(); this.watchers.delete(path) }
 }
+
+/** Watches the folders the explorer shows (not recursive), ref-counted; `onChanged(dir)` debounced. */
+export class DirWatcher {
+  private dirs = new Map<string, { w: FSWatcher; refs: number; t?: ReturnType<typeof setTimeout> }>()
+  constructor(private onChanged: (dir: string) => void) {}
+  watch(dir: string) {
+    const d = this.dirs.get(dir)
+    if (d) { d.refs++; return }
+    try {
+      const entry: { w: FSWatcher; refs: number; t?: ReturnType<typeof setTimeout> } = { w: undefined as unknown as FSWatcher, refs: 1 }
+      entry.w = watch(dir, () => { clearTimeout(entry.t); entry.t = setTimeout(() => this.onChanged(dir), 200) })
+      entry.w.on('error', () => this.drop(dir))
+      this.dirs.set(dir, entry)
+    } catch { /* gone or unreadable */ }
+  }
+  unwatch(dir: string) { const d = this.dirs.get(dir); if (d && --d.refs <= 0) this.drop(dir) }
+  private drop(dir: string) { const d = this.dirs.get(dir); if (d) { clearTimeout(d.t); d.w.close(); this.dirs.delete(dir) } }
+}

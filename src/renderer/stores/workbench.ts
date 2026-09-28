@@ -92,6 +92,10 @@ interface Workbench {
   /** types commands into a shell tab (strings as is, argv arrays quoted for its shell), chained on success */
   runCommand(projectId: string, cwd: string, cmds: (string | string[])[], tab?: 'reuse' | 'new', run?: { id: string; label?: string }): Promise<void>
   closeTab(projectId: string, tabId: string): Promise<void>
+  /** explorer rename / move: file tabs at or under `from` follow (unsaved edits kept) */
+  pathMoved(from: string, to: string): Promise<void>
+  /** explorer deletion: file tabs at or under a path close, except the ones with unsaved edits */
+  pathsRemoved(paths: string[]): Promise<void>
   /** closes every file tab (terminals stay), except `keep` */
   closeFiles(projectId: string, keep?: string): Promise<void>
   setCurrentTab(projectId: string, tabId: string): void
@@ -290,6 +294,23 @@ export const useWorkbench = create<Workbench>((set, get) => ({
         return { ...x, tabs, currentTabId: current }
       }),
     }))
+  },
+  async pathMoved(from, to) {
+    const under = (p?: string) => !!p && (p === from || p.startsWith(from + '/') || p.startsWith(from + '\\'))
+    const moved = [...new Set(get().projects.flatMap((p) => p.tabs.filter((t) => t.kind === 'file' && under(t.path)).map((t) => t.path!)))]
+    const host = await import('@/editor/EditorHost')
+    const map = new Map(moved.map((p) => [p, to + p.slice(from.length)]))
+    for (const [a, b] of map) { window.ct.fs.unwatch(a); host.renameFile(a, b); window.ct.fs.watch(b) }
+    set((s) => ({ projects: s.projects.map((p) => ({
+      ...p,
+      selectedPath: under(p.selectedPath ?? undefined) ? to + p.selectedPath!.slice(from.length) : p.selectedPath,
+      tabs: p.tabs.map((t) => (t.kind === 'file' && map.has(t.path!) ? { ...t, path: map.get(t.path!)!, title: map.get(t.path!)!.split(/[\\/]/).pop()!, cwd: map.get(t.path!)!.replace(/[\\/][^\\/]*$/, '') } : t)),
+    })) }))
+  },
+  async pathsRemoved(paths) {
+    const under = (p?: string) => !!p && paths.some((r) => p === r || p.startsWith(r + '/') || p.startsWith(r + '\\'))
+    for (const p of get().projects) for (const t of p.tabs) if (t.kind === 'file' && !t.dirty && under(t.path)) await get().closeTab(p.id, t.id)
+    set((s) => ({ projects: s.projects.map((p) => (under(p.selectedPath ?? undefined) ? { ...p, selectedPath: null } : p)) }))
   },
   async closeFiles(projectId, keep) {
     const p = get().projects.find((x) => x.id === projectId)

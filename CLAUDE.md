@@ -7,7 +7,7 @@ Electron workbench for Claude Code (macOS, Windows, Linux). Successor of the nat
   Dev name/icon on macOS: `npm run dev:bundle` (also run by postinstall) renames node_modules' Electron.app to ClaudeTerm.
   Typecheck: `npm run typecheck`. Tests: `npm test` (vitest, `tests/`). Run all three before a commit.
 - Tests cover `src/shared` (pure) and the main services that touch files: `ClaudeSettings`, `ClaudeData`,
-  `SessionTracker` (temp dirs via `tests/helpers.ts`). Add a test whenever these change.
+  `SessionTracker`, `FileOps` (temp dirs via `tests/helpers.ts`). Add a test whenever these change.
 - UI checks without the user: the dev app exposes CDP on port 9333; `npx tsx scripts/ui.ts` drives it
   (Playwright over CDP): `shot <name>` (screenshot in `scratch/`, then Read it), `click "<selector>"`,
   `type`, `key`, `text`, `eval`, `state` (store dump via `window.__ct_state`), chained with `--`.

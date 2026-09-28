@@ -27,6 +27,13 @@ const api: CtApi = {
     watch: (path) => ipcRenderer.send('fs:watch', path),
     unwatch: (path) => ipcRenderer.send('fs:unwatch', path),
     onChanged: (cb) => channel('fs:changed', () => true, (p) => p.path as string, cb),
+    watchDir: (dir) => ipcRenderer.send('fs:watchDir', dir),
+    unwatchDir: (dir) => ipcRenderer.send('fs:unwatchDir', dir),
+    onDirChanged: (cb) => channel('fs:dirChanged', () => true, (p) => p.path as string, cb),
+    create: (dir, name, folder) => ipcRenderer.invoke('fs:create', { dir, name, folder }),
+    rename: (path, name) => ipcRenderer.invoke('fs:rename', { path, name }),
+    transfer: (paths, dest, move) => ipcRenderer.invoke('fs:transfer', { paths, dest, move }),
+    trash: (paths) => ipcRenderer.invoke('fs:trash', paths),
   },
   themes: {
     list: () => ipcRenderer.invoke('themes:list'),

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 export interface MenuItem { label: string; icon?: ReactNode; shortcut?: string; onSelect: () => void; danger?: boolean; disabled?: boolean }
 
@@ -39,8 +39,16 @@ export function ContextMenu({ at, items, onClose }: { at: { x: number; y: number
     window.addEventListener('mousedown', onDown); window.addEventListener('keydown', onKey); window.addEventListener('blur', onClose)
     return () => { window.removeEventListener('mousedown', onDown); window.removeEventListener('keydown', onKey); window.removeEventListener('blur', onClose) }
   }, [at, onClose])
+  // kept inside the window, measured once rendered
+  useLayoutEffect(() => {
+    const m = ref.current
+    if (!at || !m) return
+    const r = m.getBoundingClientRect()
+    m.style.left = Math.max(4, Math.min(at.x, window.innerWidth - r.width - 4)) + 'px'
+    m.style.top = Math.max(4, Math.min(at.y, window.innerHeight - r.height - 4)) + 'px'
+  }, [at])
   if (!at) return null
-  const x = Math.min(at.x, window.innerWidth - 200), y = Math.min(at.y, window.innerHeight - 40 * items.length)
+  const x = at.x, y = at.y
   return (
     <div className="menu ctx" ref={ref} style={{ left: x, top: y }}>
       {items.map((it, i) => it === 'sep' ? <div key={i} className="menu-sep" /> : (

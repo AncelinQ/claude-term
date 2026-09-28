@@ -52,11 +52,13 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   comments and Markdown. Both grouped by file, click to the line, "Corriger / Demander à Claude" types the prompt. The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
 - Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
   `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
-- Explorer: Quick Look on macOS (Space on the selection, file context menu).
-- Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
-  `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
-- Explorer: keyboard (↑ ↓ move, → open / enter, ← close / parent, Enter opens, Space = Quick Look on macOS) and a
-  file context menu (Quick Look, open, reveal).
+- Explorer: keyboard (↑ ↓ move, → open / enter, ← close / parent, Enter opens, Space = Quick Look on macOS),
+  context menus on files, folders and the empty area. File management: new file / folder (inline name field), cut /
+  copy / paste (⌘X ⌘C ⌘V, shared between projects), duplicate (⌘D), rename (F2), Trash after a confirmation (⌘⌫,
+  Delete elsewhere). Main side in `services/file-ops.ts`: never overwrites (taken name refused, copies named
+  "x copie.ts"), refuses a folder into itself and the disk root / home. Open file tabs follow a rename or move
+  (unsaved edits kept) and close on deletion unless dirty. Shown folders are watched (`DirWatcher`), so outside
+  changes appear.
 - Claude icon: the terminal icon in orange (`Icons.claude`) everywhere it means Claude; skills keep the sparkle.
 - **Claude panel** (right bar): subscription usage from Claude Code's status line (5 h session, week, per-model
   week, extra credit; gauges with reset delays), Claude Code version and default model (global data only), a

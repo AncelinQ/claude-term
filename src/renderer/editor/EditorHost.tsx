@@ -105,6 +105,18 @@ export function fileText(path: string): string | null {
   return monaco.editor.getModel(monaco.Uri.file(path))?.getValue() ?? null
 }
 export function markSaved(path: string) { const t = fileText(path); if (t !== null) saved.set(path, t) }
+/** a file renamed or moved on disk: its model (unsaved edits included) follows */
+export function renameFile(from: string, to: string) {
+  const m = monaco.editor.getModel(monaco.Uri.file(from))
+  if (!m) return
+  const n = monaco.editor.getModel(monaco.Uri.file(to)) ?? monaco.editor.createModel(m.getValue(), undefined, monaco.Uri.file(to))
+  const shown = editor?.getModel() === m
+  const view = shown ? editor!.saveViewState() : viewStates.get(from) ?? null
+  if (shown) { editor!.setModel(n); if (view) editor!.restoreViewState(view) }
+  if (view) viewStates.set(to, view)
+  if (saved.has(from)) saved.set(to, saved.get(from)!)
+  m.dispose(); viewStates.delete(from); saved.delete(from)
+}
 export function disposeFile(path: string) {
   monaco.editor.getModel(monaco.Uri.file(path))?.dispose()
   viewStates.delete(path); saved.delete(path)

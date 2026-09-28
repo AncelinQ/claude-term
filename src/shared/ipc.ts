@@ -196,6 +196,8 @@ export const DEFAULT_SETTINGS: Settings = {
   treeState: {},
 }
 
+export type FileOpResult = { ok: true; path: string } | { ok: false; error: string }
+
 export interface CtApi {
   platform: NodeJS.Platform
   /** test hooks (window.__ct…) enabled: dev, or CT_CDP_PORT set on a packaged app */
@@ -218,6 +220,17 @@ export interface CtApi {
     watch(path: string): void
     unwatch(path: string): void
     onChanged(cb: (path: string) => void): () => void
+    /** explorer: a shown folder's entries changed (debounced, not recursive) */
+    watchDir(dir: string): void
+    unwatchDir(dir: string): void
+    onDirChanged(cb: (dir: string) => void): () => void
+    /** never overwrite: a taken name is refused, a copy gets "name copie" */
+    create(dir: string, name: string, folder: boolean): Promise<FileOpResult>
+    rename(path: string, name: string): Promise<FileOpResult>
+    /** copy (or move) into the folder `dest` */
+    transfer(paths: string[], dest: string, move: boolean): Promise<FileOpResult[]>
+    /** to the Trash after a confirmation dialog; false when cancelled */
+    trash(paths: string[]): Promise<boolean>
   }
   themes: {
     list(): Promise<ThemeSpec[]>

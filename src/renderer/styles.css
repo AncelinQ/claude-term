@@ -522,6 +522,11 @@ input[type=checkbox]:disabled { opacity: .4; }
 .claude-panel .cp-select { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px 0 8px; margin: -3px -6px -3px 0; border-radius: 6px; color: var(--ct-text); font-size: 12px; }
 .claude-panel .cp-select:hover, .claude-panel .cp-select.on { background: var(--ct-hover-bg); }
 .tree:focus { outline: none; }
+.tree .row.cut { opacity: .5; }
+.tree .row.editing { background: var(--ct-hover-bg); }
+.tree .name-input { flex: 1; min-width: 0; height: 18px; padding: 0 4px; font: inherit; color: var(--ct-text); background: var(--ct-input-bg); border: 1px solid var(--ct-accent); border-radius: 3px; outline: none; }
+.tree .name-input.bad { border-color: var(--ct-badge-error); }
+.tree-error { margin: 2px 8px 4px; padding: 4px 6px; font-size: 11px; color: var(--ct-badge-error); border: 1px solid currentColor; border-radius: 4px; white-space: normal; }
 
 /* tabs inside an island, full width, above its content (Exécuteurs: Scripts | Tests) */
 .island > .content > .panel-tabs { flex: 1; min-height: 0; }

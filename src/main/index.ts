@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, session, net } from 'electron'
-import { join } from 'node:path'
+import { join, basename, isAbsolute, resolve, parse } from 'node:path'
 import { homedir } from 'node:os'
 import { execFile, spawnSync } from 'node:child_process'
 import { readdirSync, statSync, existsSync, readFileSync, watch } from 'node:fs'
@@ -11,7 +11,8 @@ import { ClaudeData } from './services/claude-data'
 import { SessionTracker } from './services/session-tracker'
 import { ClaudeSettings } from './services/claude-settings'
 import { HookHub } from './services/hooks'
-import { FileService } from './services/files'
+import { FileService, DirWatcher } from './services/files'
+import { FileOps } from './services/file-ops'
 import { ProjectLinks } from './services/links'
 import { Skills } from './services/skills'
 import { Mcp } from './services/mcp'
@@ -75,6 +76,24 @@ ipcMain.handle('fs:readFile', (_e, path: string) => files.read(path))
 ipcMain.handle('fs:writeFile', (_e, { path, text }) => files.write(path, text))
 ipcMain.on('fs:watch', (_e, path: string) => files.watch(path))
 ipcMain.on('fs:unwatch', (_e, path: string) => files.unwatch(path))
+const dirs = new DirWatcher((dir) => send('fs:dirChanged', { path: dir }))
+ipcMain.on('fs:watchDir', (_e, dir: string) => dirs.watch(dir))
+ipcMain.on('fs:unwatchDir', (_e, dir: string) => dirs.unwatch(dir))
+// explorer file management; never the disk root, the home folder or one of its parents
+const safe = (p: unknown): p is string => typeof p === 'string' && isAbsolute(p) && resolve(p) === p && p !== parse(p).root
+  && !homedir().startsWith(p) && p.split(/[\\/]/).filter(Boolean).length >= 2
+ipcMain.handle('fs:create', (_e, { dir, name, folder }) => (safe(dir) || dir === homedir() ? FileOps.create(dir, name, !!folder) : { ok: false, error: 'emplacement refusé' }))
+ipcMain.handle('fs:rename', (_e, { path, name }) => (safe(path) ? FileOps.rename(path, name) : { ok: false, error: 'emplacement refusé' }))
+ipcMain.handle('fs:transfer', (_e, { paths, dest, move }: { paths: string[]; dest: string; move: boolean }) =>
+  (Array.isArray(paths) && paths.every(safe) && (safe(dest) || dest === homedir()) ? paths.map((p) => FileOps.transfer(p, dest, !!move)) : [{ ok: false, error: 'emplacement refusé' }]))
+ipcMain.handle('fs:trash', async (_e, paths: string[]) => {
+  if (!Array.isArray(paths) || !paths.length || !paths.every(safe)) return false
+  const what = paths.length === 1 ? `« ${basename(paths[0])} »` : `ces ${paths.length} éléments`
+  const r = await dialog.showMessageBox(win!, { type: 'warning', message: `Mettre ${what} à la corbeille ?`, detail: 'Vous pourrez les récupérer depuis la corbeille.', buttons: ['Mettre à la corbeille', 'Annuler'], defaultId: 0, cancelId: 1 })
+  if (r.response !== 0) return false
+  for (const p of paths) await shell.trashItem(p).catch(() => {})
+  return true
+})
 ipcMain.handle('app:confirmSave', async (_e, name: string) => {
   const r = await dialog.showMessageBox(win!, { type: 'question', message: `Enregistrer les modifications de ${name} ?`, detail: 'Sinon elles seront perdues.', buttons: ['Enregistrer', 'Ne pas enregistrer', 'Annuler'], defaultId: 0, cancelId: 2 })
   return (['save', 'discard', 'cancel'] as const)[r.response]
