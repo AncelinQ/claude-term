@@ -160,6 +160,12 @@ export interface Settings {
   themeFixed: string
   /** terminal font (empty = default mono stack) */
   fontFamily: string
+  /** interface colours over the theme, per mode (shared/looks) */
+  looks: import('./looks').Looks
+  /** interface zoom (0.85–1.5); the terminal and editor fonts keep their own size */
+  uiZoom: number
+  /** interface font ('' = the system's) */
+  uiFont: string
   fontSize: number
   /** editor font, independent from the terminal */
   editorFontFamily: string
@@ -208,6 +214,9 @@ export const DEFAULT_SETTINGS: Settings = {
   themeLight: 'claudeterm-light',
   themeFixed: 'claudeterm-dark',
   fontFamily: '',
+  looks: {},
+  uiZoom: 1,
+  uiFont: '',
   fontSize: 13,
   editorFontFamily: '',
   editorFontSize: 13,

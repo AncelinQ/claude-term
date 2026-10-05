@@ -16,9 +16,10 @@ const viewStates = new Map<string, monaco.editor.ICodeEditorViewState | null>()
 const saved = new Map<string, string>()   // path → text at last load/save (dirty = differs)
 let themedFor: string | null = null
 
-function editorOptions(s: { editorFontFamily: string; editorFontSize: number; editorLineHeight: number; editorWordWrap: boolean; editorMinimap: boolean }): monaco.editor.IEditorOptions {
+function editorOptions(s: { editorFontFamily: string; editorFontSize: number; editorLineHeight: number; editorWordWrap: boolean; editorMinimap: boolean; uiZoom?: number }): monaco.editor.IEditorOptions {
   return {
-    fontFamily: s.editorFontFamily || undefined, fontSize: s.editorFontSize, lineHeight: s.editorLineHeight || 0,
+    // the window's zoom applies on top: the editor keeps the size set
+    fontFamily: s.editorFontFamily || undefined, fontSize: s.editorFontSize / (s.uiZoom || 1), lineHeight: s.editorLineHeight ? s.editorLineHeight / (s.uiZoom || 1) : 0,
     wordWrap: s.editorWordWrap ? 'on' : 'off', minimap: { enabled: s.editorMinimap },
   }
 }
@@ -194,7 +195,7 @@ export function EditorHost({ tab }: { tab: Tab }) {
     if (!editor) return
     applyMonacoTheme(theme); themedFor = theme.id
     editor.updateOptions(editorOptions(settings))
-  }, [theme, settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight, settings.editorWordWrap, settings.editorMinimap])
+  }, [theme, settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight, settings.editorWordWrap, settings.editorMinimap, settings.uiZoom])
   useEffect(() => { applyKeymap(settings.keybindings ?? {}, settings.keymapPreset) }, [JSON.stringify(settings.keybindings ?? {}), settings.keymapPreset])
 
   return (

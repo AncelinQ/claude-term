@@ -118,10 +118,17 @@ ipcMain.handle('app:confirmSave', async (_e, name: string) => {
 // themes / settings
 ipcMain.handle('themes:list', () => themes.list())
 ipcMain.handle('themes:current', () => themes.current())
-themes.onChange((t) => { send('themes:changed', t); if (win) applyOverlayTheme(win, t) })
+themes.onChange((t) => { send('themes:changed', t); if (win) applyOverlayTheme(win, t, settings.get().looks?.[t.type]) })
 ipcMain.handle('settings:get', () => settings.get())
 ipcMain.handle('settings:set', (_e, patch) => settings.set(patch))
-settings.onChange((s) => send('settings:changed', s))
+// the look recolours the native caption buttons; the zoom is the window's (the terminal and editor fonts make up for it)
+let zoom = 1
+settings.onChange((s) => {
+  send('settings:changed', s)
+  if (!win || win.isDestroyed()) return
+  applyOverlayTheme(win, themes.current(), s.looks?.[themes.current().type])
+  if (s.uiZoom !== zoom) { zoom = s.uiZoom; win.webContents.setZoomFactor(Math.max(0.85, Math.min(1.5, zoom || 1))) }
+})
 
 // claude sessions
 const claudeData = new ClaudeData()
@@ -441,6 +448,8 @@ app.whenReady().then(() => {
   // alone (Ctrl+R reloads the workbench, Ctrl+W closes the window and quits). macOS keeps it for its menu bar.
   if (process.platform !== 'darwin') Menu.setApplicationMenu(null)
   win = createWindow(themes.current())
+  applyOverlayTheme(win, themes.current(), settings.get().looks?.[themes.current().type])
+  win.webContents.on('did-finish-load', () => { zoom = settings.get().uiZoom || 1; win?.webContents.setZoomFactor(Math.max(0.85, Math.min(1.5, zoom))) })
   // plugin windows are hidden BrowserWindows too: closing the workbench window quits
   win.webContents.once('did-finish-load', () => { pluginStore.cleanStaging(); pluginHost.loadAll(); updater.start() })
   win.on('closed', () => { win = null; app.quit() })

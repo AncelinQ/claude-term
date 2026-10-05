@@ -147,7 +147,7 @@ export function TerminalHost({ tab }: { tab: Tab }) {
 
   useEffect(() => {
     const host = ref.current!
-    const t = getOrCreate(tab, theme, settings.fontFamily, settings.fontSize)
+    const t = getOrCreate(tab, theme, settings.fontFamily, settings.fontSize / (settings.uiZoom || 1))
     host.appendChild(t.el)
     const ro = new ResizeObserver(() => { try { t.fit.fit() } catch { /* not laid out yet */ } })
     ro.observe(host)
@@ -159,10 +159,10 @@ export function TerminalHost({ tab }: { tab: Tab }) {
     const t = terminals.get(tab.id)
     if (!t) return
     t.term.options.theme = xtermTheme(theme)
-    t.term.options.fontSize = settings.fontSize
+    t.term.options.fontSize = settings.fontSize / (settings.uiZoom || 1)   // the window's zoom applies on top
     t.term.options.fontFamily = monoFont(settings.fontFamily)
     try { t.fit.fit() } catch {}
-  }, [theme, settings.fontFamily, settings.fontSize, tab.id])
+  }, [theme, settings.fontFamily, settings.fontSize, settings.uiZoom, tab.id])
 
   const finding = useTermFind((s) => s.tabId === tab.id)
   const search = terminals.get(tab.id)?.search

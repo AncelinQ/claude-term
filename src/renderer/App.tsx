@@ -61,7 +61,8 @@ export function App() {
         projects: s.projects.map((p) => ({ id: p.id, root: p.root, currentTabId: p.currentTabId, selectedPath: p.selectedPath, tabs: p.tabs.map((t) => ({ id: t.id, kind: t.kind, title: t.title, cwd: t.cwd, alive: t.alive, busy: t.busy, lastCommand: t.lastCommand, lastExit: t.lastExit, claudeRunning: t.claudeRunning, attention: t.attention, path: t.path, dirty: t.dirty, changedOnDisk: t.changedOnDisk, session: t.session && { id: t.session.sessionId, events: t.session.events.length, files: Object.keys(t.session.files).length, planMode: t.session.planMode, tokens: [t.session.inputTokens, t.session.outputTokens] } })) })) }
     }
   }, [])
-  useEffect(() => { if (theme) applyTheme(theme) }, [theme])
+  const look = theme ? settings?.looks?.[theme.type] : undefined
+  useEffect(() => { if (theme) applyTheme(theme, { look, uiFont: settings?.uiFont }) }, [theme, JSON.stringify(look), settings?.uiFont])
   const activeRoot = project?.root ?? null
   useEffect(() => { window.ct.plugins.projectChanged(activeRoot) }, [activeRoot])
   const language = settings?.language ?? 'system'

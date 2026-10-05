@@ -98,6 +98,13 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   local feed (packaged 2.0.0 → 2.0.1). Settings › Général › Mises à jour; download icon in the right bar when ready.
   CI workflow `release`: every push to main → next version (last tag + 1 patch, or package.json when higher) →
   draft release → 3 platforms → published when all succeed. First release: v2.0.0.
+- **Appearance** (Settings › Apparence, `shared/looks.ts`, `renderer/appearance.ts`): mode (system / light / dark,
+  also the sun-moon button above the gear) with a theme per mode; interface colours over the theme, an accent and a
+  canvas per mode (presets or free colours; islands, editor and terminal keep the theme's, so VS Code themes stay
+  unchanged; ink on the canvas from the theme's text or background, whichever contrasts more; caption buttons
+  follow); interface zoom 85–150 % (`setZoomFactor`; terminal and editor fonts divided by it so they keep their
+  size); interface font from the installed proportional fonts. Resize handles: a thin line on hover and while
+  dragging, double-click resets. Meters: accent while normal, status colours only from high, labelled.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.

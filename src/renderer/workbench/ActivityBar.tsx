@@ -6,6 +6,7 @@ import { usePlugins } from '@/stores/plugins'
 import { useUpdate } from '@/stores/update'
 import { binding, label as keyLabel } from '@shared/keymap'
 import { withShortcut } from '@/actions'
+import { appearanceMode, modeLabel, NEXT_MODE, setAppearance } from '@/appearance'
 
 const pluginIcon = (name: string) => { const f = (Icons as Record<string, ((s?: number) => React.ReactElement) | undefined>)[name]; return f ? f() : Icons.puzzle() }
 
@@ -59,7 +60,8 @@ export function LeftActivityBar() {
 }
 
 export function RightActivityBar() {
-  const { rightActivity, setRight, showSettings, setShowSettings } = useWorkbench()
+  const { rightActivity, setRight, showSettings, setShowSettings, settings, theme } = useWorkbench()
+  const mode = settings && theme ? appearanceMode(settings, theme) : 'system'
   const update = useUpdate((s) => s.state)
   return (
     <div className="activity right">
@@ -71,6 +73,9 @@ export function RightActivityBar() {
       <PluginEntries side="right" current={rightActivity} select={(id) => setRight(id as RightActivity | null)} />
       <span className="spacer" />
       {update.status === 'ready' && <button className="update" title={t('Version {v} prête : redémarrer pour l\'installer (les terminaux seront fermés)', { v: update.version ?? '' })} onClick={() => window.ct.update.install()}>{Icons.download()}</button>}
+      {settings && <button title={t('Apparence : {m} — clic : {n}', { m: modeLabel(mode), n: modeLabel(NEXT_MODE[mode]) })} onClick={() => setAppearance(NEXT_MODE[mode], settings)}>
+        {mode === 'system' ? Icons.sunMoon() : mode === 'light' ? Icons.sun() : Icons.moon()}
+      </button>}
       <button className={showSettings ? 'on' : ''} title={withShortcut(t('Réglages'), 'app.settings')} onClick={() => setShowSettings(!showSettings)}>{Icons.gear()}</button>
     </div>
   )

@@ -2,11 +2,13 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import type { ResolvedTheme } from '@shared/theme'
 import { isWebUrl } from '@shared/external'
+import { lookTokens, type Look } from '@shared/looks'
 
-/** Windows/Linux: recolors the native caption buttons when the theme changes. */
-export function applyOverlayTheme(win: BrowserWindow, theme: ResolvedTheme) {
+/** Windows/Linux: recolors the native caption buttons with the title strip (the theme's, or the look's canvas and ink). */
+export function applyOverlayTheme(win: BrowserWindow, theme: ResolvedTheme, look?: Look) {
   if (process.platform === 'darwin') return
-  try { win.setTitleBarOverlay({ color: theme.tokens['activity.bg'], symbolColor: theme.tokens['text'], height: 38 }) } catch { /* not supported */ }
+  const tokens = { ...theme.tokens, ...lookTokens(look, theme.tokens) }
+  try { win.setTitleBarOverlay({ color: tokens['activity.bg'], symbolColor: tokens['activity.active'] ?? tokens['text'], height: 38 }) } catch { /* not supported */ }
 }
 
 export function createWindow(theme: ResolvedTheme): BrowserWindow {

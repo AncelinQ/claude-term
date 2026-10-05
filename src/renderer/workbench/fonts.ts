@@ -15,6 +15,25 @@ function installed(family: string, ctx: CanvasRenderingContext2D): boolean {
   return a !== b || c !== d
 }
 
+const UI_FALLBACK = ['Segoe UI', 'Inter', 'SF Pro Text', 'Helvetica Neue', 'Roboto', 'Noto Sans', 'Ubuntu', 'Cantarell', 'Open Sans', 'Arial']
+let uiCache: string[] | null = null
+
+/** Proportional fonts installed (the interface font): Local Font Access, monospace and symbol fonts left out. */
+export async function installedUiFonts(): Promise<string[]> {
+  if (uiCache) return uiCache
+  await document.fonts.ready
+  const ctx = document.createElement('canvas').getContext('2d')!
+  let families: string[] = []
+  try {
+    const q = (window as any).queryLocalFonts as (() => Promise<{ family: string }[]>) | undefined
+    if (q) families = [...new Set((await q()).map((f) => f.family))]
+  } catch { /* permission denied or unsupported */ }
+  const symbolic = /wingdings|webdings|symbol|dingbat|emoji|braille|ayuthaya|marlett/i
+  const out = families.length ? families.filter((f) => !symbolic.test(f) && !isMono(f, ctx)) : UI_FALLBACK.filter((f) => installed(f, ctx))
+  uiCache = out.sort((a, b) => a.localeCompare(b))
+  return uiCache
+}
+
 export async function installedMonoFonts(): Promise<string[]> {
   if (cache) return cache
   await document.fonts.ready

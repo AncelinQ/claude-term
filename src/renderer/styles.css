@@ -271,6 +271,14 @@ input[type=checkbox]:checked { background: var(--ct-accent); border-color: var(-
 input[type=checkbox]:checked::after { content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
 input[type=checkbox]:focus-visible { outline: 2px solid color-mix(in srgb, var(--ct-accent) 50%, transparent); outline-offset: 1px; }
 input[type=checkbox]:disabled { opacity: .4; }
+.looks { display: inline-flex; gap: 6px; }
+.look { width: 26px; height: 26px; padding: 0; border-radius: 6px; border: 1px solid var(--ct-input-border); background: var(--look-canvas); display: grid; place-items: center; }
+.look i { width: 10px; height: 10px; border-radius: 50%; background: var(--look-accent); }
+.look.on { outline: 2px solid var(--ct-accent); outline-offset: 1px; }
+.colour { display: inline-flex; align-items: center; gap: 5px; margin-right: 6px; }
+.colour input[type=color] { width: 26px; height: 22px; padding: 0; border: 1px solid var(--ct-input-border); border-radius: 5px; background: none; cursor: pointer; }
+.colour input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+.colour input[type=color]::-webkit-color-swatch { border: 0; border-radius: 3px; }
 .unit-row { display: inline-flex; align-items: center; gap: 6px; }
 .unit-row .unit { color: var(--ct-text-secondary); }
 
