@@ -102,6 +102,19 @@ describe('transcript parsing', () => {
     expect(u.events).toHaveLength(0)
     expect(parseTranscript(jsonl([{ type: 'user', message: { content: '<command-name>/model</command-name><command-args>fable</command-args>' } }]), opts).effort).toBeUndefined()
   })
+  it("reads a picker's choice from Claude Code's answer (for this session only, or as the default)", () => {
+    const said = (out: string, sidechain = false) => ({ type: 'user', isSidechain: sidechain, message: { role: 'user', content: `<local-command-stdout>${out}</local-command-stdout>` } })
+    const u = parseTranscript(jsonl([
+      { type: 'assistant', effort: 'xhigh', message: { model: 'claude-opus-5-5', content: [] } },
+      said('Set effort level to high (this session only): Comprehensive implementation with extensive testing'),
+      said('Set model to `Haiku 4.5` for this session only'),
+    ]), opts)
+    expect(u).toMatchObject({ effort: 'high', model: 'Haiku 4.5' })
+    expect(u.events).toHaveLength(0)
+    expect(parseTranscript(jsonl([said('Set model to `Sonnet 5.5` and saved as your default')]), opts).model).toBe('Sonnet 5.5')
+    expect(parseTranscript(jsonl([said('Set effort level to low', true)]), opts).effort).toBeUndefined()
+    expect(parseTranscript(jsonl([said('Kept model as Opus 5.5')]), opts).model).toBeUndefined()
+  })
   it('keeps where entries are, the sub-agents calls start, the queue and the images', () => {
     const u = parseTranscript(jsonl([
       { type: 'user', uuid: 'u1', message: { content: [{ type: 'text', text: 'regarde' }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } }] } },

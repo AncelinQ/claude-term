@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { SearchAddon } from '@xterm/addon-search'
 import type { ResolvedTheme } from '@shared/theme'
+import type { ScreenRow } from '@shared/claude-picker'
 import { OSC_SHELL } from '@shared/ipc'
 import * as pathsMod from '@shared/paths'
 const require_paths = () => pathsMod
@@ -39,6 +40,32 @@ function monoFont(pref: string): string {
 }
 function defaultMono(): string {
   return getComputedStyle(document.documentElement).getPropertyValue('--ct-font-mono').trim() || 'Menlo, monospace'
+}
+
+/**
+ * The rows of a tab's screen as shown (a full-screen program's alternate screen included), with each character's
+ * dimming: what the bubble reads while it drives Claude Code's pickers.
+ */
+export function screenRows(tabId: string): ScreenRow[] | undefined {
+  const t = terminals.get(tabId)
+  if (!t) return undefined
+  const buffer = t.term.buffer.active
+  const rows: ScreenRow[] = []
+  for (let y = buffer.baseY; y < buffer.baseY + t.term.rows; y++) {
+    const line = buffer.getLine(y)
+    if (!line) continue
+    let text = ''
+    const dim: boolean[] = []
+    for (let x = 0; x < line.length; x++) {
+      const cell = line.getCell(x)
+      // the second half of a wide character has nothing of its own
+      if (!cell || cell.getWidth() === 0) continue
+      for (const c of cell.getChars() || ' ') { text += c; dim.push(cell.isDim() !== 0) }
+    }
+    const kept = text.trimEnd()
+    rows.push({ text: kept, dim: dim.slice(0, [...kept].length) })
+  }
+  return rows
 }
 
 /** Creates a tab's terminal before it is first shown (a script started in the background): nothing it prints is lost. */

@@ -5,6 +5,7 @@ import { level } from '@shared/usage'
 import { MenuButton } from './Menu'
 import { Icons } from './icons'
 import { t as tr } from '@/i18n'
+import { EFFORT_LEVELS, switchEffort, switchModel, usePickerNotice } from '@/claude-picker'
 
 export function attentionColor(a: { kind: string }) {
   return a.kind === 'permission' ? 'var(--ct-accent)' : a.kind === 'idle' ? 'var(--ct-badge-warn)' : 'var(--ct-badge-info)'
@@ -17,8 +18,8 @@ const badge = (text: string, color: string) => <span className="badge" style={{ 
 
 /**
  * Floating bubble at the top right of a terminal (like the markdown modes): the tab's state (command, exit code;
- * Claude: attention, permission / plan mode, running tools, tokens), and for Claude the current model (menu:
- * `/model <alias>` typed in the tab) and the context used.
+ * Claude: attention, permission / plan mode, running tools, tokens), and for Claude the model and the effort (menus:
+ * for this session only, through Claude Code's pickers: claude-picker) and the context used.
  */
 export function TermBubble({ tab }: { tab: Tab }) {
   const claude = isClaude(tab)
@@ -26,6 +27,7 @@ export function TermBubble({ tab }: { tab: Tab }) {
   const live = useUsage((st) => (s?.sessionId ? st.bySession[s.sessionId] : undefined))
   const requested = useUsage((st) => st.requested[tab.id])
   const defaultModel = useUsage((st) => st.defaultModel)
+  const notice = usePickerNotice((st) => (st.notice?.tabId === tab.id ? st.notice.text : null))
   if (!claude) {
     const content = tab.busy ? <span className="item"><span className="spin" /><span className="cmd">{tab.lastCommand}</span></span>
       : tab.lastExit !== null ? <span className="item">{badge(tab.lastExit === 0 ? 'ok' : 'exit ' + tab.lastExit, tab.lastExit === 0 ? 'var(--ct-badge-ok)' : 'var(--ct-badge-error)')}<span className="cmd">{tab.lastCommand}</span></span>
@@ -41,10 +43,8 @@ export function TermBubble({ tab }: { tab: Tab }) {
   const model = live?.model ?? withWindowHint(s?.model, requested?.sessionId === s?.sessionId ? requested?.alias : undefined, defaultModel) ?? defaultModel
   const active = pending ?? currentChoice(model)
   const ctx = contextInfo({ statusPercent: live?.contextPercent, tokens: s?.contextTokens, model })
-  const setModel = (alias: string) => {
-    if (!tab.ptyId) return
-    window.ct.usage.switchModel(tab.ptyId, alias)
-    useUsage.getState().request(tab.id, alias, s?.model, s?.sessionId)
+  const setModel = async (alias: string) => {
+    if (await switchModel(tab.id, alias)) useUsage.getState().request(tab.id, alias, s?.model, s?.sessionId)
   }
   return (
     <div className="term-bubble">
@@ -53,12 +53,16 @@ export function TermBubble({ tab }: { tab: Tab }) {
       {s?.planMode && badge(tr('plan'), 'var(--ct-accent)')}
       {s && s.runningTools.length > 0 && <span className="item"><span className="spin" /><span className="cmd">{s.runningTools.map((r) => r.name).join(', ')}</span></span>}
       {!tab.alive ? badge(tr('terminé'), 'var(--ct-badge-error)') : (
-        <MenuButton className="model" title={tr('Changer de modèle (/model)')} items={MODEL_CHOICES.map((c) => ({ label: c.label, icon: c.alias === active ? Icons.check(12) : <span style={{ width: 12 }} />, onSelect: () => setModel(c.alias) }))}>
+        <MenuButton className="model" title={tr('Modèle de cette session (le défaut des suivantes se règle dans le panneau Claude)')} items={MODEL_CHOICES.map((c) => ({ label: c.label, icon: c.alias === active ? Icons.check(12) : <span style={{ width: 12 }} />, onSelect: () => setModel(c.alias) }))}>
           {Icons.claude(12)}<span>{shown ?? tr('modèle')}</span>{Icons.chevronDown(11)}
         </MenuButton>
       )}
-      {/* shown only: /effort also saves the level as Claude Code's default, which the bubble must not change */}
-      {tab.alive && s?.effort && <span className="item dim" title={tr('Effort de raisonnement de la session (/effort pour le changer)')}>{s.effort}</span>}
+      {tab.alive && (
+        <MenuButton className="model" title={tr('Effort de raisonnement de cette session')} items={EFFORT_LEVELS.map((l) => ({ label: l, icon: l === s?.effort ? Icons.check(12) : <span style={{ width: 12 }} />, onSelect: () => { switchEffort(tab.id, l) } }))}>
+          <span>{s?.effort ?? tr('effort')}</span>{Icons.chevronDown(11)}
+        </MenuButton>
+      )}
+      {notice && <span className="item picker-notice">{notice}</span>}
       {ctx && (
         <span className={'ctx ' + level(ctx.percent).tone} title={ctx.estimated ? tr('Estimé depuis le transcript (le suivi en continu donne le chiffre exact)') : tr('Contexte utilisé')}>
           <span className="mini"><span style={{ width: `${ctx.percent}%` }} /></span>{ctx.estimated ? '≈' : ''}{Math.round(ctx.percent)} %

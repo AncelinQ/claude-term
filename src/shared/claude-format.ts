@@ -228,6 +228,14 @@ export function parseTranscript(lines: string[], opts: { plansDir: string; home:
         // `/effort <level>` is recorded when typed, before Claude answers
         const effort = t?.includes('<command-name>/effort</command-name>') ? t.match(/<command-args>\s*([a-z]+)\s*<\/command-args>/)?.[1] : undefined
         if (effort && !obj.isSidechain) u.effort = effort
+        // a picker's choice (the bubble's, for this session only, or the user's): what Claude Code answered
+        const out = t?.match(/<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/)?.[1]
+        if (out && !obj.isSidechain) {
+          const level = out.match(/^Set effort level to ([a-z]+)\b/)?.[1]
+          const model = out.match(/^Set model to `([^`]+)`/)?.[1]
+          if (level) u.effort = level
+          if (model) u.model = model
+        }
         break
       }
     }

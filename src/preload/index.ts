@@ -171,7 +171,6 @@ const api: CtApi = {
     install: (on) => ipcRenderer.invoke('usage:install', on),
     refresh: () => ipcRenderer.invoke('usage:refresh'),
     claude: (refresh) => ipcRenderer.invoke('usage:claude', !!refresh),
-    switchModel: (ptyId, alias) => ipcRenderer.invoke('claude:switchModel', { ptyId, alias }),
     defaultModel: () => ipcRenderer.invoke('claude:defaultModel'),
     setDefaultModel: (model) => ipcRenderer.invoke('claude:setDefaultModel', model),
   },

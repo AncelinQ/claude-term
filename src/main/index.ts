@@ -30,7 +30,7 @@ import { UsageService } from './services/usage'
 import { TestsService } from './services/tests'
 import { ProblemsService } from './services/problems'
 import { detectRunnables } from '@shared/runnables'
-import { DefaultModelGuard } from './services/default-model'
+import { setDefaultModel } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
@@ -247,17 +247,8 @@ usage.start()
 ipcMain.handle('usage:state', () => usage.state())
 ipcMain.handle('usage:install', (_e, on: boolean) => usage.setInstalled(on))
 ipcMain.handle('usage:refresh', () => usage.refresh())
-// the terminal bubble's model menu changes the session only: Claude Code's `/model` also saves the alias as the
-// default for new sessions, the guard puts the user's default back whenever that happens (even late)
-const defaultModel = new DefaultModelGuard(claudeSettingsFile)
-ipcMain.handle('claude:switchModel', (_e, { ptyId, alias }: { ptyId: string; alias: string }) => {
-  if (!/^[a-z0-9.[\]-]+$/i.test(alias)) return
-  defaultModel.beforeSwitch(alias)
-  // ^U clears what the user may have started typing (several lines: one per ^U), then the command
-  ptys.write(ptyId, '\x15'.repeat(10) + `/model ${alias}\r`)
-})
-// the Claude panel's default model (new sessions): settings.json, kept by the guard from then on
-ipcMain.handle('claude:setDefaultModel', (_e, model: string | null) => (model === null || /^[a-z0-9.[\]-]+$/i.test(model) ? defaultModel.setDefault(model) : { ok: false, error: 'modèle invalide' }))
+// the Claude panel's default model (new sessions); a tab changes its own through Claude Code's picker
+ipcMain.handle('claude:setDefaultModel', (_e, model: string | null) => (model === null || /^[a-z0-9.[\]-]+$/i.test(model) ? setDefaultModel(claudeSettingsFile, model) : { ok: false, error: 'modèle invalide' }))
 ipcMain.handle('claude:defaultModel', () => { const r = claudeSettingsFile.read(); return r.ok && typeof r.data.model === 'string' ? r.data.model : null })
 let claudeVersion: Promise<string | null> | null = null
 const cached = <T,>(ttl: number, load: () => Promise<T>) => { let v: { at: number; p: Promise<T> } | null = null; return (force = false) => { if (force || !v || Date.now() - v.at > ttl) v = { at: Date.now(), p: load() }; return v.p } }

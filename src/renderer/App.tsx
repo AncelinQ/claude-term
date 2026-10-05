@@ -21,6 +21,8 @@ import { usePlugins } from './stores/plugins'
 import { PluginPopover } from './workbench/PluginView'
 import { Palette } from './workbench/Palette'
 import { Decorations } from './workbench/Decorations'
+import { switchEffort, switchModel, usePickerNotice } from './claude-picker'
+import { screenRows } from './terminal/TerminalView'
 import { t } from '@/i18n'
 
 /** A tab doing something now: Claude on a turn, or a shell running a command. */
@@ -67,6 +69,7 @@ export function App() {
       if (claude) await useWorkbench.getState().newTab(p.id, 'claude', root)
     })
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
+    if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_picker = { switchModel, switchEffort, screenRows, usePickerNotice }
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_state = () => {
       const s = useWorkbench.getState()
       return { activeProjectId: s.activeProjectId, leftActivity: s.leftActivity, rightActivity: s.rightActivity, showSettings: s.showSettings, sessionMode: s.sessionMode,

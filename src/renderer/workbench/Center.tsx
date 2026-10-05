@@ -14,6 +14,7 @@ import { MarkdownPreview } from '@/editor/MarkdownPreview'
 import { Gutter, useStoredSize } from './Split'
 import { t as tr } from '@/i18n'
 import { barItems, GROUP_COLORS, NO_GROUPS, nextColor, type GroupColor, type TabGroup } from '@shared/tab-groups'
+import { MODEL_CHOICES } from '@shared/models'
 
 /** A group's colour, from the theme (its terminal colours) */
 export const GROUP_VARS: Record<GroupColor, string> = {
@@ -202,6 +203,9 @@ export function Center({ project }: { project: Project }) {
             <MenuButton title={tr('Nouvel onglet')} items={[
               { label: tr('Claude'), icon: Icons.claude(13), shortcut: shortcutLabel('app.newClaude'), onSelect: () => newTab(project.id, 'claude') },
               { label: tr('Shell'), icon: Icons.terminal(13), shortcut: shortcutLabel('app.newShell'), onSelect: () => newTab(project.id, 'shell') },
+              'sep',
+              // a Claude tab on another model than the default, for its sessions only (claude --model)
+              ...MODEL_CHOICES.map((c) => ({ label: tr('Claude avec {model}', { model: c.label }), icon: Icons.claude(13), onSelect: () => newTab(project.id, 'claude', undefined, undefined, { model: c.alias }) })),
               ...(window.ct.platform !== 'linux' ? ['sep' as const, { label: tr("Capture d'écran → prompt"), icon: Icons.camera(13), shortcut: shortcutLabel('app.screenshot'), onSelect: () => useWorkbench.getState().captureScreen(project.id) }] : []),
             ]}>{Icons.plus()}</MenuButton>
           </>}>

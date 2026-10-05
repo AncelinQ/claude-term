@@ -34,6 +34,8 @@ export interface PtyCreate {
   kind: TabKind
   /** `claude --resume <id>` */
   resume?: string
+  /** `claude --model <alias>` (a /model alias: "opus", "sonnet[1m]"…) */
+  model?: string
   /** exported as CLAUDETERM_ROOT for the shell's `claude` wrapper */
   projectRoot?: string
   /** the renderer's tab, exported (with this run's instance) as CLAUDETERM_TAB: hook events name the tab they come from */
@@ -484,8 +486,6 @@ export interface CtApi {
     refresh(): Promise<UsageState>
     /** version, default model, latest published Claude Code, Anthropic status (refresh: skip the caches) */
     claude(refresh?: boolean): Promise<ClaudeInfo>
-    /** `/model <alias>` in a Claude tab, keeping the default model of ~/.claude/settings.json */
-    switchModel(ptyId: string, alias: string): Promise<void>
     /** default model of new sessions (~/.claude/settings.json `model`; null: the account's) */
     defaultModel(): Promise<string | null>
     setDefaultModel(model: string | null): Promise<{ ok: boolean; error?: string }>

@@ -70,8 +70,11 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   one check at a time, each request gets its own project), on project open, save and end of a Claude turn; markers in
   the editor (Monaco's own semantic errors are off: it does not see the project). TODO / FIXME / HACK / XXX in
   comments and Markdown. Both grouped by file, click to the line, "Corriger / Demander à Claude" types the prompt. The plugin API keeps `terminal.run` ids, `runs`, `stop`, `show`.
-- Default model: set from the Claude panel (settings.json `model`); the bubble's menu only changes the session, the
-  `DefaultModelGuard` (services/default-model.ts) puts the default back whenever Claude Code saves a switched alias.
+- Default model: set from the Claude panel (settings.json `model`). The bubble's model and effort menus change the
+  session only: they drive Claude Code's `/model` and `/effort` pickers and confirm with `s` (`renderer/claude-picker.ts`,
+  the screen read between keys by `shared/claude-picker.ts`; anything unexpected closes the picker, nothing changed;
+  waits for the end of Claude's turn, stops on a draft in the input line, leaves the "Switch model?" question to the
+  user).
 - Explorer: keyboard (↑ ↓ move, → open / enter, ← close / parent, Enter opens, Space = Quick Look on macOS),
   context menus on files, folders and the empty area. File management: new file / folder (inline name field), cut /
   copy / paste (⌘X ⌘C ⌘V, shared between projects), duplicate (⌘D), rename (F2), Trash after a confirmation (⌘⌫,
@@ -129,6 +132,15 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   model at 100 % coverage (`tests/git-plugin.test.ts`, `tests/git-worktrees.test.ts`). Plugin API:
   `workspace.projects` / `onDidChangeProjects`, `visible` / `onDidChangeVisibility`, `openProject`, `openUrl`,
   `ui.projectDecoration`, `prompt({ choice })`.
+- **Tab groups** (`shared/tab-groups.ts`, Chrome's way): a coloured label (theme's terminal colours) that folds, made by
+  hand or by kind (Claude tabs, shells); a tab dropped on a tab takes its group, on a label enters it; a dragged label
+  moves its group; showing a tab unfolds it; next / previous tab skip folded ones; a new Claude tab or shell goes beside
+  or into the group of its kind (Réglages › Terminal). They live with the tabs (not kept across restarts).
+- **Sessions keep their tab's name** (`userData/session-names.json`): History shows it and finds it, resuming reopens
+  the tab under it, an unnamed tab binding a named session takes it.
+- **Prompts**: a prompt saved without a key gets the next free Ctrl+Shift+2 to 9, Ctrl+Shift+1 opens their list;
+  `{saisie}` left empty sends the prompt without it. Plugin trees can ask for Tout replier / Tout déplier (`foldAll`,
+  folds kept per project): the Commit view does.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.

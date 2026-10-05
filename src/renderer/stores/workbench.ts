@@ -104,7 +104,8 @@ interface Workbench {
   closeTabGroup(projectId: string, groupId: string): Promise<void>
   groupTabsByKind(projectId: string, kind: 'claude' | 'shell'): void
   select(projectId: string, path: string, isDir: boolean): void
-  newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string): Promise<void>
+  /** `model`: a Claude tab opened on that /model alias */
+  newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string, o?: { model?: string }): Promise<void>
   /** types text into the current Claude tab of the project (opens one if needed) */
   insertPrompt(projectId: string, text: string): Promise<void>
   /** types escaped file paths into a terminal tab (the current one, else the Claude tab) */
@@ -288,12 +289,12 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, selectedPath: path, selectedFolder: folder } : p)) }))
   },
 
-  async newTab(projectId, kind, cwd, resume) {
+  async newTab(projectId, kind, cwd, resume, o) {
     const p = get().projects.find((x) => x.id === projectId)
     if (!p) return
     const dir = cwd ?? p.selectedFolder
     const id = 't' + ++seq
-    const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind, projectRoot: p.root ?? undefined, resume, tabId: id })
+    const { id: ptyId, error } = await window.ct.pty.create({ cwd: dir, kind, projectRoot: p.root ?? undefined, resume, tabId: id, ...(o?.model ? { model: o.model } : {}) })
     const tab: Tab = { id, kind, title: name(dir), cwd: dir, ptyId, alive: !error, busy: false, lastCommand: '', lastExit: null, claudeRunning: false }
     // a resumed session reopens under the name of the tab it ran in
     const kept = resume ? await window.ct.claude.sessionName(resume) : null
