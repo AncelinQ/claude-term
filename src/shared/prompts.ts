@@ -24,11 +24,16 @@ export function promptVariables(text: string): ('selection' | 'file' | 'branch' 
   return [...new Set([...text.matchAll(RE)].map((m) => VARS[m[1]]))]
 }
 
-/** The text with its variables replaced, or the ones that have no value (the prompt is then not sent). */
+const WITH_BLANK = /(\s*)\{(sélection|selection|fichier|file|branche|branch|saisie|input)\}/g
+
+/**
+ * The text with its variables replaced, or the ones that have no value (the prompt is then not sent). {saisie} may be
+ * left empty on purpose: it goes, with the blank before it (`/sc:brainstorm {saisie}` → `/sc:brainstorm`).
+ */
 export function expandPrompt(text: string, values: PromptValues): { text: string } | { missing: string[] } {
-  const missing = promptVariables(text).filter((v) => !values[v])
+  const missing = promptVariables(text).filter((v) => (v === 'input' ? values.input === undefined : !values[v]))
   if (missing.length) return { missing }
-  return { text: text.replace(RE, (_m, name: string) => values[VARS[name]]!) }
+  return { text: text.replace(WITH_BLANK, (_m, blank: string, name: string) => { const v = values[VARS[name]]!; return v === '' ? '' : blank + v }) }
 }
 
 /**

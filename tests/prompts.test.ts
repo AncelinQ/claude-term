@@ -10,6 +10,15 @@ describe('saved prompts', () => {
     expect(expandPrompt('{inconnue} reste', {})).toEqual({ text: '{inconnue} reste' })
   })
 
+  it('sends without {saisie} left empty, and the blank before it; other variables still block', () => {
+    expect(expandPrompt('/sc:brainstorm {saisie}', { input: '' })).toEqual({ text: '/sc:brainstorm' })
+    expect(expandPrompt('Ticket {saisie} sur {branche}', { input: '', branch: 'main' })).toEqual({ text: 'Ticket sur main' })
+    expect(expandPrompt('{input}: go', { input: '' })).toEqual({ text: ': go' })
+    expect(expandPrompt('Revue de {saisie}', { input: 'HN-12' })).toEqual({ text: 'Revue de HN-12' })
+    expect(expandPrompt('Explique {sélection}', { selection: '' })).toEqual({ missing: ['selection'] })
+    expect(expandPrompt('Revue de {saisie}', {})).toEqual({ missing: ['input'] })
+  })
+
   it('types a bracketed paste, Enter apart when it sends', () => {
     expect(promptKeys('a\nb', 'send')).toEqual({ paste: '\x1b[200~a\nb\x1b[201~', enter: true })
     expect(promptKeys('x\x1b[201~y', 'insert')).toEqual({ paste: '\x1b[200~xy\x1b[201~', enter: false })

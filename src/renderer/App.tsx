@@ -127,7 +127,7 @@ export function App() {
       {popovers.map((p) => <PluginPopover key={p.id} id={p.id} anchorViewId={p.anchorViewId} model={p.model} onClose={() => closePopover(p.id)} />)}
       {prompt && <PromptModal req={prompt} onDone={(v) => { window.ct.plugins.promptReply(prompt.id, v); setPrompt(null) }} />}
       <Palette />
-      {askReq && <PromptModal req={{ id: 0, title: askReq.title, placeholder: askReq.placeholder }} onDone={(v) => useAsk.getState().done(v)} />}
+      {askReq && <PromptModal req={{ id: 0, title: askReq.title, placeholder: askReq.placeholder, emptyLabel: askReq.emptyLabel }} onDone={(v) => useAsk.getState().done(v)} />}
       {showSettings && (
         <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>
           <div className="modal"><SettingsPage onClose={() => setShowSettings(false)} /></div>
@@ -161,14 +161,14 @@ function PromptModal({ req, onDone }: { req: import('@shared/plugins').PromptReq
           <div className="hdr"><span>{req.title}</span></div>
           <div className="content" style={{ padding: 12, gap: 10 }}>
             <input autoFocus list={req.options ? 'prompt-options' : undefined} placeholder={req.placeholder} value={value} onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onDone(value); if (e.key === 'Escape') { e.stopPropagation(); onDone(null) } }} />
+              onKeyDown={(e) => { if (e.key === 'Enter' && (value.trim() || req.emptyLabel)) onDone(value); if (e.key === 'Escape') { e.stopPropagation(); onDone(null) } }} />
             {req.options && <datalist id="prompt-options">{req.options.map((o) => <option key={o} value={o} />)}</datalist>}
             {req.options && req.options.length > 0 && (
               <div className="plan-pick" style={{ padding: 0 }}>{req.options.slice(0, 12).map((o) => <button key={o} className="linkbtn" onClick={() => onDone(o)}>{o}</button>)}</div>
             )}
             <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
               <button className="btn" onClick={() => onDone(null)}>{t('Annuler')}</button>
-              <button className="btn primary" disabled={!value.trim()} onClick={() => onDone(value)}>OK</button>
+              <button className="btn primary" disabled={!value.trim() && !req.emptyLabel} onClick={() => onDone(value)}>{!value.trim() && req.emptyLabel ? req.emptyLabel : 'OK'}</button>
             </div>
           </div>
         </div>

@@ -111,8 +111,8 @@ export interface PopoverRequest { id: string; anchorViewId: string; model: ViewM
 export interface DiffRequest { title: string; path?: string; original?: string; modified?: string; unified?: string }
 
 /** Host → renderer: a text prompt (modal); answered with `plugins:promptReply`. */
-/** `choice`: only the options, as buttons (no text to type) */
-export interface PromptRequest { id: number; title: string; placeholder?: string; options?: string[]; choice?: boolean }
+/** `choice`: only the options, as buttons (no text to type); `emptyLabel`: an empty answer is allowed, the OK button then says what it does */
+export interface PromptRequest { id: number; title: string; placeholder?: string; options?: string[]; choice?: boolean; emptyLabel?: string }
 
 /**
  * Host → renderer: a terminal command request. `command` is typed as is; `argv` commands are quoted for the tab's

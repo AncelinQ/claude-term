@@ -35,8 +35,10 @@ export async function runPrompt(p: SavedPrompt): Promise<string | null> {
     } else if (v === 'branch') {
       values.branch = (await window.ct.app.gitBranch(root)) ?? undefined
     } else if (v === 'input') {
-      values.input = (await useAsk.getState().ask(p.name, t('Valeur de {saisie}')))?.trim() || undefined
-      if (!values.input) return null   // cancelled
+      // left empty, the prompt goes without it; only Annuler / Escape stop it
+      const v = await useAsk.getState().ask(p.name, t('Valeur de {saisie}'), { emptyLabel: p.mode === 'send' ? t('Envoyer sans saisie') : t('Insérer sans saisie') })
+      if (v === null) return null
+      values.input = v.trim()
     }
   }
   const r = expandPrompt(p.text, values)
