@@ -518,4 +518,10 @@ const EN: Record<string, string> = {
   'Bleu marine': 'Navy',
   'Crème': 'Cream',
   'Argent': 'Silver',
+  'Insérer le chemin dans le prompt': 'Insert the path into the prompt',
+  'Des sessions Claude ont été lancées dans ce dossier': 'Claude sessions were started in this folder',
+  'Révéler le fichier affiché': 'Reveal the shown file',
+  "Révéler le fichier dans l'explorateur": 'Reveal the file in the explorer',
+  'Cacher les fichiers masqués et ceux que git ignore': 'Hide dotfiles and what git ignores',
+  'Afficher les fichiers masqués (.env, .claude…) et ceux que git ignore': 'Show dotfiles (.env, .claude…) and what git ignores',
 }

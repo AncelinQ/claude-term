@@ -87,6 +87,7 @@ input:focus { border-color: var(--ct-accent); }
 .island > .hdr > button, .island > .hdr .menu-anchor > button { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: var(--ct-text-secondary); }
 .island > .hdr > button:hover, .island > .hdr .menu-anchor > button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 .island > .hdr > button svg, .island > .hdr .menu-anchor > button svg { width: 14px; height: 14px; }
+.island > .hdr > button:disabled { opacity: .4; background: none; }
 .island > .content { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
 .island > .content > * { flex: none; }
 .island > .content > .term-wrap, .island > .content > .list, .island > .content > .tree, .island > .content > .results, .island > .content > .files, .island > .content > .plan, .island > .content > .activity-list, .island > .content > .empty, .island > .content > .md, .island > .content > .settings-body, .island > .content > .welcome, .island > .content > .links-empty, .island > .content > .plan-empty { flex: 1; min-height: 0; }
@@ -632,3 +633,5 @@ input[type=checkbox]:disabled { opacity: .4; }
 .pb-status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pb-status button { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: var(--ct-text-secondary); flex: none; }
 .pb-status button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
+.tree .row .dim { opacity: .6; }
+.tree .row .sessions-mark { color: var(--ct-accent); font-size: 10px; margin-left: 2px; }
