@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { SessionInfo } from '@shared/ipc'
+import { formatCost, showsCost, type Cost } from '@shared/costs'
 import { Icons } from '../icons'
 import { Island, Empty } from '../Island'
 import { useWorkbench, useActiveProject } from '@/stores/workbench'
 import { t } from '@/i18n'
+
+const bytes = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} ko`)
 
 /** Past Claude sessions (this project or all), resume in a new Claude tab, open the transcript, delete. */
 export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
@@ -14,6 +17,9 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
   const root = project?.root ?? null
   const reload = () => (scope === 'project' && root ? window.ct.claude.sessions(root) : window.ct.claude.allSessions()).then(setSessions)
   useEffect(() => { reload() }, [scope, root, project?.tabs.length])
+  // each session's cost (Claude Code's figure, or an estimate)
+  const [costs, setCosts] = useState<Record<string, Cost>>({})
+  useEffect(() => { window.ct.claude.costs().then((r) => setCosts(r.sessions)) }, [scope])
   const home = window.ct.home
   const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
   const fmt = (ms: number) => { const d = new Date(ms); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }
@@ -41,12 +47,15 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
               <span className="ico">{Icons.claude(12)}</span>
               <div className="lbody">
                 <div className="head"><span className="name">{s.title}</span></div>
-                <div className="desc">{fmt(s.modified)}{s.messageCount ? ` · ${s.messageCount} msg` : ''}{s.gitBranch ? ` · ${s.gitBranch}` : ''}{scope === 'all' && s.projectPath ? ` · ${short(s.projectPath)}` : ''}</div>
+                <div className="desc">{fmt(s.modified)}{showsCost(costs[s.path]) ? ` · ${formatCost(costs[s.path])}` : ''}{s.messageCount ? ` · ${s.messageCount} msg` : ''}{s.gitBranch ? ` · ${s.gitBranch}` : ''}{scope === 'all' && s.projectPath ? ` · ${short(s.projectPath)}` : ''}</div>
               </div>
               <span className="acts">
                 <button title={t('Reprendre dans un onglet Claude')} onClick={() => resume(s)}>{Icons.terminal(12)}</button>
                 <button title={t('Ouvrir le transcript')} onClick={() => project && openFile(project.id, s.path)}>{Icons.file(12)}</button>
-                <button title={t('Supprimer (corbeille)')} onClick={async () => { if (confirm(t('Supprimer la session « {title} » ?', { title: s.title }))) { await window.ct.claude.deleteSession(s); reload() } }}>{Icons.x(12)}</button>
+                <button title={t('Supprimer (corbeille)')} onClick={async () => {
+                  const size = await window.ct.claude.sessionSize(s)
+                  if (confirm(t('Supprimer la session « {title} » ({size}) ? Le transcript, ses sous-agents et les sauvegardes de fichiers de Claude Code vont à la corbeille.', { title: s.title, size: bytes(size) }))) { await window.ct.claude.deleteSession(s); reload() }
+                }}>{Icons.x(12)}</button>
               </span>
             </div>
           ))}

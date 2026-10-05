@@ -80,6 +80,12 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   (unsaved edits kept) and close on deletion unless dirty. Shown folders are watched (`DirWatcher`), so outside
   changes appear.
 - Claude icon: the terminal icon in orange (`Icons.claude`) everywhere it means Claude; skills keep the sparkle.
+- **Costs** (`shared/costs.ts`, `services/cost-index.ts`, summaries cached in `userData/index/costs.json` by size and mtime):
+  Claude Code's cost-state is exact; replies' tokens (each API response once) priced with a base rate per model
+  inferred from the user's own cost-state records give ≈ where there is none or after it; ≥ when a model has no rate.
+  Claude panel: today, 7 and 30 days, by day / project / model; History rows show each session's cost. Search what
+  was said: ripgrep over the transcripts, no index (`services/transcript-search.ts`). Deleting a session also trashes
+  its file-history, size shown first.
 - **Claude panel** (right bar): subscription usage from Claude Code's status line (5 h session, week, per-model
   week, extra credit; gauges with reset delays), Claude Code version and default model (global data only), a
   button to the artifacts gallery (claude.ai/code/artifacts, default browser). The status line is ours only

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { ClaudeInfo, UsageState } from '@shared/ipc'
 import { level, untilReset, type UsageLimit } from '@shared/usage'
+import { formatCost, type Cost, type CostReport } from '@shared/costs'
 import { MODEL_CHOICES, modelName } from '@shared/models'
 import { MenuButton } from '../Menu'
 import { useUsage } from '@/stores/usage'
@@ -71,6 +72,8 @@ export function ClaudeIsland() {
           ) : null}
         </Block>
 
+        <CostsBlock />
+
         <Block title={t('Claude Code')}>
           {usage?.plan?.subscription && <Row k={t('Abonnement')} v={plan(usage.plan.subscription)} />}
           <Row k={t('Version')} v={info ? info.version ?? t('introuvable') : '…'} extra={info?.version && info.latest ? (newer ? <span className="badge accent">{t('{v} disponible', { v: newer })}</span> : <span className="badge dim">{t('à jour')}</span>) : undefined} />
@@ -113,6 +116,35 @@ export function ClaudeIsland() {
         </Block>
       </div>
     </Island>
+  )
+}
+
+/** What the sessions cost over 30 days: Claude Code's exact figures, an estimate (≈) where it has none, ≥ when part of it is unknown. */
+function CostsBlock() {
+  const [report, setReport] = useState<CostReport | null>(null)
+  const [open, setOpen] = useState(false)
+  useEffect(() => { window.ct.claude.costs().then(setReport) }, [])
+  if (!report) return <Block title={t('Coûts (30 jours)')}><div className="cp-row hint">{t('Lecture des sessions…')}</div></Block>
+  const today = new Date(), key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const week = key(new Date(today.getTime() - 6 * 86_400_000))
+  const sum = (days: CostReport['byDay']) => days.reduce<Cost>((a, d) => ({ usd: a.usd + d.cost.usd, kind: a.kind === 'atLeast' || d.cost.kind === 'atLeast' ? 'atLeast' : a.kind === 'estimated' || d.cost.kind === 'estimated' ? 'estimated' : 'exact' }), { usd: 0, kind: 'exact' })
+  const dayLabel = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: '2-digit' })
+  return (
+    <Block title={t('Coûts (30 jours)')}>
+      <Row k={t('Aujourd’hui')} v={formatCost(sum(report.byDay.filter((d) => d.day === key(today))))} />
+      <Row k={t('7 jours')} v={formatCost(sum(report.byDay.filter((d) => d.day >= week)))} />
+      <Row k={t('30 jours')} v={formatCost(report.total)} />
+      <button className="cp-row link" onClick={() => setOpen(!open)}><span>{open ? t('Masquer le détail') : t('Par jour, projet et modèle')}</span>{open ? Icons.chevronUp(12) : Icons.chevronDown(12)}</button>
+      {open && <>
+        <div className="cp-row hint dim">{t('Par jour')}</div>
+        {report.byDay.slice(0, 14).map((d) => <Row key={d.day} k={dayLabel(d.day)} v={formatCost(d.cost)} />)}
+        <div className="cp-row hint dim">{t('Par projet')}</div>
+        {report.byProject.slice(0, 8).map((p) => <Row key={p.project} k={p.project.split(/[\\/]/).filter(Boolean).pop() ?? p.project} v={formatCost(p.cost)} />)}
+        <div className="cp-row hint dim">{t('Par modèle')}</div>
+        {report.byModel.map((m) => <Row key={m.model} k={modelName(m.model)} v={formatCost(m.cost)} />)}
+        <div className="cp-row hint dim">{t('Exact : relevé par Claude Code. ≈ : estimé d’après tes propres relevés. ≥ : une part n’a pas pu être chiffrée. Équivalent API, pas une facture.')}</div>
+      </>}
+    </Block>
   )
 }
 

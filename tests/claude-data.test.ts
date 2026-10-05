@@ -78,6 +78,23 @@ describe('ClaudeData', () => {
     t.dispose()
   })
 
+  it('deletes a session with its folder and file-history, after telling its size; nothing outside the projects', async () => {
+    const { t, cwd, dir, data } = home()
+    const path = t.write(join(dir, 'sid1.jsonl'), jsonl([{ type: 'user', cwd, message: { content: 'x' } }]))
+    t.write(join(dir, 'sid1', 'subagents', 'agent-a.jsonl'), '{}\n')
+    t.write(join('.claude', 'file-history', 'sid1', 'f@v1'), 'backup content')
+    const s = { id: 'sid1', path, title: 'x', modified: 0, projectPath: cwd, messageCount: 1, gitBranch: '' }
+    expect(data.sessionSize(s)).toBeGreaterThan(14)
+    const trashed: string[] = []
+    await data.deleteSession(s, async (p) => { trashed.push(p) })
+    expect(trashed).toEqual([path, join(dir, 'sid1'), join(t.path, '.claude', 'file-history', 'sid1')])
+    const outside = { ...s, id: 'evil', path: t.write('elsewhere/evil.jsonl', '{}') }
+    expect(data.sessionSize(outside)).toBe(0)
+    await data.deleteSession(outside, async (p) => { trashed.push(p) })
+    expect(trashed).toHaveLength(3)
+    t.dispose()
+  })
+
   it('counts the slash commands typed, skills included, not the ones quoted in tool output', () => {
     const { t, cwd, dir, data } = home()
     t.write(join(dir, 'c1.jsonl'), jsonl([

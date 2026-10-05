@@ -219,11 +219,33 @@ export class ClaudeData {
   }
 
   /** Moves a transcript (and its companion folder) to the trash and drops it from sessions-index.json. */
+  /** What a session takes on disk: its transcript, its folder (sub-agents, tool results) and its file-history backups. */
+  sessionSize(s: SessionInfo): number {
+    if (!this.isSession(s)) return 0
+    const size = (p: string): number => {
+      let st
+      try { st = statSync(p) } catch { return 0 }
+      if (!st.isDirectory()) return st.size
+      let n = 0
+      try { for (const e of readdirSync(p)) n += size(join(p, e)) } catch { /* unreadable */ }
+      return n
+    }
+    return size(s.path) + size(join(dirname(s.path), s.id)) + size(join(this.fileHistoryDir, s.id))
+  }
+
+  /** A session the renderer names: a transcript under ~/.claude/projects, an id without path characters. */
+  private isSession(s: SessionInfo): boolean {
+    return !!s && typeof s.id === 'string' && /^[\w-]+$/.test(s.id) && typeof s.path === 'string' && s.path.endsWith(`${s.id}.jsonl`) && isInside(s.path, this.root)
+  }
+
   async deleteSession(s: SessionInfo, trash: (p: string) => Promise<void>) {
+    if (!this.isSession(s)) return
     const dir = dirname(s.path)
     await trash(s.path)
     const companion = join(dir, s.id)
     if (existsSync(companion)) await trash(companion).catch(() => {})
+    const history = join(this.fileHistoryDir, s.id)
+    if (existsSync(history)) await trash(history).catch(() => {})
     const index = join(dir, 'sessions-index.json')
     try {
       const obj = JSON.parse(readFileSync(index, 'utf8'))

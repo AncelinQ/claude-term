@@ -291,7 +291,10 @@ export interface CtApi {
     sessions(cwd: string): Promise<SessionInfo[]>
     allSessions(): Promise<SessionInfo[]>
     hasSessions(cwd: string): Promise<boolean>
+    /** to the Trash: the transcript, its folder (sub-agents) and its file-history backups */
     deleteSession(s: SessionInfo): Promise<void>
+    /** bytes those take */
+    sessionSize(s: SessionInfo): Promise<number>
     sessionDiff(path: string, backupName: string | null, sessionId: string): Promise<string>
     readText(path: string): Promise<string>
     /** an activity entry in full (its tool input and result, or the text), in the session or one of its sub-agents */
@@ -305,6 +308,8 @@ export interface CtApi {
     commandCounts(): Promise<Record<string, number>>
     /** sessions whose prompts or Claude's answers hold every word of the query (accents and case aside), with snippets */
     searchText(query: string): Promise<{ session: SessionInfo; hits: { role: 'user' | 'assistant'; snippet: string; time?: string }[] }[]>
+    /** what the sessions of the last 30 days cost: total, by day, project and model, and each session's (shared/costs) */
+    costs(): Promise<import('./costs').CostReport>
     /** a sub-agent's activity, with its type and description */
     subagent(transcript: string, agentId: string): Promise<{ events: import('./claude-format').ToolEvent[]; agentType?: string; description?: string } | null>
     /** the session's images (its sub-agents' too) as data URLs */

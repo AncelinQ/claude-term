@@ -23,6 +23,7 @@ import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
 import { Restore } from './services/restore'
 import { TranscriptSearch } from './services/transcript-search'
+import { CostIndex } from './services/cost-index'
 import { UsageService } from './services/usage'
 import { TestsService } from './services/tests'
 import { ProblemsService } from './services/problems'
@@ -137,6 +138,7 @@ ipcMain.handle('claude:sessions', (_e, cwd: string) => claudeData.sessions(cwd))
 ipcMain.handle('claude:allSessions', () => claudeData.allSessions())
 ipcMain.handle('claude:hasSessions', (_e, cwd: string) => claudeData.hasSessions(cwd))
 ipcMain.handle('claude:deleteSession', (_e, s) => claudeData.deleteSession(s, (p) => shell.trashItem(p)))
+ipcMain.handle('claude:sessionSize', (_e, s) => claudeData.sessionSize(s))
 ipcMain.handle('claude:sessionDiff', (_e, { path, backupName, sessionId }) => claudeData.sessionDiff(path, backupName, sessionId))
 ipcMain.handle('claude:readText', (_e, path: string) => claudeData.readText(path))
 // restore a file to its state before the session: only a file the tab's session has a backup for
@@ -164,6 +166,8 @@ ipcMain.handle('claude:restoreApply', async (_e, { tabId, path, hash }) => {
 })
 ipcMain.handle('claude:restoreUndo', (_e, undoId: string) => restore.undo(undoId))
 ipcMain.handle('claude:commandCounts', () => claudeData.commandCounts())
+const costIndex = new CostIndex(claudeData.root, join(app.getPath('userData'), 'index', 'costs.json'))
+ipcMain.handle('claude:costs', () => costIndex.report())
 const transcriptSearch = new TranscriptSearch(claudeData.root)
 ipcMain.handle('claude:searchText', async (_e, query: string) => {
   if (typeof query !== 'string') return []
