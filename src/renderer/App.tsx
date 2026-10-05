@@ -21,7 +21,7 @@ import { usePlugins } from './stores/plugins'
 import { PluginPopover } from './workbench/PluginView'
 import { Palette } from './workbench/Palette'
 import { Decorations } from './workbench/Decorations'
-import { switchEffort, switchModel, usePickerNotice } from './claude-picker'
+import { sendWhenReady, switchEffort, switchModel, usePickerNotice } from './claude-picker'
 import { screenRows } from './terminal/TerminalView'
 import { t } from '@/i18n'
 
@@ -57,16 +57,19 @@ export function App() {
     window.ct.plugins.onStopRun((id) => { const f = tabOfRun(id); if (f?.t.ptyId) window.ct.pty.write(f.t.ptyId, '\x03') })
     window.ct.plugins.onShowRun((id) => { const f = tabOfRun(id); if (f) { const s = useWorkbench.getState(); s.setActiveProject(f.p.id); s.setCurrentTab(f.p.id, f.t.id) } })
     window.ct.plugins.onOpenDiff((r) => { const s = useWorkbench.getState(); if (s.activeProjectId) s.openDiff(s.activeProjectId, r) })
-    window.ct.plugins.onOpenProject(async ({ path, claude }) => {
+    window.ct.plugins.onOpenProject(async ({ path, claude, resume, prompt }) => {
       const s = useWorkbench.getState()
       // git prints Windows paths with forward slashes
       const root = window.ct.platform === 'win32' ? path.replace(/\//g, '\\') : path
       const same = (r: string | null) => !!r && r.replace(/[\\/]+$/, '').toLowerCase() === root.replace(/[\\/]+$/, '').toLowerCase()
       const open = s.projects.find((p) => same(p.root))
-      if (open) { s.setActiveProject(open.id); return }
-      const p = s.newProject(null)
-      s.setRoot(p.id, root)
-      if (claude) await useWorkbench.getState().newTab(p.id, 'claude', root)
+      if (open) s.setActiveProject(open.id)
+      const p = open ?? s.newProject(null)
+      if (!open) s.setRoot(p.id, root)
+      // a session to resume or a prompt to send get a Claude tab of their own, even in a project already open
+      if (!resume && !prompt && (open || !claude)) return
+      const tabId = await useWorkbench.getState().newTab(p.id, 'claude', open?.root ?? root, resume)
+      if (prompt && tabId) await sendWhenReady(tabId, prompt)
     })
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct = useWorkbench
     if (import.meta.env.DEV || window.ct.debug) (window as any).__ct_picker = { switchModel, switchEffort, screenRows, usePickerNotice }

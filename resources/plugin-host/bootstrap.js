@@ -34,7 +34,7 @@
       onDidChangeProjects: (cb) => on('projects', cb),
       get visible() { return call('workspace.visible') },
       onDidChangeVisibility: (cb) => on('visibility', cb),
-      openProject: (path, opts) => call('workspace.openProject', { path, claude: !!(opts && opts.claude) }),
+      openProject: (path, opts) => call('workspace.openProject', { path, claude: !!(opts && opts.claude), resume: opts && opts.resume, prompt: opts && opts.prompt }),
       openUrl: (url) => call('workspace.openUrl', { url }),
       openFile: (path) => call('workspace.openFile', { path }),
       openDiff: (req) => call('workspace.openDiff', req),
@@ -79,6 +79,7 @@
     },
     claude: {
       run: (req) => callAsync('claude.run', req),
+      sessions: (opts) => callAsync('claude.sessions', { days: opts && opts.days }),
     },
     net: {
       // the answer is read whole by the host: text() and json() resolve at once, like a fetch Response's

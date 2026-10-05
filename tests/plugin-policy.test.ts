@@ -54,6 +54,8 @@ describe('plugin policy', () => {
     expect(permissionError('net.fetch', ctx({ permissions: new Set(['network']) }))).toBeNull()
     expect(permissionError('secrets.get', ctx({ permissions: new Set(['network']) }))).toMatch(/"secrets"/)
     expect(permissionError('secrets.get', ctx({ permissions: new Set(['secrets']) }))).toBeNull()
+    expect(permissionError('claude.sessions', ctx())).toMatch(/"sessions"/)
+    expect(permissionError('claude.sessions', ctx({ permissions: new Set(['sessions']) }))).toBeNull()
     const hosts = ['api.linear.app']
     expect(netError('https://api.linear.app/graphql', ctx({ hosts }))).toBeNull()
     expect(netError('https://example.com/', ctx({ hosts }))).toMatch(/hosts/)

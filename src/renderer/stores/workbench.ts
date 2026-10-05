@@ -105,7 +105,8 @@ interface Workbench {
   groupTabsByKind(projectId: string, kind: 'claude' | 'shell'): void
   select(projectId: string, path: string, isDir: boolean): void
   /** `model`: a Claude tab opened on that /model alias */
-  newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string, o?: { model?: string }): Promise<void>
+  /** resolves with the new tab's id */
+  newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string, o?: { model?: string }): Promise<string | undefined>
   /** types text into the current Claude tab of the project (opens one if needed) */
   insertPrompt(projectId: string, text: string): Promise<void>
   /** types escaped file paths into a terminal tab (the current one, else the Claude tab) */
@@ -306,6 +307,7 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     if (error) console.error(error)
     else if (kind === 'claude') window.ct.claude.track(tab.id, dir, resume ? { resume } : undefined)
     get().visibleChanged()
+    return id
   },
   async sendPaths(projectId, paths, tabId) {
     if (!paths.length) return

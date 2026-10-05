@@ -24,7 +24,7 @@ import type { RunInfo } from './plugins'
 import type { RunGroup, UserRunGroup } from './runnables'
 import type { TestNode, TestResult, TestSuite } from './tests'
 import type { Diagnostic, Todo } from './problems'
-import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest, ProjectDecoration } from './plugins'
+import type { PluginInfo, ViewModel, ViewEvent, RunRequest, PromptRequest, PopoverRequest, DiffRequest, ProjectDecoration, OpenProjectRequest } from './plugins'
 export type PluginDecoration = ProjectDecoration & { root: string; pluginId: string }
 
 export type TabKind = 'claude' | 'shell'
@@ -477,8 +477,8 @@ export interface CtApi {
     /** chips plugins show on project tabs and linked folders, by root */
     decorations(): Promise<PluginDecoration[]>
     onDecorations(cb: (list: PluginDecoration[]) => void): () => void
-    /** a plugin opens a folder as a project (workspace.openProject), with a Claude tab when `claude` */
-    onOpenProject(cb: (req: { path: string; claude: boolean }) => void): () => void
+    /** a plugin opens a folder as a project (workspace.openProject): a Claude tab, a resumed session or a prompt sent */
+    onOpenProject(cb: (req: OpenProjectRequest) => void): () => void
   }
   attachments: {
     /** absolute path of a dropped File (Electron webUtils) */

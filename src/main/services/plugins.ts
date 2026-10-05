@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFi
 import { homedir } from 'node:os'
 import { join, dirname, isAbsolute, relative, sep } from 'node:path'
 import { execFile } from 'node:child_process'
-import { hostAllowed, pendingPermissions, validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type PromptRequest, type RunInfo, type ProjectDecoration } from '@shared/plugins'
+import { hostAllowed, pendingPermissions, validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type PromptRequest, type RunInfo, type ProjectDecoration, type PluginSession } from '@shared/plugins'
 import { isBrowsable } from '@shared/external'
 import { fsError, netError, permissionError, type PolicyCtx } from './plugin-policy'
 import { netFetch, netRequest } from './plugin-net'
@@ -21,6 +21,8 @@ export interface HostBridge {
   visible(): boolean
   /** an isolated claude -p (services/claude-run); a preset (commit, mr) takes the app's own instructions */
   claudeRun(input: string, o: { instructions?: string; preset?: { kind: 'commit'; recentSubjects: string[] } | { kind: 'mr' }; model?: string }): Promise<{ text: string; costUsd?: number; model?: string }>
+  /** Claude Code sessions written to in the last `days` days, newest first */
+  claudeSessions(days: number): Promise<PluginSession[]>
   settings(): Record<string, any>
 }
 
@@ -218,6 +220,10 @@ export class PluginHost {
         const model = typeof a.model === 'string' && /^[a-z0-9.[\]-]+$/i.test(a.model) ? a.model : undefined
         return { value: await this.bridge.claudeRun(a.input, preset ? { preset, model } : { instructions: a.instructions, model }) }
       }
+      if (method === 'claude.sessions') {
+        const days = typeof a?.days === 'number' && a.days > 0 ? Math.min(a.days, 3650) : 90
+        return { value: await this.bridge.claudeSessions(days) }
+      }
       if (method === 'net.fetch') {
         const req = netRequest(a)
         const err = netError(req.url, this.policy(p))
@@ -251,7 +257,9 @@ export class PluginHost {
       case 'workspace.visible': return this.bridge.visible()
       case 'workspace.openProject': {
         if (typeof a.path !== 'string' || !isAbsolute(a.path)) throw new Error('openProject: absolute path expected')
-        return void this.bridge.send('plugins:openProject', { path: a.path, claude: !!a.claude })
+        if (a.resume !== undefined && (typeof a.resume !== 'string' || !/^[0-9a-f-]{8,64}$/i.test(a.resume))) throw new Error('openProject: resume must be a session id')
+        if (a.prompt !== undefined && (typeof a.prompt !== 'string' || a.prompt.length > 20_000)) throw new Error('openProject: prompt must be a string (20 000 characters at most)')
+        return void this.bridge.send('plugins:openProject', { path: a.path, claude: !!a.claude, ...(a.resume ? { resume: a.resume } : {}), ...(a.prompt?.trim() ? { prompt: a.prompt } : {}) })
       }
       case 'workspace.openUrl': {
         if (typeof a.url !== 'string' || !isBrowsable(a.url)) throw new Error('openUrl: https, or http on this machine')

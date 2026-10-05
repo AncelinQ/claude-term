@@ -8,6 +8,7 @@ import { hostAllowed, type PluginPermission } from '@shared/plugins'
  * - fs: its own folder and the open project; fs:home widens reads / watches to the home folder
  * - network: net.fetch, to the hosts of plugin.json only (built-ins too), https; the plugin window itself reaches nothing
  * - secrets: its own secrets, encrypted by the OS
+ * - sessions: the list of Claude Code sessions (titles, folders, branches, costs, merge requests and tickets)
  */
 export interface PolicyCtx {
   builtin: boolean
@@ -22,7 +23,7 @@ export interface PolicyCtx {
 }
 
 // opening a project widens what fs reaches, opening a URL can carry data out: as much as running a command
-const NEEDS: Record<string, PluginPermission> = { 'process.exec': 'process', 'terminal.run': 'process', 'terminal.stop': 'process', 'workspace.openProject': 'process', 'workspace.openUrl': 'process', 'claude.run': 'claude', 'net.fetch': 'network', 'secrets.get': 'secrets', 'secrets.set': 'secrets', 'secrets.delete': 'secrets' }
+const NEEDS: Record<string, PluginPermission> = { 'process.exec': 'process', 'terminal.run': 'process', 'terminal.stop': 'process', 'workspace.openProject': 'process', 'workspace.openUrl': 'process', 'claude.run': 'claude', 'net.fetch': 'network', 'secrets.get': 'secrets', 'secrets.set': 'secrets', 'secrets.delete': 'secrets', 'claude.sessions': 'sessions' }
 
 export function permissionError(method: string, ctx: PolicyCtx): string | null {
   const need = NEEDS[method]

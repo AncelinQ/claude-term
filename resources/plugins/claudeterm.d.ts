@@ -6,6 +6,7 @@
  * - "claude": claude.run (an isolated claude -p, on the user's subscription)
  * - "network": net.fetch, https to the hosts listed in plugin.json `"hosts"` only ("api.linear.app", "*.linear.app")
  * - "secrets": secrets (API keys…), encrypted by the OS, the plugin's own
+ * - "sessions": claude.sessions, the user's Claude Code sessions (title, folder, branch, cost, merge requests, tickets)
  * - fs (exists / read / list / watch, openFile): the plugin folder and the open project; "fs:home" widens it to the
  *   home folder. Absolute paths only.
  */
@@ -25,6 +26,14 @@ export type ViewModel =
   | { kind: 'diff'; text: string }
 export interface ViewEvent { viewId: string; type: 'select' | 'open' | 'action' | 'toolbar'; itemId?: string; actionId?: string }
 
+export interface TicketTrace { title?: string; url?: string; branch?: string; status?: string; statusAt?: string; statusSetByClaude?: boolean }
+export interface Session {
+  id: string; title: string; cwd: string; modified: number; branch?: string; tabName?: string
+  cost?: { usd: number; kind: 'exact' | 'estimated' | 'atLeast' }
+  prs: { url: string; number?: number; repository?: string }[]
+  tickets: Record<string, TicketTrace>
+}
+
 export interface Context {
   plugin: { id: string; dir: string }
   workspace: {
@@ -37,8 +46,12 @@ export interface Context {
     /** the workbench window is on screen: pause polling while it is not */
     readonly visible: boolean
     onDidChangeVisibility(cb: (visible: boolean) => void): () => void
-    /** opens a folder as a project (or brings it to the front), with a Claude tab when `claude`; requires "process" */
-    openProject(path: string, opts?: { claude?: boolean }): void
+    /**
+     * Opens a folder as a project (or brings it to the front); requires "process". `claude`: with a Claude tab when it
+     * opens. `resume`: a Claude tab resuming that session. `prompt`: a new Claude tab that sends it as its first message
+     * once Claude is ready (after the folder trust question, which stays the user's).
+     */
+    openProject(path: string, opts?: { claude?: boolean; resume?: string; prompt?: string }): void
     /** an https link, or http on this machine, in the default browser; requires "process" */
     openUrl(url: string): void
     /** opens a file in an editor tab of the active project */
@@ -89,7 +102,15 @@ export interface Context {
    * instructions for a commit message (following `recentSubjects`) or a merge request (in the interface's language).
    * Run it on the user's click only, and show `costUsd`.
    */
-  claude: { run(req: { input: string; instructions?: string; preset?: { kind: 'commit'; recentSubjects: string[] } | { kind: 'mr' }; model?: string }): Promise<{ text: string; costUsd?: number; model?: string }> }
+  claude: {
+    run(req: { input: string; instructions?: string; preset?: { kind: 'commit'; recentSubjects: string[] } | { kind: 'mr' }; model?: string }): Promise<{ text: string; costUsd?: number; model?: string }>
+    /**
+     * Requires "sessions". The sessions written to in the last `days` days (90 by default), newest first: the branch
+     * they were on last, the merge requests they opened (pr-link), the tickets Claude read or changed through a Linear
+     * MCP server with their last known state, and what they cost.
+     */
+    sessions(opts?: { days?: number }): Promise<Session[]>
+  }
   /**
    * Requires "network". Sent by the app without cookies: a string body (≤ 1 MB), an answer read whole (≤ 5 MB, 30 s),
    * redirects followed within the declared hosts only. Host, Cookie, Origin and the like are the app's to set.

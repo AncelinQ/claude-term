@@ -1,4 +1,5 @@
 /** Plugin system contract: manifest, declarative view models, host ↔ renderer messages. */
+import type { PrLink, TicketTrace } from './work'
 
 export interface PluginManifest {
   id: string
@@ -8,7 +9,7 @@ export interface PluginManifest {
   main: string
   /** "startup" (default) or lazy: "onView:<viewId>" */
   activation?: string[]
-  permissions?: ('process' | 'fs:home' | 'network' | 'secrets' | 'claude')[]
+  permissions?: ('process' | 'fs:home' | 'network' | 'secrets' | 'claude' | 'sessions')[]
   /** what "network" reaches, https only: "api.linear.app", or "*.linear.app" for its subdomains */
   hosts?: string[]
   contributes?: {
@@ -27,6 +28,27 @@ export const PLUGIN_PERMISSIONS: Record<PluginPermission, string> = {
   network: 'accès réseau en https, limité aux domaines que le plugin déclare',
   secrets: 'garder des secrets (clés d\'API) chiffrés par le système',
   claude: 'demander un texte à Claude (claude -p, sur votre abonnement ; plafonné à 1 $ par demande)',
+  sessions: 'lire la liste de vos sessions Claude Code : titre, dossier, branche, coût, MR et tickets Linear cités',
+}
+
+/** A Claude Code session as ctx.claude.sessions() lists it (permission "sessions"). */
+export interface PluginSession {
+  id: string
+  title: string
+  /** the folder it ran in */
+  cwd: string
+  /** last write of its transcript (ms) */
+  modified: number
+  /** the git branch it was on last */
+  branch?: string
+  /** the name of the tab it ran in */
+  tabName?: string
+  /** what it cost; "atLeast" / "estimated" when Claude Code did not write it all */
+  cost?: { usd: number; kind: 'exact' | 'estimated' | 'atLeast' }
+  /** merge requests it opened */
+  prs: PrLink[]
+  /** tickets Claude read or changed through a Linear MCP server, by id */
+  tickets: Record<string, TicketTrace>
 }
 
 export const HOST = /^(\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/
@@ -139,6 +161,12 @@ export interface PopoverRequest { id: string; anchorViewId: string; model: ViewM
 
 /** Host → renderer: a side-by-side diff tab (original/modified) or a unified diff tab. */
 export interface DiffRequest { title: string; path?: string; original?: string; modified?: string; unified?: string }
+
+/**
+ * Host → renderer: open a folder as a project (or bring it to the front). `claude`: with a Claude tab when it opens;
+ * `resume`: a Claude tab resuming that session; `prompt`: a new Claude tab that sends it once Claude is ready.
+ */
+export interface OpenProjectRequest { path: string; claude?: boolean; resume?: string; prompt?: string }
 
 /** Host → renderer: a text prompt (modal); answered with `plugins:promptReply`. */
 /** `choice`: only the options, as buttons (no text to type); `emptyLabel`: an empty answer is allowed, the OK button then says what it does */

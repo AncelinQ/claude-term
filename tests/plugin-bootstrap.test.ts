@@ -74,6 +74,7 @@ describe('plugin bootstrap (window side)', () => {
         ctx.ui.projectDecoration('/a', { text: 'main ↑1', tone: 'warn' })
         ctx.ui.projectDecoration('/b')
         ctx.workspace.openProject('/a.worktrees/x', { claude: true })
+        ctx.workspace.openProject('/a', { resume: 'abc-123', prompt: 'Travaille sur HN-1' })
         ctx.workspace.openUrl('https://github.com/x/y/pull/1')
       }`,
     }
@@ -82,7 +83,7 @@ describe('plugin bootstrap (window side)', () => {
     const g = globalThis as any
     expect(g.__ws).toEqual({ projects: [{ root: '/a', linked: ['/b'] }], visible: true })
     expect(f.calls.filter(([m]) => m === 'ui.projectDecoration').map(([, a]) => a)).toEqual([{ root: '/a', deco: { text: 'main ↑1', tone: 'warn' } }, { root: '/b', deco: null }])
-    expect(f.calls.find(([m]) => m === 'workspace.openProject')![1]).toEqual({ path: '/a.worktrees/x', claude: true })
+    expect(f.calls.filter(([m]) => m === 'workspace.openProject').map(([, a]) => a)).toEqual([{ path: '/a.worktrees/x', claude: true }, { path: '/a', claude: false, resume: 'abc-123', prompt: 'Travaille sur HN-1' }])
     expect(f.calls.find(([m]) => m === 'workspace.openUrl')![1]).toEqual({ url: 'https://github.com/x/y/pull/1' })
     f.emit('projects', [{ root: '/c', linked: [] }]); f.emit('visibility', false)
     expect(g.__projects).toEqual([{ root: '/c', linked: [] }])
@@ -104,6 +105,7 @@ describe('plugin bootstrap (window side)', () => {
         await ctx.secrets.set('apiKey', 'lin_api_X')
         globalThis.__secret = await ctx.secrets.get('apiKey')
         await ctx.secrets.delete('apiKey')
+        await ctx.claude.sessions({ days: 30 })
       }`,
     }
     boot(f.bridge, manifest, files)
@@ -113,6 +115,7 @@ describe('plugin bootstrap (window side)', () => {
     expect(g.__netErr).toMatch(/hosts/)
     expect(g.__secret).toBe('lin_api_X')
     expect(f.calls.find(([m]) => m === 'net.fetch')![1]).toEqual({ url: 'https://api.linear.app/graphql', method: 'POST', headers: { authorization: 'k' }, body: '{}' })
+    expect(f.calls.find(([m]) => m === 'claude.sessions')![1]).toEqual({ days: 30 })
     expect(f.calls.filter(([m]) => m.startsWith('secrets.'))).toEqual([['secrets.set', { key: 'apiKey', value: 'lin_api_X' }], ['secrets.get', { key: 'apiKey' }], ['secrets.delete', { key: 'apiKey' }]])
   })
 

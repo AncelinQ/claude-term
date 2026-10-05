@@ -3,7 +3,7 @@ import {
   Files, Search, Box, Plug, Puzzle, Cpu, Clock, Terminal, Plus, X, ChevronRight, ChevronDown, ChevronUp,
   Folder, File, Link, Info, ExternalLink, ArrowUp, List, Activity, Save, Settings, Image, Code, Columns2, Eye, Play, Camera, Sparkle,
   GitBranch, Minus, Check, SquareTerminal, Power, PowerOff, Download, RefreshCw, Gauge, Square, Filter, MessageSquareText, Pencil, Trash2,
-  Sun, Moon, SunMoon, LocateFixed, EyeOff, ChevronsDownUp, ChevronsUpDown, Copy,
+  Sun, Moon, SunMoon, LocateFixed, EyeOff, ChevronsDownUp, ChevronsUpDown, Copy, KeyRound, Layers, Ticket,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,4 +21,5 @@ export const Icons = {
   power: wrap(Power), powerOff: wrap(PowerOff), download: wrap(Download), refresh: wrap(RefreshCw), gauge: wrap(Gauge), stop: wrap(Square),
   filter: wrap(Filter), prompt: wrap(MessageSquareText), edit: wrap(Pencil), trash: wrap(Trash2),
   sun: wrap(Sun), moon: wrap(Moon), sunMoon: wrap(SunMoon), locate: wrap(LocateFixed), eyeOff: wrap(EyeOff), collapseAll: wrap(ChevronsDownUp), expandAll: wrap(ChevronsUpDown), copy: wrap(Copy),
+  ticket: wrap(Ticket), layers: wrap(Layers), key: wrap(KeyRound),
 }

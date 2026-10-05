@@ -153,13 +153,21 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   reaches nothing. Approving "network" approves its hosts (`network:<host>` in `pluginPermissions`): a new host asks
   again, and a catalogue entry must announce them. `ctx.secrets` (permission "secrets"): per plugin, encrypted by
   safeStorage in `userData/plugins/.secrets/<id>.json`, refused on Linux without a keyring, erased at uninstall.
+- **What sessions worked on**: the cost index (`services/cost-index.ts`, `userData/index/costs.json`) also keeps each
+  transcript's work (`shared/work.ts`): its last git branch, its `pr-link` merge requests, the tickets Claude read or
+  changed through a Linear MCP server (either the claude.ai connector or `mcp__linear__`) with their last state.
+  Plugins read it with `ctx.claude.sessions()` (permission "sessions"). `workspace.openProject` takes `resume` (a
+  Claude tab resuming that session) and `prompt` (a new Claude tab that pastes it as its first message once its input
+  line shows, after the folder trust question). The Linear plugin (own repository, `../perso/claudeterm-linear` for
+  now) is built on these.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.
 
 ## Open / next
 
-0. **Next task: Linear plugin**, first catalogue plugin, in its own repo, on `ctx.net.fetch` and `ctx.secrets`. Then add it to `sunstan/claudeterm-plugins`
+0. **Linear plugin**: written and tested in `../perso/claudeterm-linear` (local git, no remote yet); to publish in its own
+   repository, then add it to `sunstan/claudeterm-plugins`
    `registry.json` with the plugin's release .tgz + sha256 (repo created 2026-09-27, empty registry, local clone in `../claudeterm-plugins`).
 1. **Bug to reproduce**: the user sees the right icon column change size "when a tab is selected"; not reproduced
    (measured 38 px in every state). Waiting for before/after screenshots.

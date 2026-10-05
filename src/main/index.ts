@@ -38,7 +38,8 @@ import { setDefaultModel } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
-import { grantsOf, PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
+import { grantsOf, PLUGIN_PERMISSIONS, type PluginPermission, type PluginSession } from '@shared/plugins'
+import { costReport } from '@shared/costs'
 import { isBrowsable, opensInDefaultApp } from '@shared/external'
 import type { DirEntry, MCPServer, SessionInfo, SkillInfo } from '@shared/ipc'
 import { maskServer, unmaskServer } from '@shared/mcp-secrets'
@@ -414,6 +415,16 @@ const pluginHost = new PluginHost(builtinPlugins, {
     model: o.model,
     instructions: o.preset?.kind === 'commit' ? commitInstructions(o.preset.recentSubjects) : o.preset?.kind === 'mr' ? mrInstructions(uiLanguage()) : o.instructions ?? '',
   }).then((r) => (o.preset ? { ...r, text: unfence(r.text) } : r)),
+  claudeSessions: async (days) => {
+    const list = await costIndex.transcripts()
+    const costs = costReport(list).sessions
+    const work = new Map(list.map((x) => [x.path, x.work]))
+    const since = Date.now() - days * 86_400_000
+    return claudeData.allSessions().filter((s) => s.modified >= since).slice(0, 2000).map((s): PluginSession => {
+      const w = work.get(s.path), tabName = sessionNames.get(s.id), branch = w?.branch || s.gitBranch
+      return { id: s.id, title: s.title, cwd: s.projectPath, modified: s.modified, ...(branch ? { branch } : {}), ...(tabName ? { tabName } : {}), ...(costs[s.path] ? { cost: costs[s.path] } : {}), prs: w?.prs ?? [], tickets: w?.tickets ?? {} }
+    })
+  },
 }, pluginHostDir)
 ipcMain.handle('plugins:decorations', () => pluginHost.decorations())
 ipcMain.handle('plugins:list', () => pluginHost.list())

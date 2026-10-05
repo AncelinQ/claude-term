@@ -153,3 +153,27 @@ export function switchEffort(id: string, level: string): Promise<boolean> {
 
 /** The levels the bubble offers (Claude Code v2.1.289's slider); one it does not show stops the gesture. */
 export const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max']
+
+/** how long a new Claude tab gets to show its input line: the folder trust question is the user's to answer first */
+const READY_MS = 180_000
+
+/**
+ * Sends `prompt` as the first message of a Claude tab that just started: once its input line shows, empty, the text
+ * goes as a paste (its lines stay one message) and Enter sends it. False when the line never showed, or was typed on.
+ */
+export async function sendWhenReady(id: string, prompt: string): Promise<boolean> {
+  const started = Date.now()
+  for (;;) {
+    const tab = tabOf(id)
+    if (!tab || !tab.alive) return false
+    const rows = screenRows(id)
+    const draft = rows ? inputDraft(rows) : undefined
+    if (draft === '') break
+    if (draft || Date.now() - started > READY_MS) return false
+    await sleep(200)
+  }
+  press(id, `\x1b[200~${prompt}\x1b[201~`)
+  await sleep(300)
+  press(id, '\r')
+  return true
+}
