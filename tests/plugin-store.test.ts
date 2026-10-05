@@ -39,7 +39,7 @@ function tgz(entries: Entry[]): Buffer {
 const paxRecord = (k: string, v: string) => { let len = k.length + v.length + 3; len += String(len).length; if (String(len).length !== String(len - String(len).length).length) len++; return `${len} ${k}=${v}\n` }
 
 const LIMITS = { maxBytes: 1 << 20, maxFiles: 100 }
-const manifest = (o: object = {}) => JSON.stringify({ id: 'acme.hello', name: 'Hello', version: '1.0.0', main: 'main.js', permissions: ['network'], ...o })
+const manifest = (o: object = {}) => JSON.stringify({ id: 'acme.hello', name: 'Hello', version: '1.0.0', main: 'main.js', permissions: ['network'], hosts: ['api.acme.dev'], ...o })
 const pluginTgz = (o: object = {}, top = 'hello-1.0.0/') => tgz([{ name: top, type: '5' }, { name: top + 'plugin.json', data: manifest(o) }, { name: top + 'main.js', data: 'exports.activate = () => {}' }, { name: top + 'lib/util.js', data: '//' }])
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 
@@ -107,13 +107,14 @@ describe('tar reader', () => {
 })
 
 describe('registry', () => {
-  const entry = (o: object = {}) => ({ id: 'acme.hello', name: 'Hello', version: '1.0.0', permissions: ['network'], url: 'https://x.dev/h.tgz', sha256: 'A'.repeat(64), ...o })
+  const entry = (o: object = {}) => ({ id: 'acme.hello', name: 'Hello', version: '1.0.0', permissions: ['network'], hosts: ['api.acme.dev'], url: 'https://x.dev/h.tgz', sha256: 'A'.repeat(64), ...o })
 
   it('parses entries, lowercases checksums, skips invalid or duplicated entries', () => {
-    const r = parseRegistry(JSON.stringify({ version: 1, plugins: [entry(), entry(), entry({ id: 'b', url: 'http://evil.com/x.tgz' }), entry({ id: 'c', sha256: 'zz' }), entry({ id: 'd', permissions: ['root'] }), entry({ id: 'e', version: 'x' }), entry({ id: 'f', engine: '>=nope' }), { id: 'Bad' }, entry({ id: 'g', name: '' }), null, entry({ id: 'h', permissions: 'network' })] }))
+    const r = parseRegistry(JSON.stringify({ version: 1, plugins: [entry(), entry(), entry({ id: 'b', url: 'http://evil.com/x.tgz' }), entry({ id: 'c', sha256: 'zz' }), entry({ id: 'd', permissions: ['root'] }), entry({ id: 'e', version: 'x' }), entry({ id: 'f', engine: '>=nope' }), { id: 'Bad' }, entry({ id: 'g', name: '' }), null, entry({ id: 'h', permissions: 'network' }), entry({ id: 'i', hosts: ['https://api.acme.dev'] })] }))
     expect(r.entries).toHaveLength(1)
     expect(r.entries[0].sha256).toBe('a'.repeat(64))
-    expect(r.skipped).toEqual(['acme.hello : id en double', 'b : url refusée', 'c : sha256 invalide', 'd : permissions invalides', 'e : version invalide', 'f : engine invalide', 'Bad : id invalide', 'g : name manquant', '? : entrée invalide', 'h : permissions invalides'])
+    expect(r.entries[0].hosts).toEqual(['api.acme.dev'])
+    expect(r.skipped).toEqual(['acme.hello : id en double', 'b : url refusée', 'c : sha256 invalide', 'd : permissions invalides', 'e : version invalide', 'f : engine invalide', 'Bad : id invalide', 'g : name manquant', '? : entrée invalide', 'h : permissions invalides', 'i : hosts invalides'])
     expect(parseRegistry(JSON.stringify({ version: 1, plugins: [{ ...entry(), permissions: undefined }] })).entries[0].permissions).toEqual([])
     expect(() => parseRegistry('{')).toThrow(/illisible/)
     expect(() => parseRegistry(JSON.stringify({ version: 2, plugins: [] }))).toThrow(/format/)
@@ -165,6 +166,8 @@ describe('registry', () => {
     expect(checkCandidate(m({ id: 'other' }), ctx)).toMatch(/≠ catalogue/)
     expect(checkCandidate(m({ version: '1.0.1' }), ctx)).toMatch(/version 1.0.1/)
     expect(checkCandidate(m({ permissions: ['network', 'process'] }), ctx)).toMatch(/non annoncées par le catalogue : process/)
+    expect(checkCandidate(m({ hosts: ['api.acme.dev', 'evil.dev'] }), ctx)).toMatch(/domaines non annoncés par le catalogue : evil.dev/)
+    expect(checkCandidate(m({ permissions: ['network'], hosts: undefined }), ctx)).toMatch(/hosts/)
     expect(checkCandidate(m({ engine: '>=3.0.0' }), ctx)).toMatch(/demande ClaudeTerm/)
     expect(checkCandidate(m({ engine: 3 }), ctx)).toMatch(/engine/)
     expect(checkCandidate(m({ permissions: ['anything'] }), { builtinIds: [], appVersion: '2.0.0' })).toMatch(/permissions/)
@@ -193,7 +196,7 @@ describe('plugin store', () => {
     const store = new PluginStore(userDir, '2.0.0', host)
     return { t, userDir, store, log, asked, approved }
   }
-  const entryFor = (url: string, b: Buffer, o: Partial<RegistryEntry> = {}): RegistryEntry => ({ id: 'acme.hello', name: 'Hello', version: '1.0.0', permissions: ['network'], url, sha256: sha(b), ...o })
+  const entryFor = (url: string, b: Buffer, o: Partial<RegistryEntry> = {}): RegistryEntry => ({ id: 'acme.hello', name: 'Hello', version: '1.0.0', permissions: ['network'], hosts: ['api.acme.dev'], url, sha256: sha(b), ...o })
 
   it('installs from the catalogue: verify, approve, unpack into <id>, activate', async () => {
     const gz = pluginTgz()
@@ -201,15 +204,17 @@ describe('plugin store', () => {
     const r = await store.install({ entry: entryFor('https://x.dev/h.tgz', gz) })
     expect(r).toEqual({ ok: true, id: 'acme.hello' })
     expect(readdirSync(join(userDir, 'acme.hello')).sort()).toEqual(['lib', 'main.js', 'plugin.json'])
-    expect(asked[0]).toMatchObject({ id: 'acme.hello', version: '1.0.0', permissions: ['network'], verified: true, update: undefined, sha256: sha(gz) })
-    expect(log).toEqual(['unload acme.hello', 'approved acme.hello network', 'load /acme.hello'])
+    expect(asked[0]).toMatchObject({ id: 'acme.hello', version: '1.0.0', permissions: ['network'], hosts: ['api.acme.dev'], verified: true, update: undefined, sha256: sha(gz) })
+    expect(log).toEqual(['unload acme.hello', 'approved acme.hello network,network:api.acme.dev', 'load /acme.hello'])
     expect(readdirSync(join(userDir, '.staging'))).toEqual([])
     t.dispose()
   })
 
-  it('updates in place, asking again only when permissions grow', async () => {
+  it('updates in place, asking again only when permissions or hosts grow', async () => {
     const v1 = pluginTgz(), v2 = pluginTgz({ version: '1.1.0' }), v3 = pluginTgz({ version: '1.2.0', permissions: ['network', 'process'] })
-    const { t, userDir, store, asked } = setup({ 'https://x/1': v1, 'https://x/2': v2, 'https://x/3': v3 })
+    const hosts = ['api.acme.dev', '*.cdn.acme.dev']
+    const v4 = pluginTgz({ version: '1.3.0', permissions: ['network', 'process'], hosts })
+    const { t, userDir, store, asked, approved } = setup({ 'https://x/1': v1, 'https://x/2': v2, 'https://x/3': v3, 'https://x/4': v4 })
     await store.install({ entry: entryFor('https://x/1', v1) })
     expect((await store.install({ entry: entryFor('https://x/2', v2, { version: '1.1.0' }) })).ok).toBe(true)
     expect(asked).toHaveLength(1)
@@ -217,6 +222,11 @@ describe('plugin store', () => {
     expect((await store.install({ entry: entryFor('https://x/3', v3, { version: '1.2.0', permissions: ['network', 'process'] }) })).ok).toBe(true)
     expect(asked).toHaveLength(2)
     expect(asked[1]).toMatchObject({ update: '1.1.0', permissions: ['network', 'process'] })
+    // one host more is asked for too, and recorded
+    expect((await store.install({ entry: entryFor('https://x/4', v4, { version: '1.3.0', permissions: ['network', 'process'], hosts }) })).ok).toBe(true)
+    expect(asked).toHaveLength(3)
+    expect(asked[2]).toMatchObject({ update: '1.2.0', hosts })
+    expect(approved['acme.hello']).toEqual(['network', 'process', 'network:api.acme.dev', 'network:*.cdn.acme.dev'])
     t.dispose()
   })
 
@@ -247,7 +257,7 @@ describe('plugin store', () => {
     const { t, userDir, store, asked, approved } = setup({ 'file:///p.tgz': gz })
     expect((await store.install({ url: ' file:///p.tgz ' })).ok).toBe(true)
     expect(asked[0]).toMatchObject({ verified: false, sha256: sha(gz), source: 'file:///p.tgz' })
-    expect(approved['acme.hello']).toEqual(['network'])
+    expect(approved['acme.hello']).toEqual(['network', 'network:api.acme.dev'])
     expect(store.uninstall('git', join(userDir, 'git'))).toMatchObject({ ok: false })
     expect(store.uninstall('acme.hello', '/elsewhere/acme.hello')).toMatchObject({ ok: false })
     expect(store.uninstall('acme.hello', join(userDir, 'acme.hello'))).toEqual({ ok: true, id: 'acme.hello' })

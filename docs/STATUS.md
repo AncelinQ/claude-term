@@ -147,19 +147,23 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   requests and diffs, kept per session; a skill drafted from its name and purpose, shown before it is created; the Git
   plugin drafts the commit message of the checked files (the repository's convention) and the merge request of the
   branch (copied). Plugin API: `claude.run` (permission "claude", presets commit / mr), `ui.clipboard`, a footer note.
+- **Plugin network and secrets**: `ctx.net.fetch` (permission "network") reaches the hosts of plugin.json `hosts` only
+  (https, default port; `*.domain` for subdomains), sent by main through an in-memory session per plugin that refuses
+  any other host at every redirect, without cookies, body ≤ 1 MB, answer ≤ 5 MB, 30 s; the plugin window itself still
+  reaches nothing. Approving "network" approves its hosts (`network:<host>` in `pluginPermissions`): a new host asks
+  again, and a catalogue entry must announce them. `ctx.secrets` (permission "secrets"): per plugin, encrypted by
+  safeStorage in `userData/plugins/.secrets/<id>.json`, refused on Linux without a keyring, erased at uninstall.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.
 
 ## Open / next
 
-0. **Next task: Linear plugin**, first catalogue plugin, in its own repo: needs the `fetch` (network permission,
-   domain-scoped) and `secrets` (safeStorage) APIs in the host first. Then add it to `sunstan/claudeterm-plugins`
+0. **Next task: Linear plugin**, first catalogue plugin, in its own repo, on `ctx.net.fetch` and `ctx.secrets`. Then add it to `sunstan/claudeterm-plugins`
    `registry.json` with the plugin's release .tgz + sha256 (repo created 2026-09-27, empty registry, local clone in `../claudeterm-plugins`).
 1. **Bug to reproduce**: the user sees the right icon column change size "when a tab is selected"; not reproduced
    (measured 38 px in every state). Waiting for before/after screenshots.
-3. Plugins: Thèmes plugin (list, preview, VS Code import); `network` (domain-scoped, through the plugin session) and
-   `secrets` permissions for the Linear plugin.
+3. Plugins: Thèmes plugin (list, preview, VS Code import).
 4. Windows: test on a real machine (native and WSL), `hook.cmd`, screen capture, Ctrl shortcuts typed in a
    terminal go to the shell instead of the app.
 5. Formatter beyond Monaco's languages (Prettier).

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { symlinkSync, mkdirSync, realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import { TempDir } from './helpers'
-import { fsError, inside, permissionError, type PolicyCtx } from '../src/main/services/plugin-policy'
+import { fsError, inside, netError, permissionError, type PolicyCtx } from '../src/main/services/plugin-policy'
 
-const ctx = (o: Partial<PolicyCtx> = {}): PolicyCtx => ({ builtin: false, permissions: new Set(), pluginDir: '/data/plugins/x', projectRoot: '/work/proj', home: '/home/me', real: (p) => p, ...o })
+const ctx = (o: Partial<PolicyCtx> = {}): PolicyCtx => ({ builtin: false, permissions: new Set(), pluginDir: '/data/plugins/x', hosts: [], projectRoot: '/work/proj', home: '/home/me', real: (p) => p, ...o })
 
 describe('plugin policy', () => {
   it('requires "process" for exec and terminal runs of user plugins', () => {
@@ -47,6 +47,18 @@ describe('plugin policy', () => {
     expect(fsError(join(proj, 'link', 'key'), c)).toMatch(/fs:home/)
     expect(fsError(join(proj, 'new-file'), c)).toBeNull()
     t.dispose()
+  })
+
+  it('requires "network" to fetch, and "secrets" for secrets; fetches reach the declared hosts only, built-ins included', () => {
+    for (const m of ['net.fetch', 'secrets.get', 'secrets.set', 'secrets.delete']) expect(permissionError(m, ctx())).toMatch(/"(network|secrets)"/)
+    expect(permissionError('net.fetch', ctx({ permissions: new Set(['network']) }))).toBeNull()
+    expect(permissionError('secrets.get', ctx({ permissions: new Set(['network']) }))).toMatch(/"secrets"/)
+    expect(permissionError('secrets.get', ctx({ permissions: new Set(['secrets']) }))).toBeNull()
+    const hosts = ['api.linear.app']
+    expect(netError('https://api.linear.app/graphql', ctx({ hosts }))).toBeNull()
+    expect(netError('https://example.com/', ctx({ hosts }))).toMatch(/hosts/)
+    expect(netError('https://example.com/', ctx({ builtin: true }))).toMatch(/hosts/)
+    expect(netError(undefined, ctx({ hosts }))).toMatch(/url/)
   })
 
   it('inside', () => {

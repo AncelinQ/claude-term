@@ -2,14 +2,16 @@ import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { readTarGz, stripTopFolder } from './tar'
-import { allowedUrl, checkCandidate, missingPermissions, parseRegistry, type RegistryEntry } from '@shared/plugin-registry'
-import type { PluginManifest, PluginPermission } from '@shared/plugins'
+import { allowedUrl, checkCandidate, parseRegistry, type RegistryEntry } from '@shared/plugin-registry'
+import { grantsOf, pendingPermissions, type PluginManifest, type PluginPermission } from '@shared/plugins'
 
 export const LIMITS = { archive: 20 * 1024 * 1024, unpacked: 50 * 1024 * 1024, files: 2000, registry: 2 * 1024 * 1024 }
 
 export interface ApprovalRequest {
   id: string; name: string; version: string; source: string; sha256: string
   permissions: PluginPermission[]
+  /** the hosts "network" reaches */
+  hosts?: string[]
   /** installed version when this is an update */
   update?: string
   /** true when the catalogue checksum was verified (false: install from URL) */
@@ -23,7 +25,8 @@ export interface StoreHost {
   approved(id: string): string[] | undefined
   /** native confirmation listing the permissions */
   approve(req: ApprovalRequest): Promise<boolean>
-  setApproved(id: string, perms: PluginPermission[] | null): void
+  /** what was approved: permissions and "network:<host>" grants (shared/plugins grantsOf) */
+  setApproved(id: string, grants: string[] | null): void
   /** deactivate and forget a plugin before its folder changes */
   unload(id: string): void
   /** load (and activate) the plugin folder */
@@ -61,9 +64,9 @@ export class PluginStore {
       const update = this.host.installedVersion(manifest.id)
       const perms = manifest.permissions ?? []
       const approved = this.host.approved(manifest.id)
-      // a fresh install always asks; an update only when it asks for more permissions
-      if (!update || !approved || missingPermissions(perms, approved).length) {
-        const ok = await this.host.approve({ id: manifest.id, name: manifest.name, version: manifest.version, source: url, sha256, permissions: perms, update, verified: !!entry })
+      // a fresh install always asks; an update only when it asks for more permissions or new hosts
+      if (!update || !approved || pendingPermissions(manifest, approved).length) {
+        const ok = await this.host.approve({ id: manifest.id, name: manifest.name, version: manifest.version, source: url, sha256, permissions: perms, hosts: perms.includes('network') ? manifest.hosts : undefined, update, verified: !!entry })
         if (!ok) return { ok: false, error: 'installation annulée', cancelled: true }
       }
       for (const f of files) {
@@ -77,7 +80,7 @@ export class PluginStore {
       if (existsSync(target)) renameSync(target, trash)
       renameSync(staging, target)
       rmSync(trash, { recursive: true, force: true })
-      this.host.setApproved(manifest.id, perms)
+      this.host.setApproved(manifest.id, grantsOf(manifest))
       this.host.load(target)
       return { ok: true, id: manifest.id }
     } catch (e) {

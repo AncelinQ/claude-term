@@ -1,12 +1,13 @@
-import { app, BrowserWindow, clipboard, ipcMain, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, safeStorage, session, shell, type IpcMainEvent, type IpcMainInvokeEvent, type Session } from 'electron'
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync, statSync, watch, type FSWatcher } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, dirname, isAbsolute, relative, sep } from 'node:path'
 import { execFile } from 'node:child_process'
-import { missingPermissions } from '@shared/plugin-registry'
-import { validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type PromptRequest, type RunInfo, type ProjectDecoration } from '@shared/plugins'
+import { hostAllowed, pendingPermissions, validateManifest, type PluginManifest, type PluginInfo, type ViewModel, type ViewEvent, type PromptRequest, type RunInfo, type ProjectDecoration } from '@shared/plugins'
 import { isBrowsable } from '@shared/external'
-import { fsError, permissionError, type PolicyCtx } from './plugin-policy'
+import { fsError, netError, permissionError, type PolicyCtx } from './plugin-policy'
+import { netFetch, netRequest } from './plugin-net'
+import { PluginSecrets, type Cipher } from './plugin-secrets'
 
 export { validateManifest }
 
@@ -35,6 +36,7 @@ const MAX_FILES = 2000, MAX_BYTES = 20 * 1024 * 1024, MAX_READ = 10 * 1024 * 102
  */
 export class PluginHost {
   readonly userDir: string
+  readonly secrets: PluginSecrets
   private plugins = new Map<string, Loaded>()
   private byContents = new Map<number, Loaded>()
   private views = new Map<string, ViewModel>()
@@ -49,6 +51,7 @@ export class PluginHost {
   constructor(private builtinDir: string, private bridge: HostBridge, private hostDir: string, userDir = join(app.getPath('userData'), 'plugins')) {
     this.userDir = userDir
     mkdirSync(userDir, { recursive: true })
+    this.secrets = new PluginSecrets(join(userDir, '.secrets'), OS_CIPHER)
     this.bootstrap = readFileSync(join(hostDir, 'bootstrap.js'), 'utf8').replace(/;\s*$/, '')
     ipcMain.on('plugin:call', (e, method: string, args: unknown) => { e.returnValue = this.call(e, method, args) })
     ipcMain.handle('plugin:callAsync', (e, method: string, args: unknown) => this.callAsync(e, method, args))
@@ -89,7 +92,7 @@ export class PluginHost {
     }
     const s = this.bridge.settings()
     const disabled = !err && (s.disabledPlugins ?? []).includes(manifest.id)
-    const pending = err || builtin ? [] : missingPermissions(manifest.permissions, s.pluginPermissions?.[manifest.id])
+    const pending = err || builtin ? [] : pendingPermissions(manifest, s.pluginPermissions?.[manifest.id])
     const info: PluginInfo = { manifest, dir, builtin, enabled: !err && !disabled && !pending.length, disabled: disabled || undefined, pendingPermissions: pending.length ? pending : undefined, error: err ?? undefined }
     const loaded: Loaded = { info, watchers: new Map(), popovers: new Set(), decorations: new Map() }
     this.plugins.set(manifest.id, loaded)
@@ -123,7 +126,7 @@ export class PluginHost {
     let files: Record<string, string>
     try { files = readPluginFiles(dir) } catch (e) { return this.fail(p, e) }
     const ses = session.fromPartition('plugin:' + manifest.id)   // in memory, per plugin
-    ses.webRequest.onBeforeRequest((d, cb) => cb({ cancel: !d.url.startsWith('devtools:') }))   // no network (yet)
+    ses.webRequest.onBeforeRequest((d, cb) => cb({ cancel: !d.url.startsWith('devtools:') }))   // the window reaches nothing: ctx.net.fetch goes through main (netSession)
     ses.setPermissionRequestHandler((_wc, _perm, cb) => cb(false))
     ses.setPermissionCheckHandler(() => false)
     const win = new BrowserWindow({
@@ -168,7 +171,20 @@ export class PluginHost {
   private caller(e: IpcMainEvent | IpcMainInvokeEvent): Loaded | undefined { return this.byContents.get(e.sender.id) }
 
   private policy(p: Loaded): PolicyCtx {
-    return { builtin: p.info.builtin, permissions: new Set(p.info.manifest.permissions ?? []), pluginDir: p.info.dir, projectRoot: this.bridge.projectRoot(), home: homedir(), real: realpathSync }
+    return { builtin: p.info.builtin, permissions: new Set(p.info.manifest.permissions ?? []), pluginDir: p.info.dir, hosts: p.info.manifest.hosts ?? [], projectRoot: this.bridge.projectRoot(), home: homedir(), real: realpathSync }
+  }
+
+  /**
+   * The session ctx.net.fetch goes through: in memory, apart from the app's and from the plugin window's, and refusing
+   * any URL off the plugin's hosts, each hop of a redirect included.
+   */
+  private netSession(p: Loaded): Session {
+    if (p.net) return p.net
+    const hosts = p.info.manifest.hosts ?? []
+    const ses = session.fromPartition('plugin-net:' + p.info.manifest.id)
+    ses.webRequest.onBeforeRequest((d, cb) => cb({ cancel: !hostAllowed(d.url, hosts) }))
+    ses.setPermissionRequestHandler((_wc, _perm, cb) => cb(false))
+    return (p.net = ses)
   }
 
   private checkFs(p: Loaded, path: unknown): string {
@@ -202,6 +218,19 @@ export class PluginHost {
         const model = typeof a.model === 'string' && /^[a-z0-9.[\]-]+$/i.test(a.model) ? a.model : undefined
         return { value: await this.bridge.claudeRun(a.input, preset ? { preset, model } : { instructions: a.instructions, model }) }
       }
+      if (method === 'net.fetch') {
+        const req = netRequest(a)
+        const err = netError(req.url, this.policy(p))
+        if (err) throw new Error(err)
+        // the first URL passed the policy: a block can only come from a redirect
+        const fetch = (url: string, init: RequestInit) => this.netSession(p).fetch(url, init).catch((e) => {
+          throw /ERR_BLOCKED_BY_CLIENT/.test(String(e?.message)) ? new Error(`${req.url}: redirected to a host not listed in plugin.json "hosts"`) : e
+        })
+        return { value: await netFetch(fetch, req) }
+      }
+      if (method === 'secrets.get') return { value: this.secrets.get(p.info.manifest.id, a?.key) }
+      if (method === 'secrets.set') return { value: this.secrets.set(p.info.manifest.id, a?.key, a?.value) }
+      if (method === 'secrets.delete') return { value: this.secrets.delete(p.info.manifest.id, a?.key) }
       if (method === 'ui.prompt') {
         const req = a as Omit<PromptRequest, 'id'>
         return { value: await new Promise<string | null>((res) => { const id = ++this.promptSeq; this.prompts.set(id, res); this.bridge.send('plugins:prompt', { id, title: String(req.title ?? ''), placeholder: req.placeholder, options: req.options, choice: !!req.choice }) }) }
@@ -316,7 +345,14 @@ export class PluginHost {
   dispose() { for (const p of this.plugins.values()) { p.watchers.forEach((w) => w.close()); if (p.win && !p.win.isDestroyed()) p.win.destroy() } }
 }
 
-interface Loaded { info: PluginInfo; win?: BrowserWindow; watchers: Map<number, FSWatcher>; popovers: Set<string>; decorations: Map<string, ProjectDecoration> }
+interface Loaded { info: PluginInfo; win?: BrowserWindow; net?: Session; watchers: Map<number, FSWatcher>; popovers: Set<string>; decorations: Map<string, ProjectDecoration> }
+
+const OS_CIPHER: Cipher = {
+  unavailable: () => !safeStorage.isEncryptionAvailable() ? 'secrets: the system offers no encryption'
+    : process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text' ? 'secrets: no system keyring (libsecret, KWallet), refused' : null,
+  encrypt: (text) => safeStorage.encryptString(text),
+  decrypt: (data) => safeStorage.decryptString(data),
+}
 
 /** The plugin's .js files (posix relative path → source) handed to its window. */
 export function readPluginFiles(dir: string): Record<string, string> {

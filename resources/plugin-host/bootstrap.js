@@ -80,6 +80,23 @@
     claude: {
       run: (req) => callAsync('claude.run', req),
     },
+    net: {
+      // the answer is read whole by the host: text() and json() resolve at once, like a fetch Response's
+      fetch: (url, init) => {
+        const o = init || {}
+        const headers = o.headers && typeof o.headers.entries === 'function' ? Object.fromEntries(o.headers.entries()) : o.headers
+        return callAsync('net.fetch', { url: String(url), method: o.method, headers, body: o.body }).then((r) => ({
+          ok: r.status >= 200 && r.status < 300, status: r.status, statusText: r.statusText, headers: r.headers,
+          text: () => Promise.resolve(r.body),
+          json: () => Promise.resolve().then(() => JSON.parse(r.body)),
+        }))
+      },
+    },
+    secrets: {
+      get: (key) => callAsync('secrets.get', { key }),
+      set: (key, value) => callAsync('secrets.set', { key, value }),
+      delete: (key) => callAsync('secrets.delete', { key }),
+    },
     settings: { get: (key) => call('settings.get', { key }) },
     storage: { get: (key) => call('storage.get', { key }), set: (key, value) => call('storage.set', { key, value }) },
   }

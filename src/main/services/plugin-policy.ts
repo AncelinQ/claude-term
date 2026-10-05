@@ -1,17 +1,20 @@
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
-import type { PluginPermission } from '@shared/plugins'
+import { hostAllowed, type PluginPermission } from '@shared/plugins'
 
 /**
  * What a plugin may do through the host bridge (DESIGN.md §7). Built-ins are trusted (shipped and reviewed with the
  * app); a user plugin only gets what its approved permissions allow:
  * - process: process.exec, and terminal.run (typing into a shell is running a command)
  * - fs: its own folder and the open project; fs:home widens reads / watches to the home folder
- * - network: nothing yet (the sandbox session blocks every request)
+ * - network: net.fetch, to the hosts of plugin.json only (built-ins too), https; the plugin window itself reaches nothing
+ * - secrets: its own secrets, encrypted by the OS
  */
 export interface PolicyCtx {
   builtin: boolean
   permissions: ReadonlySet<string>
   pluginDir: string
+  /** plugin.json "hosts" */
+  hosts: readonly string[]
   projectRoot: string | null
   home: string
   /** resolves symlinks of an existing path (a link inside the project must not reach outside) */
@@ -19,12 +22,18 @@ export interface PolicyCtx {
 }
 
 // opening a project widens what fs reaches, opening a URL can carry data out: as much as running a command
-const NEEDS: Record<string, PluginPermission> = { 'process.exec': 'process', 'terminal.run': 'process', 'terminal.stop': 'process', 'workspace.openProject': 'process', 'workspace.openUrl': 'process', 'claude.run': 'claude' }
+const NEEDS: Record<string, PluginPermission> = { 'process.exec': 'process', 'terminal.run': 'process', 'terminal.stop': 'process', 'workspace.openProject': 'process', 'workspace.openUrl': 'process', 'claude.run': 'claude', 'net.fetch': 'network', 'secrets.get': 'secrets', 'secrets.set': 'secrets', 'secrets.delete': 'secrets' }
 
 export function permissionError(method: string, ctx: PolicyCtx): string | null {
   const need = NEEDS[method]
   if (!need || ctx.builtin || ctx.permissions.has(need)) return null
   return `permission "${need}" not declared in plugin.json`
+}
+
+/** null when the plugin may request `url`, else the reason. */
+export function netError(url: unknown, ctx: PolicyCtx): string | null {
+  if (typeof url !== 'string' || !url) return 'url expected'
+  return hostAllowed(url, ctx.hosts) ? null : `${url}: https to a host listed in plugin.json "hosts" only`
 }
 
 export const inside = (child: string, parent: string) => { const r = relative(parent, child); return r === '' || (!!r && !r.startsWith('..') && !isAbsolute(r)) }

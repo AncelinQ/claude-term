@@ -38,7 +38,7 @@ import { setDefaultModel } from './services/default-model'
 import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
-import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
+import { grantsOf, PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
 import { isBrowsable, opensInDefaultApp } from '@shared/external'
 import type { DirEntry, MCPServer, SessionInfo, SkillInfo } from '@shared/ipc'
 import { maskServer, unmaskServer } from '@shared/mcp-secrets'
@@ -425,9 +425,9 @@ ipcMain.on('plugins:runs', (_e, list) => pluginHost.runsChanged(Array.isArray(li
 ipcMain.on('plugins:promptReply', (_e, { id, value }) => pluginHost.promptReply(id, value))
 
 // plugin catalogue (DESIGN.md §7.1)
-const setApproved = (id: string, perms: string[] | null) => {
+const setApproved = (id: string, grants: string[] | null) => {
   const all = { ...settings.get().pluginPermissions }
-  if (perms) all[id] = perms; else delete all[id]
+  if (grants) all[id] = grants; else delete all[id]
   settings.set({ pluginPermissions: all })
 }
 const pluginStore = new PluginStore(pluginHost.userDir, app.getVersion(), {
@@ -458,10 +458,12 @@ ipcMain.handle('plugins:install', async (_e, src: { id: string } | { url: string
 ipcMain.handle('plugins:uninstall', async (_e, id: string) => {
   const p = pluginHost.get(id)
   if (!p) return { ok: false, error: 'plugin inconnu' }
-  const r = await dialog.showMessageBox(win!, { type: 'warning', message: `Désinstaller « ${p.manifest.name} » ?`, detail: `Le dossier ${p.dir} sera supprimé. Ses données (storage) sont conservées.`, buttons: ['Désinstaller', 'Annuler'], defaultId: 1, cancelId: 1 })
+  const r = await dialog.showMessageBox(win!, { type: 'warning', message: `Désinstaller « ${p.manifest.name} » ?`, detail: `Le dossier ${p.dir} sera supprimé, ses secrets effacés. Ses données (storage) sont conservées.`, buttons: ['Désinstaller', 'Annuler'], defaultId: 1, cancelId: 1 })
   if (r.response !== 0) return { ok: false, error: 'annulé' }
   settings.set({ disabledPlugins: settings.get().disabledPlugins.filter((x) => x !== id) })
-  return pluginStore.uninstall(id, p.dir)
+  const done = pluginStore.uninstall(id, p.dir)
+  if (done.ok) pluginHost.secrets.clear(id)
+  return done
 })
 ipcMain.handle('plugins:setEnabled', (_e, { id, enabled }: { id: string; enabled: boolean }) => {
   const others = settings.get().disabledPlugins.filter((x) => x !== id)
@@ -472,14 +474,14 @@ ipcMain.handle('plugins:approve', async (_e, id: string) => {
   const p = pluginHost.get(id)
   if (!p?.pendingPermissions) return false
   const perms = p.manifest.permissions ?? []
-  if (!(await approvePlugin({ id, name: p.manifest.name, version: p.manifest.version, source: p.dir, sha256: '', permissions: perms, verified: false }))) return false
-  setApproved(id, perms)
+  if (!(await approvePlugin({ id, name: p.manifest.name, version: p.manifest.version, source: p.dir, sha256: '', permissions: perms, hosts: perms.includes('network') ? p.manifest.hosts : undefined, verified: false }))) return false
+  setApproved(id, grantsOf(p.manifest))
   pluginHost.reload(id)
   return true
 })
 
 async function approvePlugin(req: ApprovalRequest): Promise<boolean> {
-  const perms = req.permissions.length ? req.permissions.map((p: PluginPermission) => `• ${p} — ${PLUGIN_PERMISSIONS[p]}`).join('\n') : 'aucune'
+  const perms = req.permissions.length ? req.permissions.map((p: PluginPermission) => `• ${p} — ${PLUGIN_PERMISSIONS[p]}${p === 'network' && req.hosts?.length ? ` : ${req.hosts.join(', ')}` : ''}`).join('\n') : 'aucune'
   const origin = req.sha256 ? `Source : ${req.source}\nsha256 : ${req.sha256}${req.verified ? ' (vérifié avec le catalogue)' : ' (non vérifié : installation depuis une URL)'}` : `Dossier : ${req.source}`
   const r = await dialog.showMessageBox(win!, {
     type: req.verified ? 'question' : 'warning',

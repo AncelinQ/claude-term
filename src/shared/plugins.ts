@@ -9,6 +9,8 @@ export interface PluginManifest {
   /** "startup" (default) or lazy: "onView:<viewId>" */
   activation?: string[]
   permissions?: ('process' | 'fs:home' | 'network' | 'secrets' | 'claude')[]
+  /** what "network" reaches, https only: "api.linear.app", or "*.linear.app" for its subdomains */
+  hosts?: string[]
   contributes?: {
     activity?: { id: string; side: 'left' | 'right'; title: string; icon: string }[]
     /** placement: sidebar (default, under the activity) or bottom (a tab of the center session block) */
@@ -22,9 +24,31 @@ export type PluginPermission = NonNullable<PluginManifest['permissions']>[number
 export const PLUGIN_PERMISSIONS: Record<PluginPermission, string> = {
   process: 'lancer des programmes et des commandes dans le terminal',
   'fs:home': 'lire les fichiers du dossier personnel (sinon : le projet ouvert seulement)',
-  network: 'accès réseau (pas encore disponible : bloqué)',
-  secrets: 'secrets du trousseau (pas encore disponible)',
+  network: 'accès réseau en https, limité aux domaines que le plugin déclare',
+  secrets: 'garder des secrets (clés d\'API) chiffrés par le système',
   claude: 'demander un texte à Claude (claude -p, sur votre abonnement ; plafonné à 1 $ par demande)',
+}
+
+export const HOST = /^(\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/
+
+/** What approving a manifest grants: its permissions and, with "network", each of its hosts as "network:<host>". */
+export function grantsOf(m: Pick<PluginManifest, 'permissions' | 'hosts'>): string[] {
+  const perms = m.permissions ?? []
+  return [...perms, ...(perms.includes('network') ? (m.hosts ?? []).map((h) => 'network:' + h) : [])]
+}
+
+/** Permissions of `m` that `approved` does not cover: "network" is pending again when one of its hosts is new. */
+export function pendingPermissions(m: Pick<PluginManifest, 'permissions' | 'hosts'>, approved: readonly string[] = []): PluginPermission[] {
+  return (m.permissions ?? []).filter((p) => !approved.includes(p) || (p === 'network' && (m.hosts ?? []).some((h) => !approved.includes('network:' + h))))
+}
+
+/** `url` is https on its default port, without credentials, and its host is one of `hosts` ("*.d" = a subdomain of d). */
+export function hostAllowed(url: string, hosts: readonly string[]): boolean {
+  let u: URL
+  try { u = new URL(url) } catch { return false }
+  if (u.protocol !== 'https:' || u.port !== '' || u.username || u.password) return false
+  const h = u.hostname
+  return hosts.some((p) => (p.startsWith('*.') ? h.length > p.length - 1 && h.endsWith(p.slice(1)) : h === p))
 }
 
 /** enabled = activated; disabled = turned off by the user; pendingPermissions = asked by the manifest, not approved yet */
@@ -37,6 +61,8 @@ export function validateManifest(m: any): string | null {
   if (typeof m.main !== 'string' || !m.main) return 'main manquant'
   if (m.version !== undefined && typeof m.version !== 'string') return 'version invalide'
   if (m.permissions !== undefined && (!Array.isArray(m.permissions) || m.permissions.some((x: unknown) => typeof x !== 'string' || !Object.hasOwn(PLUGIN_PERMISSIONS, x as string)))) return 'permissions invalides'
+  if (m.hosts !== undefined && (!Array.isArray(m.hosts) || m.hosts.some((h: unknown) => typeof h !== 'string' || !HOST.test(h)))) return 'hosts invalides (domaines en minuscules, ex. api.linear.app ou *.linear.app)'
+  if (m.permissions?.includes('network') && !m.hosts?.length) return 'la permission network demande la liste des domaines (hosts)'
   for (const a of m.contributes?.activity ?? []) if (!a.id || !a.title || (a.side !== 'left' && a.side !== 'right')) return 'contributes.activity invalide'
   for (const v of m.contributes?.views ?? []) if (!v.id || (!v.activity && v.placement !== 'bottom')) return 'contributes.views invalide'
   return null

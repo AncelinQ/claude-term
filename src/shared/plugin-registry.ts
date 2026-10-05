@@ -1,5 +1,5 @@
 /** Plugin catalogue: registry format, version rules and install checks (pure, see DESIGN.md §7.1). */
-import { validateManifest, PLUGIN_PERMISSIONS, type PluginManifest, type PluginInfo, type PluginPermission } from './plugins'
+import { HOST, validateManifest, PLUGIN_PERMISSIONS, type PluginManifest, type PluginInfo, type PluginPermission } from './plugins'
 
 export const DEFAULT_REGISTRY = 'https://raw.githubusercontent.com/sunstan/claudeterm-plugins/main/registry.json'
 
@@ -11,6 +11,8 @@ export interface RegistryEntry {
   /** minimal app version: ">=2.0.0" or "2.0.0" */
   engine?: string
   permissions: PluginPermission[]
+  /** the hosts "network" reaches (plugin.json "hosts") */
+  hosts?: string[]
   /** plugin repository (shown, not fetched) */
   repo?: string
   /** .tgz archive */
@@ -34,7 +36,7 @@ export function parseRegistry(text: string): { entries: RegistryEntry[]; skipped
     const err = entryError(e)
     if (err || seen.has(e.id)) { skipped.push(`${typeof e?.id === 'string' ? e.id : '?'} : ${err ?? 'id en double'}`); continue }
     seen.add(e.id)
-    entries.push({ id: e.id, name: e.name, description: typeof e.description === 'string' ? e.description : undefined, version: e.version, engine: e.engine, permissions: e.permissions ?? [], repo: typeof e.repo === 'string' ? e.repo : undefined, url: e.url, sha256: e.sha256.toLowerCase() })
+    entries.push({ id: e.id, name: e.name, description: typeof e.description === 'string' ? e.description : undefined, version: e.version, engine: e.engine, permissions: e.permissions ?? [], hosts: e.hosts, repo: typeof e.repo === 'string' ? e.repo : undefined, url: e.url, sha256: e.sha256.toLowerCase() })
   }
   return { entries, skipped }
 }
@@ -46,6 +48,7 @@ function entryError(e: any): string | null {
   if (typeof e.version !== 'string' || !parseVersion(e.version)) return 'version invalide'
   if (e.engine !== undefined && (typeof e.engine !== 'string' || !parseVersion(e.engine.replace(/^>=\s*/, '')))) return 'engine invalide'
   if (e.permissions !== undefined && (!Array.isArray(e.permissions) || e.permissions.some((p: unknown) => typeof p !== 'string' || !Object.hasOwn(PLUGIN_PERMISSIONS, p)))) return 'permissions invalides'
+  if (e.hosts !== undefined && (!Array.isArray(e.hosts) || e.hosts.some((h: unknown) => typeof h !== 'string' || !HOST.test(h)))) return 'hosts invalides'
   if (typeof e.url !== 'string' || !allowedUrl(e.url)) return 'url refusée'
   if (typeof e.sha256 !== 'string' || !/^[0-9a-fA-F]{64}$/.test(e.sha256)) return 'sha256 invalide'
   return null
@@ -113,6 +116,8 @@ export function checkCandidate(m: unknown, ctx: { entry?: RegistryEntry; builtin
     if (man.version !== ctx.entry.version) return `version ${man.version} ≠ catalogue ${ctx.entry.version}`
     const extra = missingPermissions(man.permissions, ctx.entry.permissions)
     if (extra.length) return `permissions non annoncées par le catalogue : ${extra.join(', ')}`
+    const hosts = man.permissions?.includes('network') ? (man.hosts ?? []).filter((h) => !(ctx.entry!.hosts ?? []).includes(h)) : []
+    if (hosts.length) return `domaines non annoncés par le catalogue : ${hosts.join(', ')}`
   }
   return null
 }

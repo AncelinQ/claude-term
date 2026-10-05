@@ -12,7 +12,7 @@ function fakeBridge(values: Record<string, unknown> = {}) {
   let emit: (ev: string, args: unknown[]) => void = () => {}
   const bridge = {
     call: (m: string, a: any) => { calls.push([m, a]); return m in values ? { value: values[m] } : m === 'fs.read' ? { error: 'denied' } : { value: m === 'fs.watch' ? 7 : undefined } },
-    callAsync: async (m: string, a: any) => { calls.push([m, a]); return { value: { code: 0, stdout: 'ok', stderr: '' } } },
+    callAsync: async (m: string, a: any): Promise<any> => { calls.push([m, a]); return { value: { code: 0, stdout: 'ok', stderr: '' } } },
     send: (m: string, a: any) => sent.push([m, a]),
     onEvent: (cb: typeof emit) => { emit = cb },
   }
@@ -87,6 +87,33 @@ describe('plugin bootstrap (window side)', () => {
     f.emit('projects', [{ root: '/c', linked: [] }]); f.emit('visibility', false)
     expect(g.__projects).toEqual([{ root: '/c', linked: [] }])
     expect(g.__visible).toBe(false)
+  })
+
+  it('fetches through the host, and keeps secrets there', async () => {
+    const f = fakeBridge()
+    f.bridge.callAsync = async (m: string, a: any) => {
+      f.calls.push([m, a])
+      if (m === 'net.fetch') return a.url.endsWith('/bad') ? { error: 'https to a host listed in plugin.json "hosts" only' } : { value: { status: 200, statusText: 'OK', headers: { 'content-type': 'application/json' }, body: '{"data":{"n":1}}' } }
+      return { value: m === 'secrets.get' ? 'lin_api_X' : undefined }
+    }
+    const files = {
+      'main.js': `exports.activate = async (ctx) => {
+        const r = await ctx.net.fetch('https://api.linear.app/graphql', { method: 'POST', headers: new Headers({ Authorization: 'k' }), body: '{}' })
+        globalThis.__net = { ok: r.ok, status: r.status, json: await r.json(), text: await r.text() }
+        try { await ctx.net.fetch('https://api.linear.app/bad') } catch (e) { globalThis.__netErr = e.message }
+        await ctx.secrets.set('apiKey', 'lin_api_X')
+        globalThis.__secret = await ctx.secrets.get('apiKey')
+        await ctx.secrets.delete('apiKey')
+      }`,
+    }
+    boot(f.bridge, manifest, files)
+    for (let i = 0; i < 6; i++) await tick()
+    const g = globalThis as any
+    expect(g.__net).toEqual({ ok: true, status: 200, json: { data: { n: 1 } }, text: '{"data":{"n":1}}' })
+    expect(g.__netErr).toMatch(/hosts/)
+    expect(g.__secret).toBe('lin_api_X')
+    expect(f.calls.find(([m]) => m === 'net.fetch')![1]).toEqual({ url: 'https://api.linear.app/graphql', method: 'POST', headers: { authorization: 'k' }, body: '{}' })
+    expect(f.calls.filter(([m]) => m.startsWith('secrets.'))).toEqual([['secrets.set', { key: 'apiKey', value: 'lin_api_X' }], ['secrets.get', { key: 'apiKey' }], ['secrets.delete', { key: 'apiKey' }]])
   })
 
   it('reports load failures and refuses requires outside the plugin', async () => {

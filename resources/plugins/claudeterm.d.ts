@@ -4,6 +4,8 @@
  * (relative paths). Everything else goes through ctx, checked against the permissions of plugin.json:
  * - "process": process.exec, terminal.run, workspace.openProject and workspace.openUrl
  * - "claude": claude.run (an isolated claude -p, on the user's subscription)
+ * - "network": net.fetch, https to the hosts listed in plugin.json `"hosts"` only ("api.linear.app", "*.linear.app")
+ * - "secrets": secrets (API keys…), encrypted by the OS, the plugin's own
  * - fs (exists / read / list / watch, openFile): the plugin folder and the open project; "fs:home" widens it to the
  *   home folder. Absolute paths only.
  */
@@ -88,6 +90,17 @@ export interface Context {
    * Run it on the user's click only, and show `costUsd`.
    */
   claude: { run(req: { input: string; instructions?: string; preset?: { kind: 'commit'; recentSubjects: string[] } | { kind: 'mr' }; model?: string }): Promise<{ text: string; costUsd?: number; model?: string }> }
+  /**
+   * Requires "network". Sent by the app without cookies: a string body (≤ 1 MB), an answer read whole (≤ 5 MB, 30 s),
+   * redirects followed within the declared hosts only. Host, Cookie, Origin and the like are the app's to set.
+   */
+  net: {
+    fetch(url: string, init?: { method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; headers?: Record<string, string>; body?: string }): Promise<{
+      ok: boolean; status: number; statusText: string; headers: Record<string, string>; text(): Promise<string>; json(): Promise<any>
+    }>
+  }
+  /** Requires "secrets". Names: 1-64 letters, digits, . _ -; removed with the plugin. */
+  secrets: { get(key: string): Promise<string | undefined>; set(key: string, value: string): Promise<void>; delete(key: string): Promise<void> }
   settings: { get(key: string): unknown }
   storage: { get(key: string): unknown; set(key: string, value: unknown): void }
 }

@@ -118,8 +118,10 @@ sync / async calls to main, which identifies the caller by its webContents and c
 (`src/main/services/plugin-policy.ts`); `resources/plugin-host/bootstrap.js` rebuilds the `ctx` API
 (`resources/plugins/claudeterm.d.ts`) on it and provides `require` for the plugin's own files. Disabling a plugin
 destroys its window. Permissions for user plugins (built-ins are trusted): `process` = `process.exec` and
-`terminal.run`; fs = its folder and the open project, `fs:home` = the home folder (symlinks resolved); `network` and
-`secrets` = nothing yet. `terminal.run` returns an id: the tab carries it until the command ends (shell integration),
+`terminal.run`; fs = its folder and the open project, `fs:home` = the home folder (symlinks resolved); `network` =
+`net.fetch` from main (an in-memory session per plugin, https to the hosts of plugin.json `hosts` only, redirects
+included, no cookies, size and time capped; the plugin window still reaches nothing), its hosts approved with it;
+`secrets` = `ctx.secrets`, encrypted by safeStorage, per plugin, erased at uninstall. `terminal.run` returns an id: the tab carries it until the command ends (shell integration),
 `terminal.runs()` / `onDidChangeRuns` list the plugin's running commands, `terminal.stop(id)` sends Ctrl+C ("process"). Events reach the owning plugin only; a plugin can only set its own views and popovers. Views are namespaced `<pluginId>:<viewId>`. Activity entries contributed by plugins sit
 after a separator line in the bar. Built-in plugin: **Git** (`resources/plugins/git`, decided 2026-09-27 with a zero-bug rule): no git logic of our
 own, reads through porcelain v2 / log formats parsed by tested code, every write is a plain `git`
