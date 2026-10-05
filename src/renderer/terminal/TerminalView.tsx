@@ -41,6 +41,12 @@ function defaultMono(): string {
   return getComputedStyle(document.documentElement).getPropertyValue('--ct-font-mono').trim() || 'Menlo, monospace'
 }
 
+/** Creates a tab's terminal before it is first shown (a script started in the background): nothing it prints is lost. */
+export function prepareTerminal(tab: Tab) {
+  const s = useWorkbench.getState()
+  if (s.theme && s.settings) getOrCreate(tab, s.theme, s.settings.fontFamily, s.settings.fontSize / (s.settings.uiZoom || 1))
+}
+
 export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, fontSize: number) {
   let t = terminals.get(tab.id)
   if (t) return t

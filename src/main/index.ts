@@ -34,7 +34,7 @@ import { NPM_LATEST, STATUS_URL, parseStatusPage } from '@shared/claude-info'
 import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
 import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
-import { opensInDefaultApp } from '@shared/external'
+import { isBrowsable, opensInDefaultApp } from '@shared/external'
 import type { DirEntry } from '@shared/ipc'
 
 // One packaged instance: a second one would drain the same hook spool (userData/events) and take the first one's
@@ -448,7 +448,7 @@ ipcMain.on('app:setOverlay', (_e, { dataUrl, label }: { dataUrl: string | null; 
   win.setOverlayIcon(img, typeof label === 'string' ? label : '')
 })
 // web links go to the default browser (https only)
-ipcMain.on('app:openUrl', (_e, url: string) => { if (/^https:\/\//.test(url)) shell.openExternal(url) })
+ipcMain.on('app:openUrl', (_e, url: string) => { if (typeof url === 'string' && isBrowsable(url)) shell.openExternal(url) })
 ipcMain.on('app:reveal', (_e, p: string) => { shell.showItemInFolder(p) })
 // macOS Quick Look panel on a file or folder (Space in the explorer, like the Finder)
 ipcMain.on('app:quickLook', (_e, p: string) => { if (process.platform === 'darwin' && typeof p === 'string' && existsSync(p)) win?.previewFile(p) })
