@@ -18,7 +18,7 @@ const RIGHT = [
   { id: 'claude', title: 'Claude : usage, version, artifacts' }, { id: 'process', title: 'Process Claude' },
   { id: 'history', title: 'Historique (toutes les sessions)' }, { id: 'skills', title: 'Skills perso et plugins' },
 ]
-const MODES: Record<PaletteMode, string> = { files: 'Fichiers du projet', commands: 'Commandes', sessions: 'Sessions Claude', skills: 'Prompts, skills et commandes /' }
+const MODES: Record<PaletteMode, string> = { files: 'Fichiers du projet', commands: 'Commandes', sessions: 'Sessions Claude', text: 'Dans les échanges des sessions', skills: 'Prompts, skills et commandes /' }
 
 /** Command palette: files, `>` commands, `@` sessions, `/` skills; ↑ ↓ to move, Enter to run, Esc to close. */
 export function Palette() {
@@ -49,6 +49,14 @@ function PaletteModal({ initial }: { initial: string }) {
     return () => { live = false; clearTimeout(timer) }
   }, [mode, query, root])
   useEffect(() => { if (mode === 'sessions' && !sessions) window.ct.claude.allSessions().then(setSessions) }, [mode])
+  // # : what was said in the sessions (prompts and answers), from 3 characters
+  const [said, setSaid] = useState<{ session: SessionInfo; hits: { snippet: string }[] }[]>([])
+  useEffect(() => {
+    if (mode !== 'text' || query.length < 3) { setSaid([]); return }
+    let live = true
+    const timer = setTimeout(() => window.ct.claude.searchText(query).then((r) => { if (live) setSaid(r) }), 300)
+    return () => { live = false; clearTimeout(timer) }
+  }, [mode, query])
   useEffect(() => {
     if (mode !== 'skills' || skills) return
     Promise.all([root ? window.ct.skills.project(root) : [], root ? window.ct.skills.linked(root) : [], window.ct.skills.personal(), window.ct.skills.plugins()])
@@ -76,6 +84,13 @@ function PaletteModal({ initial }: { initial: string }) {
         run: () => { if (project) st.newTab(project.id, 'claude', s.projectPath || undefined, s.id) },
       }))
     }
+    if (mode === 'text') {
+      return said.map(({ session: s, hits }) => ({
+        key: 'said:' + s.path, icon: Icons.search(13), label: s.title || t('(sans titre)'), detail: hits[0]?.snippet,
+        hint: s.projectPath.split(/[\\/]/).filter(Boolean).pop(),
+        run: () => { if (project) st.newTab(project.id, 'claude', s.projectPath || undefined, s.id) },
+      }))
+    }
     if (mode === 'skills') {
       const prompts: Item[] = rank(st.settings?.prompts ?? [], (p) => `${p.name} ${p.text}`, query).map((p) => ({
         key: 'prompt:' + p.id, icon: Icons.prompt(13), label: p.name, detail: p.text.replace(/\s+/g, ' '), hint: p.shortcut ? keyLabel(p.shortcut, mac) : undefined,
@@ -90,13 +105,13 @@ function PaletteModal({ initial }: { initial: string }) {
       key: r, icon: <FileIcon path={r} size={14} />, label: r.split('/').pop() ?? r, detail: r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : undefined,
       run: () => { if (project && root) st.openFile(project.id, joinPath(root, r.split('/'))) },
     }))
-  }, [mode, query, files, sessions, skills, st.settings, st.rightActivity, project?.id, root])
+  }, [mode, query, files, sessions, said, skills, st.settings, st.rightActivity, project?.id, root])
 
   const pick = (i: number) => { const it = items[i]; if (it) run(it.run) }
   return (
     <div className="modal-backdrop palette-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}>
       <div className="palette" role="dialog" aria-label={t('Palette de commandes')}>
-        <input ref={input} value={text} spellCheck={false} placeholder={t('Fichier, ou > commande, @ session, / skill')} onChange={(e) => setText(e.target.value)}
+        <input ref={input} value={text} spellCheck={false} placeholder={t('Fichier, ou > commande, @ session, # texte, / prompt')} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close() }
             else if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(s + 1, items.length - 1)) }

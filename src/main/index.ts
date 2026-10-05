@@ -22,6 +22,7 @@ import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
 import { Restore } from './services/restore'
+import { TranscriptSearch } from './services/transcript-search'
 import { UsageService } from './services/usage'
 import { TestsService } from './services/tests'
 import { ProblemsService } from './services/problems'
@@ -163,6 +164,13 @@ ipcMain.handle('claude:restoreApply', async (_e, { tabId, path, hash }) => {
 })
 ipcMain.handle('claude:restoreUndo', (_e, undoId: string) => restore.undo(undoId))
 ipcMain.handle('claude:commandCounts', () => claudeData.commandCounts())
+const transcriptSearch = new TranscriptSearch(claudeData.root)
+ipcMain.handle('claude:searchText', async (_e, query: string) => {
+  if (typeof query !== 'string') return []
+  const found = await transcriptSearch.search(query)
+  const sessions = new Map(claudeData.allSessions().map((s) => [s.path, s]))
+  return found.flatMap((f) => { const session = sessions.get(f.path); return session ? [{ session, hits: f.hits }] : [] })
+})
 ipcMain.handle('claude:entryDetail', (_e, { transcript, ref, agentId }) => claudeData.entryDetail(transcript, ref, agentId))
 ipcMain.handle('claude:subagent', (_e, { transcript, agentId }) => claudeData.subagent(transcript, agentId))
 ipcMain.handle('claude:images', (_e, transcript: string) => claudeData.images(transcript))

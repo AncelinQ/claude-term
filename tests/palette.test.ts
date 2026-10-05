@@ -7,6 +7,7 @@ describe('command palette', () => {
     expect(paletteInput('> nouvel')).toEqual({ mode: 'commands', query: 'nouvel' })
     expect(paletteInput('@refacto')).toEqual({ mode: 'sessions', query: 'refacto' })
     expect(paletteInput('/rev')).toEqual({ mode: 'skills', query: 'rev' })
+    expect(paletteInput('# déploiement')).toEqual({ mode: 'text', query: 'déploiement' })
     expect(paletteInput('')).toEqual({ mode: 'files', query: '' })
   })
 

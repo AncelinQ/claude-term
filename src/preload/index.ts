@@ -62,6 +62,7 @@ const api: CtApi = {
     restoreApply: (tabId, path, hash) => ipcRenderer.invoke('claude:restoreApply', { tabId, path, hash }),
     restoreUndo: (undoId) => ipcRenderer.invoke('claude:restoreUndo', undoId),
     commandCounts: () => ipcRenderer.invoke('claude:commandCounts'),
+    searchText: (query) => ipcRenderer.invoke('claude:searchText', query),
     subagent: (transcript, agentId) => ipcRenderer.invoke('claude:subagent', { transcript, agentId }),
     images: (transcript) => ipcRenderer.invoke('claude:images', transcript),
     onAttention: (cb) => channel('claude:attention', () => true, (p) => p, cb),

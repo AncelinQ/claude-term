@@ -303,6 +303,8 @@ export interface CtApi {
     restoreUndo(undoId: string): Promise<{ ok: boolean; error?: string }>
     /** slash commands typed in the sessions of the last 30 days, with how often */
     commandCounts(): Promise<Record<string, number>>
+    /** sessions whose prompts or Claude's answers hold every word of the query (accents and case aside), with snippets */
+    searchText(query: string): Promise<{ session: SessionInfo; hits: { role: 'user' | 'assistant'; snippet: string; time?: string }[] }[]>
     /** a sub-agent's activity, with its type and description */
     subagent(transcript: string, agentId: string): Promise<{ events: import('./claude-format').ToolEvent[]; agentType?: string; description?: string } | null>
     /** the session's images (its sub-agents' too) as data URLs */

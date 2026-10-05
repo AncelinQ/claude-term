@@ -285,6 +285,7 @@ input[type=checkbox]:disabled { opacity: .4; }
 .lrow .head { display: flex; align-items: center; gap: 6px; }
 .lrow .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lrow .desc { color: var(--ct-text-secondary); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lrow .desc.said { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .lrow .acts { display: none; gap: 2px; flex: none; }
 .lrow:hover .acts { display: inline-flex; }
 .lrow .acts button { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 4px; color: var(--ct-text-secondary); }

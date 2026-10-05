@@ -1,10 +1,11 @@
 /** Command palette (pure, tested): what the typed prefix asks for, and how well an entry matches. */
 
-export type PaletteMode = 'files' | 'commands' | 'sessions' | 'skills'
+export type PaletteMode = 'files' | 'commands' | 'sessions' | 'text' | 'skills'
 
 export const PALETTE_PREFIXES: { prefix: string; mode: PaletteMode }[] = [
   { prefix: '>', mode: 'commands' },
   { prefix: '@', mode: 'sessions' },
+  { prefix: '#', mode: 'text' },
   { prefix: '/', mode: 'skills' },
 ]
 
