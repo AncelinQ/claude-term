@@ -157,7 +157,7 @@ function Gauge({ limit, now }: { limit: UsageLimit; now: number }) {
   const reset = untilReset(limit.resetsAt, now)
   return (
     <div className={'gauge ' + lv.tone} title={limit.resetsAt ? new Date(limit.resetsAt).toLocaleString() : undefined}>
-      <div className="gauge-head"><span className="name">{t(limit.label)}</span><span className="pct">{Math.round(limit.percent)} %{lv.text && <em> · {t(lv.text)}</em>}</span></div>
+      <div className="gauge-head"><span className="name">{t(limit.label)}</span><span className="pct">{lv.text && <em className="lv"><span className="dot" />{t(lv.text)} · </em>}{Math.round(limit.percent)} %</span></div>
       <div className="bar"><div style={{ width: `${limit.percent}%` }} /></div>
       {reset && <div className="reset">{t('Réinitialisation {when}', { when: t(reset.key, reset.vars) })}</div>}
     </div>

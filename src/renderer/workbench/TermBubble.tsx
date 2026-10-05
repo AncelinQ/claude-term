@@ -62,6 +62,7 @@ export function TermBubble({ tab }: { tab: Tab }) {
       {ctx && (
         <span className={'ctx ' + level(ctx.percent).tone} title={ctx.estimated ? tr('Estimé depuis le transcript (le suivi en continu donne le chiffre exact)') : tr('Contexte utilisé')}>
           <span className="mini"><span style={{ width: `${ctx.percent}%` }} /></span>{ctx.estimated ? '≈' : ''}{Math.round(ctx.percent)} %
+          {level(ctx.percent).text && <span className="lv"><span className="dot" />{tr(level(ctx.percent).text)}</span>}
         </span>
       )}
       {s && (s.inputTokens > 0 || s.outputTokens > 0) && <span className="item dim" title={tr('Tokens de la session : entrée ↓, sortie ↑')}>{short(s.inputTokens)} ↓ {short(s.outputTokens)} ↑</span>}

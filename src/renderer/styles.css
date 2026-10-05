@@ -552,12 +552,15 @@ input[type=checkbox]:disabled { opacity: .4; }
 .claude-panel .gauge-head { display: flex; justify-content: space-between; gap: 8px; }
 .claude-panel .gauge-head .pct { font-variant-numeric: tabular-nums; color: var(--ct-text-secondary); }
 .claude-panel .gauge-head em { font-style: normal; }
-.claude-panel .gauge .bar { height: 6px; border-radius: 3px; background: var(--ct-hover-bg); overflow: hidden; }
-.claude-panel .gauge .bar > div { height: 100%; border-radius: 3px; background: var(--ct-badge-ok); transition: width .3s; }
-.claude-panel .gauge.warn .bar > div { background: var(--ct-badge-warn); }
-.claude-panel .gauge.error .bar > div { background: var(--ct-badge-error); }
-.claude-panel .gauge.warn .pct { color: var(--ct-badge-warn); }
-.claude-panel .gauge.error .pct { color: var(--ct-badge-error); }
+/* meters: the accent while normal, warn / error reserved for high and critical (with their label); the track is the
+   fill's own tint, so the bar reads as one object; figures and labels stay in text colours */
+.claude-panel .gauge, .term-bubble .ctx { --fill: var(--ct-accent); }
+.claude-panel .gauge.warn, .term-bubble .ctx.warn { --fill: var(--ct-badge-warn); }
+.claude-panel .gauge.error, .term-bubble .ctx.error { --fill: var(--ct-badge-error); }
+.claude-panel .gauge .bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--fill) 15%, transparent); overflow: hidden; }
+.claude-panel .gauge .bar > div { height: 100%; border-radius: 3px; background: var(--fill); transition: width .3s; }
+.claude-panel .gauge .lv, .term-bubble .ctx .lv { display: inline-flex; align-items: center; gap: 4px; color: var(--ct-text); }
+.claude-panel .gauge .lv .dot, .term-bubble .ctx .lv .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--fill); }
 .claude-panel .gauge .reset { font-size: 11px; color: var(--ct-text-tertiary); }
 .claude-panel .kv .k { color: var(--ct-text-secondary); flex: none; }
 .claude-panel .kv .v-wrap { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
@@ -578,10 +581,8 @@ input[type=checkbox]:disabled { opacity: .4; }
 .term-bubble .model:hover { background: var(--ct-hover-bg); }
 .term-bubble .model svg:first-child { color: var(--ct-accent); }
 .term-bubble .ctx { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
-.term-bubble .ctx .mini { width: 34px; height: 4px; border-radius: 2px; background: var(--ct-hover-bg); overflow: hidden; }
-.term-bubble .ctx .mini > span { display: block; height: 100%; background: var(--ct-badge-ok); }
-.term-bubble .ctx.warn { color: var(--ct-badge-warn); } .term-bubble .ctx.warn .mini > span { background: var(--ct-badge-warn); }
-.term-bubble .ctx.error { color: var(--ct-badge-error); } .term-bubble .ctx.error .mini > span { background: var(--ct-badge-error); }
+.term-bubble .ctx .mini { width: 34px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--fill) 15%, transparent); overflow: hidden; }
+.term-bubble .ctx .mini > span { display: block; height: 100%; background: var(--fill); }
 .ico-claude { display: inline-flex; color: var(--ct-accent); }
 .btn.primary .ico-claude { color: inherit; }
 
