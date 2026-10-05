@@ -635,3 +635,5 @@ input[type=checkbox]:disabled { opacity: .4; }
 .pb-status button:hover { background: var(--ct-hover-bg); color: var(--ct-text); }
 .tree .row .dim { opacity: .6; }
 .tree .row .sessions-mark { color: var(--ct-accent); font-size: 10px; margin-left: 2px; }
+.tree .row.drop { background: var(--ct-accent-bg); outline: 1px solid var(--ct-accent); outline-offset: -1px; }
+.tree.drop { outline: 1px solid var(--ct-accent); outline-offset: -1px; }
