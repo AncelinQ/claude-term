@@ -23,7 +23,7 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
   const home = window.ct.home
   const short = (p: string) => (p.startsWith(home) ? '~' + p.slice(home.length) : p)
   const fmt = (ms: number) => { const d = new Date(ms); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }
-  const shown = sessions.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.projectPath.toLowerCase().includes(q.toLowerCase()))
+  const shown = sessions.filter((s) => !q || [s.title, s.projectPath, s.tabName ?? ''].some((x) => x.toLowerCase().includes(q.toLowerCase())))
   const resume = (s: SessionInfo) => project && newTab(project.id, 'claude', s.projectPath || undefined, s.id)
   // the words also searched in what was said (prompts and answers), from 3 characters
   const [said, setSaid] = useState<{ session: SessionInfo; hits: { role: string; snippet: string }[] }[] | null>(null)
@@ -46,7 +46,7 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
             <div key={s.path} className="lrow" title={s.path} onDoubleClick={() => resume(s)}>
               <span className="ico">{Icons.claude(12)}</span>
               <div className="lbody">
-                <div className="head"><span className="name">{s.title}</span></div>
+                <div className="head">{s.tabName && <TabName name={s.tabName} />}<span className="name">{s.title}</span></div>
                 <div className="desc">{fmt(s.modified)}{showsCost(costs[s.path]) ? ` · ${formatCost(costs[s.path])}` : ''}{s.messageCount ? ` · ${s.messageCount} msg` : ''}{s.gitBranch ? ` · ${s.gitBranch}` : ''}{scope === 'all' && s.projectPath ? ` · ${short(s.projectPath)}` : ''}</div>
               </div>
               <span className="acts">
@@ -65,7 +65,7 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
               <div key={'said:' + s.path} className="lrow" title={s.path} onDoubleClick={() => resume(s)}>
                 <span className="ico">{Icons.search(12)}</span>
                 <div className="lbody">
-                  <div className="head"><span className="name">{s.title}</span><span className="badge dim">{fmt(s.modified)}</span></div>
+                  <div className="head">{s.tabName && <TabName name={s.tabName} />}<span className="name">{s.title}</span><span className="badge dim">{fmt(s.modified)}</span></div>
                   {hits.map((h, i) => <div key={i} className="desc said">{h.role === 'user' ? '› ' : '✳ '}{h.snippet}</div>)}
                 </div>
                 <span className="acts">
@@ -79,4 +79,9 @@ export function HistoryIsland({ scope }: { scope: 'project' | 'all' }) {
       )}
     </Island>
   )
+}
+
+/** The name of the tab a session ran in, before its title. */
+function TabName({ name }: { name: string }) {
+  return <span className="badge tabname" title={t("Nom de l'onglet où la session a tourné")}>{Icons.claude(10)}{name}</span>
 }

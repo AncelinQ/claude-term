@@ -101,6 +101,8 @@ export interface SessionInfo {
   projectPath: string
   messageCount: number
   gitBranch: string
+  /** the name of the tab it ran in (renamed by the user), kept by the app */
+  tabName?: string
 }
 
 export interface PlanInfo { path: string; title: string; modified: number }
@@ -327,6 +329,9 @@ export interface CtApi {
     plans(): Promise<PlanInfo[]>
     sessions(cwd: string): Promise<SessionInfo[]>
     allSessions(): Promise<SessionInfo[]>
+    /** the name of the tab a session ran in; set when its tab is renamed or binds it */
+    sessionName(id: string): Promise<string | null>
+    setSessionName(id: string, name: string | null): void
     hasSessions(cwd: string): Promise<boolean>
     /** to the Trash: the transcript, its folder (sub-agents) and its file-history backups */
     deleteSession(s: SessionInfo): Promise<void>

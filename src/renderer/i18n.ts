@@ -533,6 +533,7 @@ const EN: Record<string, string> = {
   'Annuler la copie de {c} éléments': 'Undo copying {c} items',
   'Dev': 'Dev',
   'Copier depuis un autre projet…': 'Copy from another project…',
+  "Nom de l'onglet où la session a tourné": 'Name of the tab the session ran in',
   'Envoyer sans saisie': 'Send without input',
   'Insérer sans saisie': 'Insert without input',
   '{n} valeur(s) secrète(s) masquée(s) : laisse {mask} pour la garder, tape une nouvelle valeur pour la changer.': '{n} secret value(s) masked: leave {mask} to keep it, type a new value to change it.',

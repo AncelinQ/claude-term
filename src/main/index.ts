@@ -14,6 +14,7 @@ import { HookHub } from './services/hooks'
 import { FileService, DirWatcher } from './services/files'
 import { FileOps, UndoLog, transferAll, type ConflictChoice } from './services/file-ops'
 import { listDir } from './services/explorer'
+import { SessionNames } from './services/session-names'
 import { ProjectLinks } from './services/links'
 import { Skills } from './services/skills'
 import { Mcp } from './services/mcp'
@@ -35,7 +36,7 @@ import { PluginStore, type ApprovalRequest } from './services/plugin-store'
 import { catalogueItems, type Catalogue, type RegistryEntry } from '@shared/plugin-registry'
 import { PLUGIN_PERMISSIONS, type PluginPermission } from '@shared/plugins'
 import { isBrowsable, opensInDefaultApp } from '@shared/external'
-import type { DirEntry, MCPServer, SkillInfo } from '@shared/ipc'
+import type { DirEntry, MCPServer, SessionInfo, SkillInfo } from '@shared/ipc'
 import { maskServer, unmaskServer } from '@shared/mcp-secrets'
 
 // One packaged instance: a second one would drain the same hook spool (userData/events) and take the first one's
@@ -162,8 +163,13 @@ ipcMain.on('claude:track', (_e, { tabId, cwd, opts }) => {
 ipcMain.on('claude:untrack', (_e, { tabId }) => { trackers.get(tabId)?.stop(); trackers.delete(tabId) })
 ipcMain.on('claude:setPlan', (_e, { tabId, path }) => trackers.get(tabId)?.setPlan(path))
 ipcMain.handle('claude:plans', () => claudeData.plans())
-ipcMain.handle('claude:sessions', (_e, cwd: string) => claudeData.sessions(cwd))
-ipcMain.handle('claude:allSessions', () => claudeData.allSessions())
+// each session with the name of the tab it ran in, when it had one
+const sessionNames = new SessionNames(join(app.getPath('userData'), 'session-names.json'))
+const named = (list: SessionInfo[]) => list.map((s) => { const tabName = sessionNames.get(s.id); return tabName ? { ...s, tabName } : s })
+ipcMain.handle('claude:sessions', (_e, cwd: string) => named(claudeData.sessions(cwd)))
+ipcMain.handle('claude:allSessions', () => named(claudeData.allSessions()))
+ipcMain.handle('claude:sessionName', (_e, id: string) => (typeof id === 'string' ? sessionNames.get(id) : null))
+ipcMain.on('claude:setSessionName', (_e, { id, name }: { id: string; name: string | null }) => { if (typeof id === 'string' && id) sessionNames.set(id, typeof name === 'string' ? name : null) })
 ipcMain.handle('claude:hasSessions', (_e, cwd: string) => claudeData.hasSessions(cwd))
 ipcMain.handle('claude:deleteSession', (_e, s) => claudeData.deleteSession(s, (p) => shell.trashItem(p)))
 ipcMain.handle('claude:sessionSize', (_e, s) => claudeData.sessionSize(s))
@@ -200,7 +206,7 @@ const transcriptSearch = new TranscriptSearch(claudeData.root)
 ipcMain.handle('claude:searchText', async (_e, query: string) => {
   if (typeof query !== 'string') return []
   const found = await transcriptSearch.search(query)
-  const sessions = new Map(claudeData.allSessions().map((s) => [s.path, s]))
+  const sessions = new Map(named(claudeData.allSessions()).map((s) => [s.path, s]))
   return found.flatMap((f) => { const session = sessions.get(f.path); return session ? [{ session, hits: f.hits }] : [] })
 })
 ipcMain.handle('claude:entryDetail', (_e, { transcript, ref, agentId }) => claudeData.entryDetail(transcript, ref, agentId))
