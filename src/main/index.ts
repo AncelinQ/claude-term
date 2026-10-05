@@ -21,6 +21,7 @@ import { ContentSearch, FileIndex } from './services/search'
 import { Attachments } from './services/attachments'
 import { PluginHost } from './services/plugins'
 import { Updater } from './services/updater'
+import { Restore } from './services/restore'
 import { UsageService } from './services/usage'
 import { TestsService } from './services/tests'
 import { ProblemsService } from './services/problems'
@@ -137,6 +138,30 @@ ipcMain.handle('claude:hasSessions', (_e, cwd: string) => claudeData.hasSessions
 ipcMain.handle('claude:deleteSession', (_e, s) => claudeData.deleteSession(s, (p) => shell.trashItem(p)))
 ipcMain.handle('claude:sessionDiff', (_e, { path, backupName, sessionId }) => claudeData.sessionDiff(path, backupName, sessionId))
 ipcMain.handle('claude:readText', (_e, path: string) => claudeData.readText(path))
+// restore a file to its state before the session: only a file the tab's session has a backup for
+const restore = new Restore(join(app.getPath('userData'), 'restore'))
+const restoreSource = (tabId: string, path: string) => {
+  const s = trackers.get(tabId)?.state
+  const b = typeof path === 'string' ? s?.backups[path] : undefined
+  if (!s?.sessionId || !b) return null
+  return { backup: b.name === null ? null : join(claudeData.fileHistoryDir, s.sessionId, b.name), lastWrite: s.lastWrites[path] }
+}
+ipcMain.handle('claude:restorePlan', (_e, { tabId, path }) => {
+  const src = restoreSource(tabId, path)
+  return src ? restore.plan(path, src.backup, src.lastWrite) : { ok: false, action: 'write', blockers: ['aucune sauvegarde de ce fichier dans la session'], warnings: [], diff: '', hash: '' }
+})
+ipcMain.handle('claude:restoreApply', async (_e, { tabId, path, hash }) => {
+  const src = restoreSource(tabId, path)
+  if (!src) return { ok: false, error: 'aucune sauvegarde de ce fichier dans la session' }
+  const r = await dialog.showMessageBox(win!, {
+    type: 'warning', message: src.backup === null ? `Mettre « ${basename(path)} » à la corbeille ?` : `Remettre « ${basename(path)} » dans son état d'avant la session ?`,
+    detail: src.backup === null ? 'La session l’a créé. Son contenu est gardé : « Annuler » le remet.' : 'Son contenu actuel est gardé : « Annuler » le remet.',
+    buttons: ['Restaurer', 'Annuler'], defaultId: 0, cancelId: 1,
+  })
+  if (r.response !== 0) return { ok: false, error: 'annulé' }
+  return restore.apply(path, src.backup, hash, (p) => shell.trashItem(p))
+})
+ipcMain.handle('claude:restoreUndo', (_e, undoId: string) => restore.undo(undoId))
 ipcMain.handle('claude:entryDetail', (_e, { transcript, ref, agentId }) => claudeData.entryDetail(transcript, ref, agentId))
 ipcMain.handle('claude:subagent', (_e, { transcript, agentId }) => claudeData.subagent(transcript, agentId))
 ipcMain.handle('claude:images', (_e, transcript: string) => claudeData.images(transcript))

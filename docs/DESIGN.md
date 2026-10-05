@@ -171,7 +171,13 @@ and **Linear** (API key in secrets, GraphQL, "Mes issues", "Démarrer avec Claud
   calls, files touched, tokens, plan mode, permission mode; encoding of the cwd is ASCII-only
   (`[^a-zA-Z0-9]` → `-`). Claimed transcripts: the one the `SessionStart` hook names for the tab, else the newest
   file created after the tab start.
-- Files touched + diffs: `~/.claude/file-history/<session>` backups, and `toolUseResult.bashEditDiff`.
+- Files touched + diffs: `~/.claude/file-history/<session>` backups (file-history snapshots and the newer per-file
+  deltas; a null backup name: the session created the file), and `toolUseResult.bashEditDiff`.
+- Restore (Fichiers): a file the tab's session has a backup for goes back to its state before the session, on the
+  user's click after a preview (the diff of what is lost, blockers, a warning when it changed after Claude's last
+  write) and a native confirmation, not while Claude works. Refused when the file changed since the preview (sha256).
+  The replaced content is kept in `userData/restore/<id>` first (Annuler puts it back); a file the session created
+  goes to the Trash. Written through a temp file renamed over it, mode kept.
 - Plans: `~/.claude/plans`. Sessions index: `sessions-index.json` (deletion allowed).
 - Hooks `Notification`, `Stop` and `SessionStart` installed only from settings (an install that lacks an event gets
   it at start), spooling events into `userData/events`. Every terminal has `CLAUDETERM_TAB=<run>.<tab>`; the spool

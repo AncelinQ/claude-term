@@ -94,7 +94,7 @@ export class SessionTracker {
           if (u.queueOps.length) s.queue = applyQueue(s.queue, u.queueOps)
           s.images += u.images
           if (u.contextTokens !== undefined) s.contextTokens = u.contextTokens
-          for (const e of u.events) if (e.file && !isInside(e.file, this.data.plansDir)) s.files[e.file] = (s.files[e.file] ?? 0) + 1
+          for (const e of u.events) if (e.file && !isInside(e.file, this.data.plansDir)) { s.files[e.file] = (s.files[e.file] ?? 0) + 1; noteWrite(s, e) }
           for (const [p, d] of Object.entries(u.bashDiffs)) (s.bashDiffs[p] ??= []).push(...d)
           for (const [p, b] of Object.entries(u.backups)) {
             const e = s.backups[p]
@@ -132,7 +132,7 @@ export class SessionTracker {
       this.agentReads.set(agentId, { offset, rest })
       const u = parseTranscript(lines, { plansDir: this.data.plansDir, home: this.data.home })
       const s = this.state
-      for (const e of u.events) if (e.file && !isInside(e.file, this.data.plansDir)) { s.files[e.file] = (s.files[e.file] ?? 0) + 1; changed = true }
+      for (const e of u.events) if (e.file && !isInside(e.file, this.data.plansDir)) { s.files[e.file] = (s.files[e.file] ?? 0) + 1; noteWrite(s, e); changed = true }
       for (const [p, d] of Object.entries(u.bashDiffs)) { (s.bashDiffs[p] ??= []).push(...d); changed = true }
       for (const [p, b] of Object.entries(u.backups)) {
         const e = s.backups[p]
@@ -204,5 +204,11 @@ export class SessionTracker {
 }
 
 export function emptyState(): SessionState {
-  return { events: [], files: {}, backups: {}, bashDiffs: {}, agents: {}, queue: [], images: 0, inputTokens: 0, outputTokens: 0, planText: '', planMode: false, runningTools: [] }
+  return { events: [], files: {}, lastWrites: {}, backups: {}, bashDiffs: {}, agents: {}, queue: [], images: 0, inputTokens: 0, outputTokens: 0, planText: '', planMode: false, runningTools: [] }
+}
+
+const WRITES = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Edit (bash)'])
+/** The session's last write to a file (a restore warns about changes made after it). */
+function noteWrite(s: SessionState, e: ToolEvent) {
+  if (e.file && WRITES.has(e.kind)) s.lastWrites[e.file] = Date.parse(e.time) || Date.now()
 }

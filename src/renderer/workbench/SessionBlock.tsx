@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify'
 import { Icons } from './icons'
 import { Island, Empty } from './Island'
 import { diffStats, type EntryDetail, type ToolEvent } from '@shared/claude-format'
+import type { RestorePlan } from '@shared/ipc'
 import { useWorkbench, sessionTab, type Project, type Tab } from '@/stores/workbench'
 import { usePlugins } from '@/stores/plugins'
 import { PluginViewBody } from './PluginView'
@@ -250,7 +251,25 @@ function FilesView({ tab }: { tab: Tab }) {
     load()
     return () => { live = false }
   }, [tab.session, current])
+  // restore: the preview of the file shown, and the last restore (undoable)
+  const [preview, setPreview] = useState<{ path: string; plan: RestorePlan } | null>(null)
+  const [restored, setRestored] = useState<{ path: string; undoId: string } | null>(null)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
+  useEffect(() => { setPreview(null); setRestoreError(null) }, [current])
   if (rows.length === 0) return <Empty>{t('Aucun fichier touché pour l\'instant')}</Empty>
+  const canRestore = !!current && !!s.backups[current]
+  const showPreview = async () => { setRestoreError(null); setPreview({ path: current!, plan: await window.ct.claude.restorePlan(tab.id, current!) }) }
+  const apply = async () => {
+    if (!preview) return
+    const r = await window.ct.claude.restoreApply(tab.id, preview.path, preview.plan.hash)
+    if (r.ok && r.undoId) { setRestored({ path: preview.path, undoId: r.undoId }); setPreview(null) } else if (r.error !== 'annulé') setRestoreError(r.error ?? '')
+  }
+  const undo = async () => {
+    if (!restored) return
+    const r = await window.ct.claude.restoreUndo(restored.undoId)
+    if (r.ok) setRestored(null); else setRestoreError(r.error ?? '')
+  }
+  const shownDiff = preview?.path === current ? preview.plan.diff : diff
   return (
     <div className="files">
       <div className="files-list" style={{ width: listWidth }}>
@@ -258,15 +277,37 @@ function FilesView({ tab }: { tab: Tab }) {
           <div key={p} className={'frow' + (p === current ? ' sel' : '')} onClick={() => setSelected(p)} onDoubleClick={() => openFile(projectId, p)} title={p}>
             <FileIcon path={p} size={14} />
             <span className="name">{p.split(/[\\/]/).pop()}</span>
-            <span className="rel">{short(p).replace(/[^/]*$/, '')}</span>
+            <span className="rel">{short(p).replace(/[^\\/]*$/, '')}</span>
+            {s.backups[p]?.name === null && <span className="badge dim">{t('créé')}</span>}
             {stats[p] && <span className="stat"><b className="add">+{stats[p][0]}</b> <b className="del">−{stats[p][1]}</b></span>}
             {!isModified(p) && s.files[p] > 0 && <span className="muted">{s.files[p]}×</span>}
           </div>
         ))}
       </div>
       <Gutter axis="x" className="inner" onDrag={(d) => setListWidth((w) => Math.max(160, Math.min(700, w + d)))} />
-      <div className="diff">
-        {current && isModified(current) ? (diff ? diff.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>) : <Empty>{t('Aucune différence')}</Empty>) : <Empty>{t('Lu, pas modifié dans cette session')}</Empty>}
+      <div className="diff-pane">
+        {(canRestore || restored) && (
+          <div className="restore-bar">
+            {restored && <span className="ok">{t('« {f} » restauré', { f: restored.path.split(/[\\/]/).pop() ?? '' })} <button className="linkbtn" onClick={undo}>{t('Annuler')}</button></span>}
+            <span className="spacer" />
+            {canRestore && !preview && <button className="btn" disabled={!!tab.working} title={tab.working ? t('Claude travaille encore sur cette session') : t('Montre ce qui sera perdu avant de restaurer')} onClick={showPreview}>{s.backups[current!].name === null ? t('Mettre à la corbeille (créé par la session)') : t('Restaurer l’état d’avant la session')}</button>}
+            {preview && <>
+              <span className="muted">{t('Aperçu : le fichier tel qu’il redeviendra')}</span>
+              <button className="btn" onClick={() => setPreview(null)}>{t('Fermer l’aperçu')}</button>
+              <button className="btn primary" disabled={!preview.plan.ok} onClick={apply}>{preview.plan.action === 'trash' ? t('Mettre à la corbeille') : t('Restaurer')}</button>
+            </>}
+          </div>
+        )}
+        {preview && (preview.plan.blockers.length > 0 || preview.plan.warnings.length > 0) && (
+          <div className="restore-notes">
+            {preview.plan.blockers.map((b) => <div key={b} className="error">{b}</div>)}
+            {preview.plan.warnings.map((w) => <div key={w} className="warn">{w}</div>)}
+          </div>
+        )}
+        {restoreError && <div className="restore-notes"><div className="error">{restoreError}</div></div>}
+        <div className="diff">
+          {current && isModified(current) ? (shownDiff ? shownDiff.split('\n').map((l, i) => <div key={i} className={'dl ' + (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')}>{l}</div>) : <Empty>{t('Aucune différence')}</Empty>) : <Empty>{t('Lu, pas modifié dans cette session')}</Empty>}
+        </div>
       </div>
     </div>
   )

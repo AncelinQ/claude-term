@@ -215,6 +215,14 @@ input:focus { border-color: var(--ct-accent); }
 .frow .stat { font-family: var(--ct-font-mono); font-size: 10px; }
 .frow .add { color: var(--ct-badge-ok); font-weight: 600; } .frow .del { color: var(--ct-badge-error); font-weight: 600; }
 .diff { flex: 1; overflow: auto; font-family: var(--ct-font-mono); font-size: 11px; padding: 6px 0; user-select: text; }
+.diff-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.restore-bar { display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-bottom: 1px solid var(--ct-island-border); font-size: 11.5px; flex: none; }
+.restore-bar .btn { height: 22px; padding: 0 10px; font-size: 11.5px; white-space: nowrap; flex: none; }
+.restore-bar > .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.restore-bar .ok { color: var(--ct-badge-ok); }
+.restore-notes { padding: 4px 10px; border-bottom: 1px solid var(--ct-island-border); font-size: 11.5px; flex: none; }
+.restore-notes .error { color: var(--ct-badge-error); }
+.restore-notes .warn { color: var(--ct-badge-warn); }
 .dl { padding: 0 10px; white-space: pre; line-height: 1.45; }
 .dl.add { background: color-mix(in srgb, var(--ct-badge-ok) 14%, transparent); color: var(--ct-badge-ok); }
 .dl.del { background: color-mix(in srgb, var(--ct-badge-error) 14%, transparent); color: var(--ct-badge-error); }

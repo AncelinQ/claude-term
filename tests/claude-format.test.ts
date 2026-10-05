@@ -71,6 +71,16 @@ describe('transcript parsing', () => {
     ]), win)
     expect(Object.keys(u.backups).sort()).toEqual(['C:\\Projets\\app\\docs\\PLAN.md', 'C:\\Users\\j\\src\\old.ts', 'C:\\top.md'])
   })
+  it('reads file-history deltas, files created by the session included', () => {
+    const win = { plansDir: 'C:\\Users\\j\\.claude\\plans', home: 'C:\\Users\\j' }
+    const u = parseTranscript(jsonl([
+      { type: 'file-history-delta', trackingPath: 'docs\\NEW.md', backup: { backupFileName: null, version: 1, realParentDir: 'C:\\p\\docs' } },
+      { type: 'file-history-delta', trackingPath: 'docs\\OLD.md', backup: { backupFileName: 'o@v2', version: 2, realParentDir: 'C:\\p\\docs' } },
+      { type: 'file-history-delta', trackingPath: 'docs\\OLD.md', backup: { backupFileName: 'o@v1', version: 1, realParentDir: 'C:\\p\\docs' } },
+      { type: 'file-history-delta', trackingPath: 'x.md', backup: { version: 1 } },
+    ]), win)
+    expect(u.backups).toEqual({ 'C:\\p\\docs\\NEW.md': { name: null, version: 1 }, 'C:\\p\\docs\\OLD.md': { name: 'o@v1', version: 1 } })
+  })
   it('resolves a backup without realParentDir from the home folder', () => {
     const u = parseTranscript(jsonl([{ type: 'file-history-snapshot', snapshot: { trackedFileBackups: { 'a.ts': { backupFileName: 'a@v1', version: 1 } } } }]), opts)
     expect(Object.keys(u.backups)).toEqual(['/Users/j/a.ts'])

@@ -49,7 +49,10 @@ export interface SessionState {
   events: ToolEvent[]
   /** absolute path → number of accesses */
   files: Record<string, number>
-  backups: Record<string, { name: string; version: number }>
+  /** when the session (or a sub-agent) last wrote each file, ms */
+  lastWrites: Record<string, number>
+  /** earliest backup of each file the session changed; name null: the session created it */
+  backups: Record<string, { name: string | null; version: number }>
   bashDiffs: Record<string, string[]>
   inputTokens: number
   outputTokens: number
@@ -75,6 +78,19 @@ export interface SessionState {
 
 /** What a Claude tab is waiting for, as reported by Claude Code hooks. */
 export interface Attention { kind: 'permission' | 'idle' | 'done'; message: string }
+
+/** What restoring a file to its state before the session would do. */
+export interface RestorePlan {
+  ok: boolean
+  /** write: the backup's content goes back; trash: the session created the file, it goes to the Trash */
+  action: 'write' | 'trash'
+  blockers: string[]
+  warnings: string[]
+  /** current → restored */
+  diff: string
+  /** sha256 of the current file ("absent" when there is none): apply refuses a file that changed since */
+  hash: string
+}
 
 export interface SessionInfo {
   id: string
@@ -277,6 +293,11 @@ export interface CtApi {
     readText(path: string): Promise<string>
     /** an activity entry in full (its tool input and result, or the text), in the session or one of its sub-agents */
     entryDetail(transcript: string, ref: string, agentId?: string): Promise<import('./claude-format').EntryDetail | null>
+    /** what restoring a file of the tab's session to its state before the session would do (preview, blockers) */
+    restorePlan(tabId: string, path: string): Promise<RestorePlan>
+    /** restores it (after a native confirmation) when it is still as the preview's hash says; undoId undoes it */
+    restoreApply(tabId: string, path: string, hash: string): Promise<{ ok: boolean; error?: string; undoId?: string }>
+    restoreUndo(undoId: string): Promise<{ ok: boolean; error?: string }>
     /** a sub-agent's activity, with its type and description */
     subagent(transcript: string, agentId: string): Promise<{ events: import('./claude-format').ToolEvent[]; agentType?: string; description?: string } | null>
     /** the session's images (its sub-agents' too) as data URLs */
