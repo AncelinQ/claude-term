@@ -6,6 +6,7 @@ import { useWorkbench, type Project } from '@/stores/workbench'
 import { Gutter, VStack, PStack, useStoredSize, useCollapsed } from './Split'
 import { LinksIsland } from './islands/Links'
 import { SearchIsland } from './islands/Search'
+import { PromptsIsland } from './islands/Prompts'
 import { SkillsIsland } from './islands/Skills'
 import { McpIsland } from './islands/Mcp'
 import { ProcessIsland } from './islands/Process'
@@ -45,6 +46,7 @@ export function LeftSidebar({ project }: { project: Project }) {
         />
       )}
       {activity === 'search' && <SearchIsland project={project} />}
+      {activity === 'prompts' && <PromptsIsland />}
       {activity === 'history' && <HistoryIsland scope="project" />}
       {activity === 'skills' && <SkillsIsland title={t('Skills du projet')} root={project.root} createIn={project.root} grow load={async () => [...(await window.ct.skills.project(project.root!)), ...(await window.ct.skills.linked(project.root!))]} />}
       {activity === 'mcp' && (

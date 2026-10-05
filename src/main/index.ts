@@ -162,6 +162,7 @@ ipcMain.handle('claude:restoreApply', async (_e, { tabId, path, hash }) => {
   return restore.apply(path, src.backup, hash, (p) => shell.trashItem(p))
 })
 ipcMain.handle('claude:restoreUndo', (_e, undoId: string) => restore.undo(undoId))
+ipcMain.handle('claude:commandCounts', () => claudeData.commandCounts())
 ipcMain.handle('claude:entryDetail', (_e, { transcript, ref, agentId }) => claudeData.entryDetail(transcript, ref, agentId))
 ipcMain.handle('claude:subagent', (_e, { transcript, agentId }) => claudeData.subagent(transcript, agentId))
 ipcMain.handle('claude:images', (_e, transcript: string) => claudeData.images(transcript))
@@ -390,6 +391,11 @@ ipcMain.handle('update:check', () => updater.check())
 ipcMain.on('update:install', () => updater.install())
 
 // app
+// {branche} of saved prompts: git from the login-shell PATH, in the folder
+ipcMain.handle('app:gitBranch', (_e, root: string) => new Promise((res) => {
+  if (typeof root !== 'string' || !isAbsolute(root)) return res(null)
+  execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root, env: ptys.env(), timeout: 5000, windowsHide: true }, (err, out) => res(err ? null : String(out).trim() || null))
+}))
 ipcMain.handle('app:pickFolder', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory', 'showHiddenFiles'] })
   return r.canceled ? null : r.filePaths[0]

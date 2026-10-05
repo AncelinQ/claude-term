@@ -175,6 +175,8 @@ export interface Settings {
   keymapPreset: 'jetbrains' | 'vscode'
   /** shortcut overrides by action id, over the preset's defaults */
   keybindings: Record<string, string>
+  /** saved prompts (shared/prompts), sent to the project's Claude tab */
+  prompts: import('./prompts').SavedPrompt[]
   openProjects: string[]
   recentProjects: string[]
   leftActivity: string | null
@@ -216,6 +218,7 @@ export const DEFAULT_SETTINGS: Settings = {
   formatOnSave: false,
   keymapPreset: 'jetbrains',
   keybindings: {},
+  prompts: [],
   openProjects: [],
   recentProjects: [],
   leftActivity: 'explorer',
@@ -298,6 +301,8 @@ export interface CtApi {
     /** restores it (after a native confirmation) when it is still as the preview's hash says; undoId undoes it */
     restoreApply(tabId: string, path: string, hash: string): Promise<{ ok: boolean; error?: string; undoId?: string }>
     restoreUndo(undoId: string): Promise<{ ok: boolean; error?: string }>
+    /** slash commands typed in the sessions of the last 30 days, with how often */
+    commandCounts(): Promise<Record<string, number>>
     /** a sub-agent's activity, with its type and description */
     subagent(transcript: string, agentId: string): Promise<{ events: import('./claude-format').ToolEvent[]; agentType?: string; description?: string } | null>
     /** the session's images (its sub-agents' too) as data URLs */
@@ -431,6 +436,8 @@ export interface CtApi {
     /** "Enregistrer" | "Ne pas enregistrer" | "Annuler" → 'save' | 'discard' | 'cancel' */
     confirmSave(name: string): Promise<'save' | 'discard' | 'cancel'>
     pickFolder(): Promise<string | null>
+    /** the git branch checked out in a folder (`{branche}` of saved prompts), null outside a repository */
+    gitBranch(root: string): Promise<string | null>
     openExternal(path: string): void
     /** an https link in the default browser */
     openUrl(url: string): void

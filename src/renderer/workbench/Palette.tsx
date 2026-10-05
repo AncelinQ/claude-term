@@ -5,6 +5,7 @@ import { useWorkbench } from '@/stores/workbench'
 import { usePlugins } from '@/stores/plugins'
 import { usePalette } from '@/stores/palette'
 import { runAppAction } from '@/actions'
+import { runPrompt } from '@/prompts'
 import { ACTIONS, binding, label as keyLabel } from '@shared/keymap'
 import { joinPath } from '@shared/claude-format'
 import { paletteInput, rank, PALETTE_PREFIXES, type PaletteMode } from '@shared/palette'
@@ -17,7 +18,7 @@ const RIGHT = [
   { id: 'claude', title: 'Claude : usage, version, artifacts' }, { id: 'process', title: 'Process Claude' },
   { id: 'history', title: 'Historique (toutes les sessions)' }, { id: 'skills', title: 'Skills perso et plugins' },
 ]
-const MODES: Record<PaletteMode, string> = { files: 'Fichiers du projet', commands: 'Commandes', sessions: 'Sessions Claude', skills: 'Skills et commandes /' }
+const MODES: Record<PaletteMode, string> = { files: 'Fichiers du projet', commands: 'Commandes', sessions: 'Sessions Claude', skills: 'Prompts, skills et commandes /' }
 
 /** Command palette: files, `>` commands, `@` sessions, `/` skills; ↑ ↓ to move, Enter to run, Esc to close. */
 export function Palette() {
@@ -76,10 +77,14 @@ function PaletteModal({ initial }: { initial: string }) {
       }))
     }
     if (mode === 'skills') {
-      return rank(skills ?? [], (s) => `${s.name} ${s.description}`, query).map((s) => ({
+      const prompts: Item[] = rank(st.settings?.prompts ?? [], (p) => `${p.name} ${p.text}`, query).map((p) => ({
+        key: 'prompt:' + p.id, icon: Icons.prompt(13), label: p.name, detail: p.text.replace(/\s+/g, ' '), hint: p.shortcut ? keyLabel(p.shortcut, mac) : undefined,
+        run: () => { runPrompt(p) },
+      }))
+      return [...prompts, ...rank(skills ?? [], (s) => `${s.name} ${s.description}`, query).map((s) => ({
         key: s.path, icon: Icons.sparkle(13), label: '/' + s.name, detail: s.description,
         run: () => { if (project) st.insertPrompt(project.id, '/' + s.name + ' ') },
-      }))
+      }))]
     }
     return files.map((r) => ({
       key: r, icon: <FileIcon path={r} size={14} />, label: r.split('/').pop() ?? r, detail: r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : undefined,

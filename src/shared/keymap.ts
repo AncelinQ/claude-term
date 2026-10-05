@@ -26,6 +26,7 @@ export const ACTIONS: KeyAction[] = [
   { id: 'app.history', scope: 'general', label: 'Historique du projet', default: 'Mod+3' },
   { id: 'app.skills', scope: 'general', label: 'Skills du projet', default: 'Mod+4' },
   { id: 'app.mcp', scope: 'general', label: 'MCP', default: 'Mod+5' },
+  { id: 'app.prompts', scope: 'general', label: 'Prompts', default: 'Mod+8' },
   { id: 'app.plugins', scope: 'general', label: 'Plugins', default: 'Mod+6', vscode: 'Mod+Shift+X' },
   { id: 'app.run', scope: 'general', label: 'Exécuteurs', default: 'Mod+7', vscode: 'Mod+Shift+D' },
   { id: 'app.git', scope: 'general', label: 'Git', default: 'Mod+9', vscode: 'Ctrl+Shift+G' },

@@ -72,6 +72,12 @@ export function applyKeymap(overrides: Record<string, string>, preset?: KeymapPr
   }
 }
 /** Runs the formatter on a file's model when it is the one in the editor. */
+/** The text selected in the editor ('' when none). */
+export function editorSelection(): string {
+  const sel = editor?.getSelection(), model = editor?.getModel()
+  return sel && model && !sel.isEmpty() ? model.getValueInRange(sel) : ''
+}
+
 export async function formatIfActive(path: string) {
   if (!editor || editor.getModel()?.uri.fsPath !== path) return
   await editor.getAction('editor.action.formatDocument')?.run()

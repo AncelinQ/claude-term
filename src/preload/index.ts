@@ -61,6 +61,7 @@ const api: CtApi = {
     restorePlan: (tabId, path) => ipcRenderer.invoke('claude:restorePlan', { tabId, path }),
     restoreApply: (tabId, path, hash) => ipcRenderer.invoke('claude:restoreApply', { tabId, path, hash }),
     restoreUndo: (undoId) => ipcRenderer.invoke('claude:restoreUndo', undoId),
+    commandCounts: () => ipcRenderer.invoke('claude:commandCounts'),
     subagent: (transcript, agentId) => ipcRenderer.invoke('claude:subagent', { transcript, agentId }),
     images: (transcript) => ipcRenderer.invoke('claude:images', transcript),
     onAttention: (cb) => channel('claude:attention', () => true, (p) => p, cb),
@@ -170,6 +171,7 @@ const api: CtApi = {
   app: {
     confirmSave: (name) => ipcRenderer.invoke('app:confirmSave', name),
     pickFolder: () => ipcRenderer.invoke('app:pickFolder'),
+    gitBranch: (root) => ipcRenderer.invoke('app:gitBranch', root),
     openExternal: (path) => ipcRenderer.send('app:openExternal', path),
     openUrl: (url) => ipcRenderer.send('app:openUrl', url),
     setOverlay: (dataUrl, label) => ipcRenderer.send('app:setOverlay', { dataUrl, label }),

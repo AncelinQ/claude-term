@@ -29,6 +29,7 @@ const LEFT: { id: LeftActivity; title: string; action: string; icon: () => React
   { id: 'search', title: 'Recherche', action: 'app.search', icon: () => Icons.search() },
   { id: 'history', title: 'Historique du projet', action: 'app.history', icon: () => Icons.clock() },
   { id: 'skills', title: 'Skills du projet', action: 'app.skills', icon: () => Icons.sparkle() },
+  { id: 'prompts', title: 'Prompts', action: 'app.prompts', icon: () => Icons.prompt() },
   { id: 'mcp', title: 'MCP', action: 'app.mcp', icon: () => Icons.plug() },
   { id: 'plugins', title: 'Plugins', action: 'app.plugins', icon: () => Icons.puzzle() },
   { id: 'run', title: 'Exécuteurs', action: 'app.run', icon: () => Icons.play() },

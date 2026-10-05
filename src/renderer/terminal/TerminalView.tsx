@@ -11,6 +11,7 @@ import { useWorkbench, type Tab } from '@/stores/workbench'
 import { binding, findAction, matches } from '@shared/keymap'
 import { TermFindBar, useTermFind } from './TermFind'
 import { keyEvent } from '@/actions'
+import { promptForKey } from '@/prompts'
 
 /** Terminals live outside React (one xterm per tab), attached to the visible container. */
 const terminals = new Map<string, { term: Terminal; fit: FitAddon; search: SearchAddon; el: HTMLDivElement; dispose: () => void }>()
@@ -67,7 +68,7 @@ export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, 
       if (e.type !== 'keydown') return true
       // the app's shortcuts go up to the window listener (App.tsx): xterm would send them to the shell and stop them
       const s = useWorkbench.getState().settings
-      if (findAction(keyEvent(e), s?.keybindings ?? {}, mac, { preset: s?.keymapPreset, inTerminal: true })) return false
+      if (findAction(keyEvent(e), s?.keybindings ?? {}, mac, { preset: s?.keymapPreset, inTerminal: true }) || promptForKey(keyEvent(e), true)) return false
       if (matches(binding('terminal.find', s?.keybindings ?? {}, s?.keymapPreset, mac), keyEvent(e), mac)) { e.preventDefault(); useTermFind.getState().open(tab.id); return false }
       if (!mac && e.ctrlKey && !e.altKey && !e.metaKey) {
         const k = e.code === 'KeyC' ? 'c' : e.code === 'KeyV' ? 'v' : ''
@@ -136,6 +137,8 @@ export function getOrCreate(tab: Tab, theme: ResolvedTheme, fontFamily: string, 
 
 export function disposeTerminal(tabId: string) { terminals.get(tabId)?.dispose() }
 export function focusTerminal(tabId: string) { terminals.get(tabId)?.term.focus() }
+/** The text selected in a terminal ('' when none). */
+export function terminalSelection(tabId: string): string { return terminals.get(tabId)?.term.getSelection() ?? '' }
 
 export function TerminalHost({ tab }: { tab: Tab }) {
   const ref = useRef<HTMLDivElement>(null)

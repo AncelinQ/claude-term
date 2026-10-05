@@ -24,6 +24,33 @@ export class ClaudeData {
 
   projectDir(cwd: string) { return join(this.root, encodeProjectPath(cwd)) }
 
+  private commandCache: { at: number; counts: Record<string, number> } | null = null
+  /**
+   * How often each slash command was typed in the sessions of the last `days` days (kept 10 min). Only the records of
+   * a typed command count (their content is <command-name>, after the <command-message> of a skill), not a command
+   * quoted in a tool's output.
+   */
+  commandCounts(days = 30): Record<string, number> {
+    if (this.commandCache && Date.now() - this.commandCache.at < 600_000) return this.commandCache.counts
+    const since = Date.now() - days * 86_400_000, counts: Record<string, number> = {}
+    let dirs: string[] = []
+    try { dirs = readdirSync(this.root) } catch { /* no projects yet */ }
+    for (const d of dirs) {
+      let names: string[] = []
+      try { names = readdirSync(join(this.root, d)).filter((n) => n.endsWith('.jsonl')) } catch { continue }
+      for (const n of names) {
+        const p = join(this.root, d, n)
+        try { if (statSync(p).mtimeMs < since) continue } catch { continue }
+        let text = ''
+        try { text = readFileSync(p, 'utf8') } catch { continue }
+        // a skill's command record starts with its <command-message> (a JSON-escaped \n follows it)
+        for (const m of text.matchAll(/"content":"(?:<command-message>[^<"]*<\/command-message>\\n\s*)?<command-name>(\/[^<"]{1,80})<\/command-name>/g)) counts[m[1]] = (counts[m[1]] ?? 0) + 1
+      }
+    }
+    this.commandCache = { at: Date.now(), counts }
+    return counts
+  }
+
   /** A sub-agent's transcript: <project>/<session>/subagents/agent-<id>.jsonl, next to the session's. */
   subagentPath(transcript: string, agentId: string) { return join(dirname(transcript), basename(transcript, '.jsonl'), 'subagents', `agent-${agentId}.jsonl`) }
 

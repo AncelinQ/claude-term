@@ -78,6 +78,18 @@ describe('ClaudeData', () => {
     t.dispose()
   })
 
+  it('counts the slash commands typed, skills included, not the ones quoted in tool output', () => {
+    const { t, cwd, dir, data } = home()
+    t.write(join(dir, 'c1.jsonl'), jsonl([
+      { type: 'user', cwd, message: { role: 'user', content: '<command-name>/clear</command-name>\n<command-message>clear</command-message>' } },
+      { type: 'user', cwd, message: { role: 'user', content: '<command-message>sc:design</command-message>\n<command-name>/sc:design</command-name>\n<command-args>x</command-args>' } },
+      { type: 'user', cwd, message: { role: 'user', content: '<command-message>sc:design</command-message>\n            <command-name>/sc:design</command-name>' } },
+      { type: 'user', cwd, message: { content: [{ type: 'tool_result', tool_use_id: 'x', content: 'grep: "content":"<command-name>/fake</command-name>' }] } },
+    ]))
+    expect(data.commandCounts()).toEqual({ '/clear': 1, '/sc:design': 2 })
+    t.dispose()
+  })
+
   it('reads a sub-agent, an entry in full and the images, only under ~/.claude/projects', () => {
     const { t, cwd, dir, data } = home()
     const main = t.write(join(dir, 's1.jsonl'), jsonl([

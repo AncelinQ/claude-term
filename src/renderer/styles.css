@@ -311,6 +311,9 @@ input[type=checkbox]:disabled { opacity: .4; }
 .cs-line .cs-text { overflow: hidden; text-overflow: ellipsis; }
 .cs-line mark { background: color-mix(in srgb, var(--ct-accent) 30%, transparent); color: inherit; border-radius: 2px; }
 .links-editor { padding: 8px 10px; border-bottom: 1px solid var(--ct-island-border); display: flex; flex-direction: column; gap: 8px; }
+.prompt-form textarea { width: 100%; resize: vertical; font-family: var(--ct-font-mono); font-size: 12px; }
+.prompt-form .row-actions { flex-wrap: wrap; }
+.list .group-title { padding: 8px 10px 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; }
 .links-editor .hint { color: var(--ct-text-secondary); font-size: 11px; }
 .link-edit { display: grid; grid-template-columns: 1fr; gap: 4px; }
 .link-edit .name { font-weight: 600; }

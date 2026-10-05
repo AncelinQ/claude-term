@@ -12,6 +12,8 @@ import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
 import { findAction } from '@shared/keymap'
 import { keyEvent, runAppAction, withShortcut } from './actions'
+import { promptForKey, runPrompt } from './prompts'
+import { useAsk } from './stores/ask'
 import { useUpdate } from './stores/update'
 import { watchTaskbarBadge } from './taskbar'
 import { useUsage } from './stores/usage'
@@ -30,6 +32,7 @@ export function App() {
   const [prompt, setPrompt] = useState<import('@shared/plugins').PromptRequest | null>(null)
   const popovers = usePlugins((s) => s.popovers)
   const closePopover = usePlugins((s) => s.closePopover)
+  const askReq = useAsk((s) => s.req)
   useEffect(() => {
     init()
     usePlugins.getState().init()
@@ -73,7 +76,10 @@ export function App() {
       if ((e.target as HTMLElement)?.closest?.('.key-recorder')) return
       const inTerminal = !!(e.target as HTMLElement)?.closest?.('.xterm')
       const hit = findAction(keyEvent(e), st.settings?.keybindings ?? {}, window.ct.platform === 'darwin', { preset: st.settings?.keymapPreset, inTerminal })
-      if (hit && runAppAction(hit.id)) e.preventDefault()
+      if (hit && runAppAction(hit.id)) { e.preventDefault(); return }
+      // a saved prompt's own shortcut
+      const prompt = hit ? null : promptForKey(keyEvent(e), inTerminal)
+      if (prompt) { e.preventDefault(); runPrompt(prompt) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -107,6 +113,7 @@ export function App() {
       {popovers.map((p) => <PluginPopover key={p.id} id={p.id} anchorViewId={p.anchorViewId} model={p.model} onClose={() => closePopover(p.id)} />)}
       {prompt && <PromptModal req={prompt} onDone={(v) => { window.ct.plugins.promptReply(prompt.id, v); setPrompt(null) }} />}
       <Palette />
+      {askReq && <PromptModal req={{ id: 0, title: askReq.title, placeholder: askReq.placeholder }} onDone={(v) => useAsk.getState().done(v)} />}
       {showSettings && (
         <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>
           <div className="modal"><SettingsPage onClose={() => setShowSettings(false)} /></div>

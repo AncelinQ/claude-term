@@ -29,6 +29,9 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   replace bar (⌘F / ⌘R), side-by-side diff tabs, separate editor fonts, format on save option.
 - **Islands**: explorer + linked folders, search (Noms: file names, Contenu: ripgrep through `@vscode/ripgrep`'s per-platform package, unpacked from the asar; case / word / regex, include / exclude globs, .gitignore followed, grouped by file), project history (left) / all history (right),
   skills (project / personal / plugins), MCP (project / user), Claude processes.
+- **Saved prompts** (Prompts island, ⌘8; `shared/prompts.ts`, `renderer/prompts.ts`, `settings.prompts` in userData): {sélection}
+  {fichier} {branche} {saisie} (a missing value cancels), sent as a bracketed paste then Enter 150 ms later, or typed
+  to complete; a shortcut each; the palette's `/`; slash commands typed 3+ times in 30 days suggested (`commandCounts`).
 - **Command palette** (`workbench/Palette.tsx`, `shared/palette.ts`): files, `>` commands (app actions, panels, plugin panels, with
   their shortcuts), `@` sessions (resume), `/` skills (typed into the Claude tab); Aller au fichier / Commandes (⇧⌘O, ⇧⌘A;
   VS Code: ⌘P, ⇧⌘P). Menus and tooltips show the shortcuts the keymap has (`withShortcut`).
