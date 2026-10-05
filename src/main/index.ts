@@ -1,8 +1,8 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, shell, nativeTheme, session, net } from 'electron'
-import { join, basename, isAbsolute, resolve, parse } from 'node:path'
+import { join, basename, dirname, isAbsolute, resolve, parse } from 'node:path'
 import { homedir } from 'node:os'
 import { execFile, spawnSync } from 'node:child_process'
-import { readdirSync, statSync, existsSync, readFileSync, watch } from 'node:fs'
+import { readdirSync, statSync, existsSync, readFileSync, writeFileSync, mkdirSync, watch } from 'node:fs'
 import { SettingsService } from './services/settings'
 import { ThemeService } from './services/themes'
 import { PtyService } from './services/pty'
@@ -15,6 +15,10 @@ import { FileService, DirWatcher } from './services/files'
 import { FileOps, UndoLog, transferAll, type ConflictChoice } from './services/file-ops'
 import { listDir } from './services/explorer'
 import { SessionNames } from './services/session-names'
+import { ClaudeRunner } from './services/claude-run'
+import { commitInstructions, diagramInstructions, extractMermaid, mrInstructions, sessionDigest, skillInstructions, unfence, type Lang } from '@shared/claude-run'
+/** the interface's language (Réglages › Général; system: the OS's) */
+const uiLanguage = (): Lang => { const l = settings.get().language; return l === 'en' || (l === 'system' && !/^fr/i.test(app.getLocale())) ? 'en' : 'fr' }
 import { ProjectLinks } from './services/links'
 import { Skills } from './services/skills'
 import { Mcp } from './services/mcp'
@@ -175,6 +179,39 @@ ipcMain.handle('claude:deleteSession', (_e, s) => claudeData.deleteSession(s, (p
 ipcMain.handle('claude:sessionSize', (_e, s) => claudeData.sessionSize(s))
 ipcMain.handle('claude:sessionDiff', (_e, { path, backupName, sessionId }) => claudeData.sessionDiff(path, backupName, sessionId))
 ipcMain.handle('claude:readText', (_e, path: string) => claudeData.readText(path))
+// isolated claude -p, on a click only (shared/claude-run); what it drew or wrote is kept in userData/claude-run
+const runDir = join(app.getPath('userData'), 'claude-run')
+mkdirSync(runDir, { recursive: true })
+const claudeRunner = new ClaudeRunner((args) => ptys.claudeCommand(args, false), () => ptys.env(), runDir)
+const diagramFile = (sessionId: string) => (/^[0-9a-f-]{8,64}$/i.test(sessionId) ? join(runDir, 'diagrams', sessionId + '.json') : null)
+/** the tab's session for claude -p: its title, its requests, and each file it changed with its diff */
+const tabDigest = (tabId: string) => {
+  const tracker = trackers.get(tabId), s = tracker?.state, cwd = tracker?.cwd ?? ''
+  if (!s?.sessionId) throw new Error('aucune session dans cet onglet')
+  const prompts = s.events.filter((e) => e.kind === 'user').map((e) => e.detail)
+  const changes = Object.entries(s.backups).map(([path, b]) => ({
+    path: cwd && path.startsWith(cwd) ? path.slice(cwd.length).replace(/^[\\/]/, '') : path,
+    unified: claudeData.sessionDiff(path, b.name, s.sessionId!), created: b.name === null, deleted: !existsSync(path),
+  }))
+  if (!prompts.length && !changes.length) throw new Error("rien à lire : la session n'a ni demande ni fichier changé")
+  return { sessionId: s.sessionId, digest: sessionDigest({ ...(s.title ? { title: s.title } : {}), prompts, changes }) }
+}
+ipcMain.handle('claude:diagram', async (_e, { tabId, draw, lang }: { tabId: string; draw: boolean; lang: Lang }) => {
+  const id = trackers.get(tabId)?.state?.sessionId
+  const file = id ? diagramFile(id) : null
+  if (!file) return { error: 'aucune session dans cet onglet' }
+  if (!draw) { try { return { diagram: JSON.parse(readFileSync(file, 'utf8')) } } catch { return { diagram: null } } }
+  try {
+    const { digest } = tabDigest(tabId)
+    const r = await claudeRunner.run(digest.text, { instructions: diagramInstructions(lang === 'en' ? 'en' : 'fr'), key: 'diagram:' + id })
+    const mermaid = extractMermaid(r.text)
+    if (!mermaid) return { error: 'la réponse ne contient pas de diagramme : ' + r.text.slice(0, 200) }
+    const diagram = { mermaid, at: Date.now(), truncated: digest.truncated, ...(r.costUsd !== undefined ? { costUsd: r.costUsd } : {}), ...(r.model ? { model: r.model } : {}) }
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, JSON.stringify(diagram, null, 2))
+    return { diagram }
+  } catch (e) { return { error: (e as Error).message } }
+})
 // restore a file to its state before the session: only a file the tab's session has a backup for
 const restore = new Restore(join(app.getPath('userData'), 'restore'))
 const restoreSource = (tabId: string, path: string) => {
@@ -277,7 +314,16 @@ ipcMain.handle('skills:project', (_e, root: string) => skills.project(root))
 ipcMain.handle('skills:linked', (_e, root: string) => links.load(root).flatMap((l) => skills.project(l.path, 'linked')))
 ipcMain.handle('skills:personal', () => skills.personal())
 ipcMain.handle('skills:plugins', () => skills.plugins())
-ipcMain.handle('skills:create', (_e, { name, description, root }) => ok(() => skills.create(name, description, root)))
+ipcMain.handle('skills:create', (_e, { name, description, root, content }) => ok(() => skills.create(name, description, root, typeof content === 'string' ? content : undefined)))
+// a skill drafted by Claude (claude -p), shown before it is created
+ipcMain.handle('skills:draft', async (_e, { name, description, lang }: { name: string; description: string; lang: Lang }) => {
+  if (typeof name !== 'string' || typeof description !== 'string') return { error: 'nom et description attendus' }
+  try {
+    const r = await claudeRunner.run(`Nom : ${name}\nÀ quoi il sert : ${description}`, { instructions: skillInstructions(lang === 'en' ? 'en' : 'fr'), key: 'skill:' + name })
+    const text = unfence(r.text)
+    return text ? { text, ...(r.costUsd !== undefined ? { costUsd: r.costUsd } : {}) } : { error: 'réponse vide de claude -p' }
+  } catch (e) { return { error: (e as Error).message } }
+})
 ipcMain.handle('skills:remove', (_e, s) => ok(() => skills.remove(s)))
 // a project root, or null for the personal skills
 const skillRoot = (r: unknown): r is string | null => r === null || (typeof r === 'string' && isAbsolute(r))
@@ -363,6 +409,11 @@ const windowVisible = () => !!win && !win.isDestroyed() && win.isVisible() && !w
 const pluginHost = new PluginHost(builtinPlugins, {
   send, projectRoot: () => activeRoot, settings: () => settings.get() as any, visible: windowVisible,
   projects: () => settings.get().openProjects.map((root) => ({ root, linked: links.load(root).map((l) => l.path) })),
+  // the commit and MR presets: the instructions tested in shared/claude-run, in the interface's language
+  claudeRun: (input, o) => claudeRunner.run(input, {
+    model: o.model,
+    instructions: o.preset?.kind === 'commit' ? commitInstructions(o.preset.recentSubjects) : o.preset?.kind === 'mr' ? mrInstructions(uiLanguage()) : o.instructions ?? '',
+  }).then((r) => (o.preset ? { ...r, text: unfence(r.text) } : r)),
 }, pluginHostDir)
 ipcMain.handle('plugins:decorations', () => pluginHost.decorations())
 ipcMain.handle('plugins:list', () => pluginHost.list())

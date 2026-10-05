@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { costReport, formatCost, inferRates, sessionCost, summarizeCosts } from '../src/shared/costs'
+import { costReport, formatCost, formatRunCost, inferRates, sessionCost, summarizeCosts } from '../src/shared/costs'
 import { CostIndex } from '../src/main/services/cost-index'
 import { TempDir, jsonl } from './helpers'
 
@@ -54,6 +54,8 @@ describe('session costs', () => {
   it('writes costs the French way, with their kind', () => {
     expect(formatCost({ usd: 1234.5, kind: 'exact' })).toMatch(/^1\s234,50 \$$/)
     expect(formatCost({ usd: 2, kind: 'estimated' })).toBe('≈ 2,00 $')
+    expect(formatRunCost(0.034)).toBe('0,03 $')
+    expect(formatRunCost(0.004)).toBe('< 0,01 $')
     expect(formatCost({ usd: 2, kind: 'atLeast' })).toBe('≥ 2,00 $')
   })
 })

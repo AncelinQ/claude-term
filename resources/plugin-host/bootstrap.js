@@ -53,6 +53,7 @@
     ui: {
       view,
       notify: (title, body) => call('ui.notify', { title, body }),
+      clipboard: (text) => call('ui.clipboard', { text }),
       projectDecoration: (root, deco) => call('ui.projectDecoration', { root, deco: deco || null }),
       popover: (localViewId, model) => {
         const id = call('ui.popover', { viewId: manifest.id + ':' + localViewId, model })
@@ -75,6 +76,9 @@
     },
     process: {
       exec: (file, args, opts) => callAsync('process.exec', { file, args: args || [], cwd: opts && opts.cwd }),
+    },
+    claude: {
+      run: (req) => callAsync('claude.run', req),
     },
     settings: { get: (key) => call('settings.get', { key }) },
     storage: { get: (key) => call('storage.get', { key }), set: (key, value) => call('storage.set', { key, value }) },

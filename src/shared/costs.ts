@@ -158,3 +158,8 @@ export function formatCost(c: Cost): string {
   const n = c.usd.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return (c.kind === 'estimated' ? '≈ ' : c.kind === 'atLeast' ? '≥ ' : '') + n + ' $'
 }
+
+/** What one claude -p run cost: "0,03 $", "< 0,01 $" when it is less. */
+export function formatRunCost(usd: number): string {
+  return usd < 0.01 ? '< 0,01 $' : formatCost({ usd, kind: 'exact' })
+}

@@ -43,13 +43,20 @@ export class Skills {
     return out.sort((a, b) => a.name.localeCompare(b.name))
   }
 
-  /** Creates `<base>/.claude/skills/<name>/SKILL.md` (personal when no root) with a front matter skeleton. */
-  create(name: string, description: string, root: string | null): string {
+  /**
+   * Creates `<base>/.claude/skills/<name>/SKILL.md` (personal when no root): `content` (a draft by Claude), or a front
+   * matter skeleton. A content without front matter gets one, so that Claude Code lists it.
+   */
+  create(name: string, description: string, root: string | null, content?: string): string {
     const base = root ? join(root, '.claude', 'skills') : this.personalSkills
     const dir = join(base, name), path = join(dir, 'SKILL.md')
     if (existsSync(path)) throw new Error(`Le skill « ${name} » existe déjà`)
     mkdirSync(dir, { recursive: true })
-    writeFileSync(path, `---\nname: ${name}\ndescription: ${description}\n---\n# ${name}\n<!-- Instructions pour Claude : quand utiliser ce skill, étapes, contraintes. -->\n`)
+    const head = `---\nname: ${name}\ndescription: ${description}\n---\n`
+    const body = content?.trim()
+      ? (content.trimStart().startsWith('---') ? content.trim() + '\n' : head + content.trim() + '\n')
+      : head + `# ${name}\n<!-- Instructions pour Claude : quand utiliser ce skill, étapes, contraintes. -->\n`
+    writeFileSync(path, body)
     return path
   }
 

@@ -141,6 +141,12 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
 - **Prompts**: a prompt saved without a key gets the next free Ctrl+Shift+2 to 9, Ctrl+Shift+1 opens their list;
   `{saisie}` left empty sends the prompt without it. Plugin trees can ask for Tout replier / Tout déplier (`foldAll`,
   folds kept per project): the Commit view does.
+- **claude -p drafts** (`shared/claude-run.ts`, `services/claude-run.ts`): an isolated `claude -p` (no tool, no MCP, no
+  settings so no hook, no session kept, $1 cap, Sonnet, the input on stdin, run in `userData/claude-run`), only on a
+  click, its cost shown. The session block's Schéma tab draws the session (Mermaid, theme colours) from a digest of its
+  requests and diffs, kept per session; a skill drafted from its name and purpose, shown before it is created; the Git
+  plugin drafts the commit message of the checked files (the repository's convention) and the merge request of the
+  branch (copied). Plugin API: `claude.run` (permission "claude", presets commit / mr), `ui.clipboard`, a footer note.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.

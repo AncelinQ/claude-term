@@ -3,6 +3,7 @@
  * deactivate()). It runs in a sandboxed browser context: no Node, no network, `require` only for its own .js files
  * (relative paths). Everything else goes through ctx, checked against the permissions of plugin.json:
  * - "process": process.exec, terminal.run, workspace.openProject and workspace.openUrl
+ * - "claude": claude.run (an isolated claude -p, on the user's subscription)
  * - fs (exists / read / list / watch, openFile): the plugin folder and the open project; "fs:home" widens it to the
  *   home folder. Absolute paths only.
  */
@@ -52,6 +53,8 @@ export interface Context {
     /** a view declared in plugin.json (contributes.views[].id) */
     view(id: string): { set(model: ViewModel): void; onEvent(cb: (e: ViewEvent) => void): () => void }
     notify(title: string, body?: string): void
+    /** puts text in the system clipboard */
+    clipboard(text: string): void
     /**
      * A short chip on the project tab of `root`, or on a linked folder with that path (null removes it). One per plugin
      * and folder; `tone` adds a status dot.
@@ -78,6 +81,13 @@ export interface Context {
   }
   /** requires the "process" permission */
   process: { exec(file: string, args?: string[], opts?: { cwd?: string }): Promise<{ code: number; stdout: string; stderr: string }> }
+  /**
+   * Requires the "claude" permission. An isolated `claude -p` (no tool, no MCP, no settings, no session kept, $1 cap
+   * per run): `instructions` become its system prompt, `input` what it reads; or a `preset`, the app's own
+   * instructions for a commit message (following `recentSubjects`) or a merge request (in the interface's language).
+   * Run it on the user's click only, and show `costUsd`.
+   */
+  claude: { run(req: { input: string; instructions?: string; preset?: { kind: 'commit'; recentSubjects: string[] } | { kind: 'mr' }; model?: string }): Promise<{ text: string; costUsd?: number; model?: string }> }
   settings: { get(key: string): unknown }
   storage: { get(key: string): unknown; set(key: string, value: unknown): void }
 }

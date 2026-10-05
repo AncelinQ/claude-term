@@ -5,7 +5,7 @@ const { layout } = require('./graph')
 
 const RUN = (args) => ({ type: 'run', args })
 const initialState = () => ({ root: null, status: null, commits: [], refs: { local: [], remote: [] }, checked: {}, message: '', amend: false, detail: null, groupByDir: false,
-  selectedCommit: null, commitFiles: null, commitInfo: null, stashes: [], worktrees: [], pr: null })
+  selectedCommit: null, commitFiles: null, commitInfo: null, stashes: [], worktrees: [], pr: null, drafting: false, draftNote: '' })
 
 // the choices offered when switching branch with changes in progress
 const SET_ASIDE = 'Les mettre de côté (git stash), puis changer'
@@ -74,11 +74,13 @@ function changesView(s) {
       { id: 'groupDirs', title: s.groupByDir ? 'Liste à plat' : 'Grouper par dossier', icon: s.groupByDir ? 'list' : 'folder' },
     ],
     footer: {
+      ...(s.draftNote ? { note: s.draftNote } : {}),
       fields: [{ id: 'message', placeholder: 'Message du commit', value: s.message, multiline: true }],
       checks: [{ id: 'amend', label: 'Amend', checked: s.amend }],
       buttons: [
         { id: 'commit', title: nChecked ? `Commit (${nChecked})` : 'Commit', icon: 'check', primary: true, disabled: !nChecked || !s.message.trim() },
         { id: 'commitPush', title: 'Commit + push', disabled: !nChecked || !s.message.trim() },
+        { id: 'draftCommit', title: s.drafting ? 'Claude rédige…' : 'Rédiger avec Claude', icon: 'sparkle', disabled: !nChecked || s.drafting },
       ],
     },
   }
@@ -131,6 +133,7 @@ function branchesView(s) {
     toolbar: [
       { id: 'fetch', title: 'Récupérer (git fetch --all --prune)', icon: 'activity' },
       { id: 'pullAll', title: 'Mettre à jour tous les projets ouverts (git pull --ff-only)', icon: 'download' },
+      { id: 'draftMr', title: 'Rédiger la description de MR avec Claude (copiée)', icon: 'sparkle' },
       { id: 'newWorktree', title: 'Nouvelle branche dans un worktree…', icon: 'columns' },
       { id: 'newBranch', title: 'Nouvelle branche…', icon: 'plus' },
     ],
@@ -159,6 +162,9 @@ function pullReport(results) {
   if (!results.length) return 'Aucun dépôt git parmi les projets ouverts.'
   return ['**git pull --ff-only**', '', ...results.map((r) => `- **${baseName(r.repo)}** : ${PULL_TEXT[r.kind](r)}`)].join('\n')
 }
+
+/** " · 0,03 $" (French notation), or nothing when the cost is unknown. */
+const costLabel = (usd) => (typeof usd !== 'number' ? '' : usd < 0.01 ? ' · < 0,01 $' : ` · ${usd.toFixed(2).replace('.', ',')} $`)
 
 /** Tracked changes (or conflicts) that a switch would carry or refuse. */
 const hasChanges = (s) => !!s.status && s.status.entries.some((e) => !e.untracked)
@@ -302,8 +308,10 @@ function reduce(s, e) {
   if (e.type === 'button') {
     if (!s.status) return { state: s, effects: ef }
     if (!checkedPaths(s).length) return { state: s, effects: [{ type: 'notify', title: 'Git', body: 'Coche les fichiers à committer.' }] }
+    // claude -p writes the message from the checked files' diff, following the repository's last subjects
+    if (e.actionId === 'draftCommit') return s.drafting ? { state: s, effects: ef } : { state: { ...s, drafting: true, draftNote: 'Claude lit les changements cochés…' }, effects: [{ type: 'draftCommit', paths: checkedPaths(s) }] }
     if (!s.message.trim()) return { state: s, effects: [{ type: 'notify', title: 'Git', body: 'Écris un message de commit.' }] }
-    if (e.actionId === 'commit' || e.actionId === 'commitPush') return { state: { ...s, message: '', amend: false, checked: {} }, effects: commitCommands(s, e.actionId === 'commitPush') }
+    if (e.actionId === 'commit' || e.actionId === 'commitPush') return { state: { ...s, message: '', amend: false, checked: {}, draftNote: '' }, effects: commitCommands(s, e.actionId === 'commitPush') }
     return { state: s, effects: ef }
   }
   if (e.type === 'toolbar') {
@@ -312,10 +320,14 @@ function reduce(s, e) {
     if (e.actionId === 'newBranch') return { state: s, effects: [{ type: 'prompt', req: { title: 'Nouvelle branche (git switch -c)', placeholder: 'nom' }, then: { type: 'promptResult', action: 'newBranch' } }] }
     if (e.actionId === 'branch') return { state: s, effects: [{ type: 'popover', view: 'changes', model: branchPopover(s) }] }
     if (e.actionId === 'pullAll') return { state: s, effects: [{ type: 'pullAll' }] }
+    if (e.actionId === 'draftMr') return { state: s, effects: [{ type: 'draftMr' }] }
     if (e.actionId === 'newWorktree') return { state: s, effects: [{ type: 'prompt', req: { title: 'Nouvelle branche dans un worktree (à côté du dépôt)', placeholder: 'nom de la branche' }, then: { type: 'promptResult', action: 'newWorktree' } }] }
     if (e.actionId === 'groupDirs') return { state: { ...s, groupByDir: !s.groupByDir }, effects: [{ type: 'persist', key: 'groupByDir', value: !s.groupByDir }] }
     return { state: s, effects: ef }
   }
+  // what claude -p wrote for the commit, or why it did not
+  if (e.type === 'drafted') return { state: { ...s, drafting: false, message: e.text, draftNote: `Rédigé par Claude${costLabel(e.costUsd)} : relis-le avant de committer.` }, effects: ef }
+  if (e.type === 'draftFailed') return { state: { ...s, drafting: false, draftNote: `Claude n'a pas rédigé : ${e.error}` }, effects: ef }
   if (e.type === 'promptResult') {
     const v = e.value == null ? '' : String(e.value).trim()
     if (!v) return { state: s, effects: ef }
@@ -430,4 +442,4 @@ function withCommit(s, hash, files, info) {
   return s.selectedCommit === hash ? { ...s, commitFiles: files, commitInfo: info } : s
 }
 
-module.exports = { initialState, changesView, branchesView, commitsView, commitFilesView, commitInfoView, branchPopover, reduce, withData, withCommit, withPr, commitCommands, checkedPaths, dirTree, pullReport, switchTo, SET_ASIDE, CARRY }
+module.exports = { initialState, changesView, branchesView, commitsView, commitFilesView, commitInfoView, branchPopover, reduce, withData, withCommit, withPr, commitCommands, checkedPaths, dirTree, pullReport, switchTo, costLabel, SET_ASIDE, CARRY }

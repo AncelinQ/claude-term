@@ -5,7 +5,8 @@
   "description": "Modifications à committer (cases à cocher), branches, commits. Chaque écriture est une commande git visible dans un shell ; rien de destructif.",
   "main": "main.js",
   "permissions": [
-    "process"
+    "process",
+    "claude"
   ],
   "contributes": {
     "activity": [

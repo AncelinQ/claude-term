@@ -112,6 +112,40 @@ exports.activate = (ctx) => {
     chips(); refresh()
   }
 
+  // MARK: drafts by claude -p (on a click; the cost is shown)
+  const cap = (text, max) => (text.length > max ? text.slice(0, max) + '\n[… coupé]' : text)
+  /** The commit message of the checked files, from their diff (new files whole), in the repository's convention. */
+  async function draftCommit(paths) {
+    const untracked = new Set(((s.status && s.status.entries) || []).filter((e) => e.untracked).map((e) => e.path))
+    const tracked = paths.filter((p) => !untracked.has(p))
+    const parts = []
+    if (tracked.length) parts.push((await git(['diff', 'HEAD', '--', ...tracked])).stdout)
+    for (const p of paths.filter((x) => untracked.has(x)).slice(0, 40)) parts.push((await git(['diff', '--no-index', '--', '/dev/null', p])).stdout)
+    const subjects = (await git(['log', '-n', '15', '--format=%s'])).stdout.split('\n').filter(Boolean)
+    try {
+      const r = await ctx.claude.run({ input: cap(parts.join('\n'), 60000), preset: { kind: 'commit', recentSubjects: subjects } })
+      return dispatch({ type: 'drafted', text: r.text, costUsd: r.costUsd })
+    } catch (e) { return dispatch({ type: 'draftFailed', error: String((e && e.message) || e).split('\n')[0] }) }
+  }
+  /** The merge request of the branch: its commits and its diff against the remote's default branch; copied, shown. */
+  async function draftMr() {
+    const target = (await git(['rev-parse', '--abbrev-ref', 'origin/HEAD'])).stdout.trim() || 'origin/main'
+    const base = (await git(['merge-base', 'HEAD', target])).stdout.trim()
+    const head = (await git(['rev-parse', 'HEAD'])).stdout.trim()
+    if (!base || base === head) return ctx.ui.notify('Git', `Rien à décrire : la branche n'a pas de commit en plus de ${target}.`)
+    if (popover) popover.close()
+    popover = ctx.ui.popover('branches', { kind: 'markdown', text: `*Claude lit la branche (${target}…HEAD)…*` })
+    popover.onEvent(dispatch)
+    const log = (await git(['log', '--format=- %s%n%b', `${base}..HEAD`])).stdout
+    const stat = (await git(['diff', '--stat', `${base}..HEAD`])).stdout
+    const diff = (await git(['diff', `${base}..HEAD`])).stdout
+    try {
+      const r = await ctx.claude.run({ input: `# Commits\n${log}\n# Fichiers\n${stat}\n# Diff\n${cap(diff, 50000)}`, preset: { kind: 'mr' } })
+      ctx.ui.clipboard(r.text)
+      popover.update({ kind: 'markdown', text: `${r.text}\n\n---\n*Copié dans le presse-papiers${M.costLabel(r.costUsd)}*` })
+    } catch (e) { popover.update({ kind: 'markdown', text: `Claude n'a pas rédigé : ${String((e && e.message) || e).split('\n')[0]}` }) }
+  }
+
   /** Runs git in a visible tab; once that run ended, opens the worktree it made (with a Claude tab). */
   function runThenOpen(seq, path) {
     const runId = ctx.terminal.run({ cwd: s.root, argv: seq.map((a) => ['git', ...a]), tab: 'reuse' })
@@ -136,7 +170,9 @@ exports.activate = (ctx) => {
     if (f.type === 'pullAll') return pullAll()
     if (f.type === 'persist') return ctx.storage.set(f.key, f.value)
     if (f.type === 'notify') return ctx.ui.notify(f.title, f.body)
-    if (f.type === 'copy') return ctx.ui.notify('Git', f.text)
+    if (f.type === 'copy') { ctx.ui.clipboard(f.text); return ctx.ui.notify('Git', 'Copié : ' + f.text) }
+    if (f.type === 'draftCommit') return draftCommit(f.paths)
+    if (f.type === 'draftMr') return draftMr()
     if (f.type === 'openFile') return ctx.workspace.openFile(s.root + '/' + f.path)
     if (f.type === 'closePopover') { if (popover) { popover.close(); popover = null } return }
     if (f.type === 'popover') { popover = ctx.ui.popover(f.view, f.model); popover.onEvent(dispatch); return }
@@ -168,7 +204,7 @@ exports.activate = (ctx) => {
   async function dispatch(e) {
     const { state, effects } = M.reduce(s, e)
     s = state
-    if (e.type === 'check' || e.type === 'input' || (e.type === 'toolbar' && (e.actionId === 'toggleAll' || e.actionId === 'groupDirs'))) changes.set(M.changesView(s))
+    if (e.type === 'check' || e.type === 'input' || e.type === 'drafted' || e.type === 'draftFailed' || (e.type === 'toolbar' && e.actionId === 'groupDirs')) changes.set(M.changesView(s))
     if (e.type === 'button') render()
     for (const f of effects) await effect(f)
   }

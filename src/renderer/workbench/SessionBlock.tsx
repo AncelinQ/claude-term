@@ -11,6 +11,7 @@ import { PluginViewBody } from './PluginView'
 import { ErrorsView, TodoView } from './ProblemsViews'
 import { useProblems } from '@/stores/problems'
 import { FileIcon } from './FileIcon'
+import { DiagramView } from './DiagramView'
 import { Gutter, useStoredSize } from './Split'
 import { t } from '@/i18n'
 
@@ -50,6 +51,7 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
       {modeBtn('activity', t('Activité'), (session?.runningTools.length ?? 0) > 0)}
       {modeBtn('files', t('Fichiers'), false, Object.keys(session?.files ?? {}).length)}
       {(session?.images ?? 0) > 0 && modeBtn('images', t('Images'), false, session!.images)}
+      {modeBtn('diagram', t('Schéma'), false)}
       <span className="vsep" />
       {modeBtn('errors', t('Erreurs'), checking, errorCount)}
       {modeBtn('todo', t('TODO'), false, todoCount)}
@@ -63,7 +65,7 @@ export function SessionBlock({ project, collapsed, onCollapse }: { project: Proj
         <PluginViewBody model={pluginModel} wide layoutKey={mode} stateKey={treeKeyOf(mode, project.root)} send={(type, extra) => window.ct.plugins.event({ viewId: mode, type, ...extra })} />
       ) : !tab || !session ? (
         <Empty>{t('Sélectionne un onglet Claude, ou tape claude dans un shell')}</Empty>
-      ) : mode === 'plan' ? <PlanView tab={tab} /> : mode === 'activity' ? <ActivityView tab={tab} /> : mode === 'images' ? <ImagesView tab={tab} /> : <FilesView tab={tab} />}
+      ) : mode === 'plan' ? <PlanView tab={tab} /> : mode === 'activity' ? <ActivityView tab={tab} /> : mode === 'images' ? <ImagesView tab={tab} /> : mode === 'diagram' ? <DiagramView tab={tab} /> : <FilesView tab={tab} />}
     </Island>
   )
 }

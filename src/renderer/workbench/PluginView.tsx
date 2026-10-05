@@ -184,9 +184,22 @@ function DiffText({ text }: { text: string }) {
 
 function Footer({ footer, send }: { footer: NonNullable<Extract<ViewModel, { kind: 'list' }>['footer']>; send: Send }) {
   const [vals, setVals] = useState<Record<string, string>>({})
-  useEffect(() => { setVals((v) => { const n = { ...v }; for (const f of footer.fields ?? []) if (n[f.id] === undefined) n[f.id] = f.value ?? ''; return n }) }, [footer.fields?.map((f) => f.id + f.value).join('|')])
+  // what is typed stays; a value the plugin sets itself (a draft, a cleared message) replaces it
+  const fromModel = useRef<Record<string, string>>({})
+  useEffect(() => {
+    setVals((v) => {
+      const n = { ...v }
+      for (const f of footer.fields ?? []) {
+        const mv = f.value ?? ''
+        if (n[f.id] === undefined || (fromModel.current[f.id] !== mv && n[f.id] !== mv)) n[f.id] = mv
+        fromModel.current[f.id] = mv
+      }
+      return n
+    })
+  }, [footer.fields?.map((f) => f.id + f.value).join('|')])
   return (
     <div className="pv-footer">
+      {footer.note && <div className="pv-footer-note">{footer.note}</div>}
       {footer.fields?.map((f) => f.multiline
         ? <textarea key={f.id} placeholder={f.placeholder} value={vals[f.id] ?? ''} rows={3} onChange={(e) => { setVals({ ...vals, [f.id]: e.target.value }); send('input', { fieldId: f.id, value: e.target.value }) }} />
         : <input key={f.id} placeholder={f.placeholder} value={vals[f.id] ?? ''} onChange={(e) => { setVals({ ...vals, [f.id]: e.target.value }); send('input', { fieldId: f.id, value: e.target.value }) }} />)}

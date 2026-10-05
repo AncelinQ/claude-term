@@ -8,7 +8,7 @@ export interface PluginManifest {
   main: string
   /** "startup" (default) or lazy: "onView:<viewId>" */
   activation?: string[]
-  permissions?: ('process' | 'fs:home' | 'network' | 'secrets')[]
+  permissions?: ('process' | 'fs:home' | 'network' | 'secrets' | 'claude')[]
   contributes?: {
     activity?: { id: string; side: 'left' | 'right'; title: string; icon: string }[]
     /** placement: sidebar (default, under the activity) or bottom (a tab of the center session block) */
@@ -24,6 +24,7 @@ export const PLUGIN_PERMISSIONS: Record<PluginPermission, string> = {
   'fs:home': 'lire les fichiers du dossier personnel (sinon : le projet ouvert seulement)',
   network: 'accès réseau (pas encore disponible : bloqué)',
   secrets: 'secrets du trousseau (pas encore disponible)',
+  claude: 'demander un texte à Claude (claude -p, sur votre abonnement ; plafonné à 1 $ par demande)',
 }
 
 /** enabled = activated; disabled = turned off by the user; pendingPermissions = asked by the manifest, not approved yet */
@@ -81,6 +82,8 @@ export interface ViewFooter {
   fields?: { id: string; placeholder?: string; value?: string; multiline?: boolean }[]
   checks?: { id: string; label: string; checked: boolean }[]
   buttons?: ViewAction[]
+  /** a short line above the fields (e.g. what a draft cost) */
+  note?: string
 }
 export type ViewModel =
   | { kind: 'empty'; text: string }

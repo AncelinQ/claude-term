@@ -107,6 +107,8 @@ export interface SessionInfo {
   tabName?: string
 }
 
+export interface SessionDiagram { mermaid: string; at: number; truncated: boolean; costUsd?: number; model?: string }
+
 export interface PlanInfo { path: string; title: string; modified: number }
 
 export interface LinkedProject { path: string; role: string; readOnly: boolean }
@@ -336,6 +338,11 @@ export interface CtApi {
     allSessions(): Promise<SessionInfo[]>
     /** the name of the tab a session ran in; set when its tab is renamed or binds it */
     sessionName(id: string): Promise<string | null>
+    /**
+     * The diagram of a tab's session (Mermaid): the one drawn before (draw false), or drawn now by claude -p from its
+     * requests and diffs (a click, its cost shown); kept per session in userData.
+     */
+    diagram(tabId: string, draw: boolean, lang: 'fr' | 'en'): Promise<{ diagram?: SessionDiagram | null; error?: string }>
     setSessionName(id: string, name: string | null): void
     hasSessions(cwd: string): Promise<boolean>
     /** to the Trash: the transcript, its folder (sub-agents) and its file-history backups */
@@ -386,7 +393,10 @@ export interface CtApi {
     linked(root: string): Promise<SkillInfo[]>
     personal(): Promise<SkillInfo[]>
     plugins(): Promise<SkillInfo[]>
-    create(name: string, description: string, root: string | null): Promise<{ ok: boolean; path?: string; error?: string }>
+    /** content: the SKILL.md (a draft), else a skeleton */
+    create(name: string, description: string, root: string | null, content?: string): Promise<{ ok: boolean; path?: string; error?: string }>
+    /** drafted by claude -p from its name and purpose (a click, its cost shown) */
+    draft(name: string, description: string, lang: 'fr' | 'en'): Promise<{ text?: string; costUsd?: number; error?: string }>
     remove(s: SkillInfo): Promise<{ ok: boolean; error?: string }>
     /** into a project (`root`) or the personal skills (null); `from`: the project the skill is listed in */
     copy(s: SkillInfo, root: string | null, from: string | null): Promise<{ ok: boolean; path?: string; error?: string }>

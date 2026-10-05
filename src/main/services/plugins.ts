@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync, statSync, watch, type FSWatcher } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, dirname, isAbsolute, relative, sep } from 'node:path'
@@ -18,6 +18,8 @@ export interface HostBridge {
   projects(): { root: string; linked: string[] }[]
   /** the workbench window is on screen (not hidden, not minimized) */
   visible(): boolean
+  /** an isolated claude -p (services/claude-run); a preset (commit, mr) takes the app's own instructions */
+  claudeRun(input: string, o: { instructions?: string; preset?: { kind: 'commit'; recentSubjects: string[] } | { kind: 'mr' }; model?: string }): Promise<{ text: string; costUsd?: number; model?: string }>
   settings(): Record<string, any>
 }
 
@@ -192,6 +194,14 @@ export class PluginHost {
         const cwd = typeof a.cwd === 'string' ? a.cwd : undefined
         return { value: await new Promise((res) => execFile(a.file, a.args, { cwd, maxBuffer: 8_000_000 }, (err, stdout, stderr) => res({ code: err ? (typeof (err as any).code === 'number' ? (err as any).code : 1) : 0, stdout: String(stdout), stderr: String(stderr) }))) }
       }
+      if (method === 'claude.run') {
+        const preset = a?.preset?.kind === 'commit' ? { kind: 'commit' as const, recentSubjects: Array.isArray(a.preset.recentSubjects) ? a.preset.recentSubjects.filter((x: unknown) => typeof x === 'string').slice(0, 30) : [] }
+          : a?.preset?.kind === 'mr' ? { kind: 'mr' as const } : undefined
+        if (typeof a?.input !== 'string' || (!preset && (typeof a.instructions !== 'string' || !a.instructions.trim()))) throw new Error('claude.run({ input, instructions | preset }) expected')
+        if (a.input.length > 200_000) throw new Error('claude.run: input too long')
+        const model = typeof a.model === 'string' && /^[a-z0-9.[\]-]+$/i.test(a.model) ? a.model : undefined
+        return { value: await this.bridge.claudeRun(a.input, preset ? { preset, model } : { instructions: a.instructions, model }) }
+      }
       if (method === 'ui.prompt') {
         const req = a as Omit<PromptRequest, 'id'>
         return { value: await new Promise<string | null>((res) => { const id = ++this.promptSeq; this.prompts.set(id, res); this.bridge.send('plugins:prompt', { id, title: String(req.title ?? ''), placeholder: req.placeholder, options: req.options, choice: !!req.choice }) }) }
@@ -246,6 +256,7 @@ export class PluginHost {
         }
         return void this.sendDecorations()
       }
+      case 'ui.clipboard': if (typeof a.text !== 'string') throw new Error('clipboard: text expected'); return void clipboard.writeText(a.text.slice(0, 1_000_000))
       case 'ui.notify': return void this.bridge.send('plugins:notify', { title: String(a.title ?? ''), body: a.body === undefined ? undefined : String(a.body) })
       case 'ui.popover': { const pid = `popover:${++this.popoverSeq}`; p.popovers.add(pid); this.bridge.send('plugins:popover', { id: pid, anchorViewId: ownView(a.viewId), model: a.model }); return pid }
       case 'ui.popoverUpdate': if (!p.popovers.has(a.id)) throw new Error('unknown popover'); return void this.bridge.send('plugins:popover', { id: a.id, anchorViewId: ownView(a.viewId), model: a.model })

@@ -255,10 +255,33 @@ describe('git plugin model: switching with changes, set aside, worktrees, PR, pu
     t.dispose()
   })
 
+  it('drafts the commit message with Claude: of the checked files, its cost noted, cleared by the commit', () => {
+    const { t, r } = repo()
+    t.write('work/a.txt', 'changed\n')
+    let s = stateOf(r)
+    const ev2 = (type: string, extra = {}) => ({ viewId: 'claudeterm.git:changes', type, ...extra })
+    expect(M.reduce(s, ev2('button', { actionId: 'draftCommit' })).effects).toEqual([{ type: 'notify', title: 'Git', body: 'Coche les fichiers à committer.' }])
+    s = M.reduce(s, ev2('check', { itemId: 'file:a.txt', value: true })).state
+    const draft = M.reduce(s, ev2('button', { actionId: 'draftCommit' }))
+    expect(draft.effects).toEqual([{ type: 'draftCommit', paths: ['a.txt'] }])
+    s = draft.state
+    expect(M.changesView(s).footer).toMatchObject({ note: 'Claude lit les changements cochés…', buttons: expect.arrayContaining([expect.objectContaining({ id: 'draftCommit', disabled: true, title: 'Claude rédige…' })]) })
+    expect(M.reduce(s, ev2('button', { actionId: 'draftCommit' })).effects).toEqual([])   // one at a time
+    s = M.reduce(s, { type: 'drafted', text: 'fix(a): change a', costUsd: 0.034 }).state
+    expect(s).toMatchObject({ drafting: false, message: 'fix(a): change a', draftNote: 'Rédigé par Claude · 0,03 $ : relis-le avant de committer.' })
+    expect(M.reduce(s, { type: 'drafted', text: 'x' }).state.draftNote).toBe('Rédigé par Claude : relis-le avant de committer.')
+    expect(M.reduce({ ...s, drafting: true }, { type: 'draftFailed', error: 'Not logged in' }).state).toMatchObject({ drafting: false, draftNote: "Claude n'a pas rédigé : Not logged in" })
+    expect(M.reduce(s, ev2('button', { actionId: 'commit' })).state.draftNote).toBe('')
+    expect(M.costLabel(undefined)).toBe('')
+    expect(M.costLabel(0.004)).toBe(' · < 0,01 $')
+    expect(M.reduce(M.initialState(), ev('toolbar', { actionId: 'draftMr' })).effects).toEqual([{ type: 'draftMr' }])
+    t.dispose()
+  })
+
   it('pulls every open project from the toolbar and reports each one', () => {
     const s = M.initialState()
     expect(M.reduce(s, ev('toolbar', { actionId: 'pullAll' })).effects).toEqual([{ type: 'pullAll' }])
-    expect(M.branchesView({ ...s, root: '/r', status: { branch: 'main', entries: [] } }).toolbar.map((a: any) => a.id)).toEqual(['fetch', 'pullAll', 'newWorktree', 'newBranch'])
+    expect(M.branchesView({ ...s, root: '/r', status: { branch: 'main', entries: [] } }).toolbar.map((a: any) => a.id)).toEqual(['fetch', 'pullAll', 'draftMr', 'newWorktree', 'newBranch'])
     expect(M.pullReport([])).toBe('Aucun dépôt git parmi les projets ouverts.')
     expect(M.pullReport([
       { repo: 'C:/p/app', kind: 'upToDate' }, { repo: '/p/api', kind: 'pulled', count: 1 }, { repo: '/p/web/', kind: 'pulled', count: 4 },

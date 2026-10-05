@@ -4,7 +4,8 @@ import { Icons } from '../icons'
 import { Island, Empty } from '../Island'
 import { MenuButton } from '../Menu'
 import { useWorkbench } from '@/stores/workbench'
-import { t } from '@/i18n'
+import { currentLanguage, t } from '@/i18n'
+import { formatRunCost } from '@shared/costs'
 
 const modeLabel = (s: SkillInfo) => (s.manualOnly || s.isCommand ? t('manuel') : s.autoOnly ? t('auto') : 'auto + /')
 /** the explorer's drags carry their paths under this type */
@@ -31,11 +32,22 @@ export function SkillsIsland({ title, load, root, createIn, copyTo, collapsed, o
   const reload = () => load().then(setSkills)
   useEffect(() => { reload() }, [root])
   useEffect(() => { if (!notice && !error) return; const id = setTimeout(() => { setNotice(null); if (!creating) setError(null) }, 5000); return () => clearTimeout(id) }, [notice, error])
+  const [draft, setDraft] = useState<{ text: string; costUsd?: number } | null>(null)
+  const [drafting, setDrafting] = useState(false)
+  const validName = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)
   const create = async () => {
-    const r = await window.ct.skills.create(name.trim(), desc.trim(), createIn ?? null)
+    const r = await window.ct.skills.create(name.trim(), desc.trim(), createIn ?? null, draft?.text)
     if (!r.ok) { setError(r.error ?? 'erreur'); return }
-    setCreating(false); setName(''); setDesc(''); setError(null); reload()
+    setCreating(false); setName(''); setDesc(''); setDraft(null); setError(null); reload()
     if (r.path && activeProjectId) openFile(activeProjectId, r.path)
+  }
+  // claude -p writes the SKILL.md from the name and the purpose; shown and editable before it is created
+  const draftIt = async () => {
+    setDrafting(true); setError(null)
+    const r = await window.ct.skills.draft(name.trim(), desc.trim(), currentLanguage())
+    setDrafting(false)
+    if (r.error || !r.text) { setError(r.error ?? 'erreur'); return }
+    setDraft({ text: r.text, costUsd: r.costUsd })
   }
   const importFrom = async (o: { path?: string; pick?: 'file' | 'folder' }) => {
     if (createIn === undefined) return
@@ -77,8 +89,18 @@ export function SkillsIsland({ title, load, root, createIn, copyTo, collapsed, o
           <div className="form">
             <input placeholder={t('nom (minuscules-tirets)')} value={name} onChange={(e) => setName(e.target.value)} />
             <input placeholder={t('description : quand Claude doit l\'utiliser')} value={desc} onChange={(e) => setDesc(e.target.value)} />
+            {draft && <>
+              <textarea className="skill-draft" value={draft.text} spellCheck={false} onChange={(e) => setDraft({ ...draft, text: e.target.value })} />
+              <div className="hint">{t('Rédigé par Claude{cost} : relis-le, il sera créé tel quel.', { cost: draft.costUsd !== undefined ? ' (' + formatRunCost(draft.costUsd) + ')' : '' })}</div>
+            </>}
             {error && <div className="error">{error}</div>}
-            <div className="row-actions"><button className="btn primary" disabled={!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)} onClick={create}>{t('Créer')}</button><button className="btn" onClick={() => setCreating(false)}>{t('Annuler')}</button></div>
+            <div className="row-actions">
+              <button className="btn primary" disabled={!validName} onClick={create}>{t('Créer')}</button>
+              <button className="btn" disabled={!validName || !desc.trim() || drafting} title={t('claude -p écrit le SKILL.md depuis le nom et la description (plafonné à 1 $)')} onClick={draftIt}>
+                {drafting ? <span className="spin" /> : Icons.sparkle(12)}{draft ? t('Réécrire avec Claude') : t('Rédiger avec Claude')}
+              </button>
+              <button className="btn" onClick={() => { setCreating(false); setDraft(null) }}>{t('Annuler')}</button>
+            </div>
           </div>
         )}
         {!creating && (error || notice) && <div className={error ? 'tree-error' : 'skills-notice'}>{error ?? notice}</div>}
