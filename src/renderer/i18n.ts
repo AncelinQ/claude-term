@@ -231,6 +231,7 @@ const EN: Record<string, string> = {
   'Commandes': 'Commands',
   'Claude travaille': 'Claude is working',
   'Prompts': 'Prompts',
+  'Glisser pour redimensionner ; double-clic : taille par défaut': 'Drag to resize; double-click: default size',
   'Coûts (30 jours)': 'Costs (30 days)',
   'Lecture des sessions…': 'Reading the sessions…',
   'Aujourd’hui': 'Today',

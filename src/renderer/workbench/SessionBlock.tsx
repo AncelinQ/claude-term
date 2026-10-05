@@ -284,7 +284,7 @@ function FilesView({ tab }: { tab: Tab }) {
           </div>
         ))}
       </div>
-      <Gutter axis="x" className="inner" onDrag={(d) => setListWidth((w) => Math.max(160, Math.min(700, w + d)))} />
+      <Gutter axis="x" className="inner" size={listWidth} onSize={setListWidth} min={160} max={700} reset={280} />
       <div className="diff-pane">
         {(canRestore || restored) && (
           <div className="restore-bar">
