@@ -160,6 +160,10 @@ Handoff for the next session. Design: `docs/DESIGN.md`. Working rules: `CLAUDE.m
   Claude tab resuming that session) and `prompt` (a new Claude tab that pastes it as its first message once its input
   line shows, after the folder trust question). The Linear plugin (own repository, `../perso/claudeterm-linear` for
   now) is built on these.
+- **Dev servers** (`shared/listening.ts`, `services/dev-servers.ts`): Exécuteurs › Scripts shows a Serveurs group, the
+  servers listening under the project's terminals that no script showed, Claude's background ones included (netstat on
+  Windows, lsof on macOS, ss then lsof on Linux; tied to a tab through the process tree; MCP servers left out; only
+  those answering text/html, checked once a minute). Polled every 15 s while the panel is open and a terminal lives.
 - **App icon**: new logo (`build/src/logo.svg`, 800 px full bleed) placed on the macOS grid in
   `build/src/icon.svg` (824 px body, 100 px margin on 1024); `build/icon.png` / `icon.icns` generated from it.
 - **Tests**: 72 (vitest). UI checked through `scripts/ui.ts` (CDP) + screenshots.
