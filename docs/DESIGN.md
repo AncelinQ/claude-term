@@ -169,11 +169,15 @@ and **Linear** (API key in secrets, GraphQL, "Mes issues", "Démarrer avec Claud
 - Claude tab = pty running `claude` (or `claude --resume <id>`) in the project cwd.
 - Transcript: `~/.claude/projects/<encoded cwd>/<session>.jsonl` tailed for messages, tool
   calls, files touched, tokens, plan mode, permission mode; encoding of the cwd is ASCII-only
-  (`[^a-zA-Z0-9]` → `-`). Claimed transcripts: newest file created after the tab start.
+  (`[^a-zA-Z0-9]` → `-`). Claimed transcripts: the one the `SessionStart` hook names for the tab, else the newest
+  file created after the tab start.
 - Files touched + diffs: `~/.claude/file-history/<session>` backups, and `toolUseResult.bashEditDiff`.
 - Plans: `~/.claude/plans`. Sessions index: `sessions-index.json` (deletion allowed).
-- Hooks `Notification` and `Stop` installed only from settings, spooling events into
-  `userData/events`; routed to tabs (attention badge, macOS/Windows notifications).
+- Hooks `Notification`, `Stop` and `SessionStart` installed only from settings (an install that lacks an event gets
+  it at start), spooling events into `userData/events`. Every terminal has `CLAUDETERM_TAB=<run>.<tab>`; the spool
+  file is named after it, so an event reaches the tab its claude runs in (then: transcript path, cwd). SessionStart
+  binds the tab to its session: `startup` only while it has none (a `claude -p` that Claude runs inherits the tab),
+  `clear` / `resume` / `compact` move it to their transcript, which may not be written yet.
 - Shell integration: OSC 7770 from a private zsh rc (busy state, last command, exit code);
   PowerShell profile equivalent on Windows.
 - Writes are limited to: `~/.claude/settings.json` (form; hooks; our `statusLine` on demand, never over a foreign
