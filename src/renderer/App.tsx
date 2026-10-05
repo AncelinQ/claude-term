@@ -28,7 +28,7 @@ const activeNow = (t: Tab) => t.alive && (isClaude(t) ? !!t.working : t.busy)
 
 export function App() {
   const { theme, settings, projects, activeProjectId, init, setActiveProject, newProject, closeProject, newTab, closeTab, showSettings, setShowSettings, moveProject } = useWorkbench()
-  const drag = useReorder('project', moveProject)
+  const drag = useReorder('project', (from, to, place) => { if (place !== 'in') moveProject(from, to, place) })
   const project = useActiveProject()
   const [prompt, setPrompt] = useState<import('@shared/plugins').PromptRequest | null>(null)
   const popovers = usePlugins((s) => s.popovers)

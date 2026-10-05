@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { isInteractiveClaude } from '@shared/models'
 import { claudeActivity } from '@shared/claude-title'
 import { reorder } from '@shared/order'
+import * as TG from '@shared/tab-groups'
+import type { TabGroups, TabGroup } from '@shared/tab-groups'
 import { clearLine, commandLine, dialectFor } from '@shared/shell'
 import { t } from '@/i18n'
 import { pathsForPrompt } from '@shared/paths'
@@ -54,6 +56,8 @@ export interface Project {
   currentTabId: string | null
   selectedPath: string | null
   selectedFolder: string
+  /** groups of the tab bar (shared/tab-groups), with the tabs: they end with the app */
+  tabGroups?: TabGroups
 }
 
 export type LeftActivity = 'explorer' | 'search' | 'history' | 'skills' | 'mcp' | 'plugins' | 'run' | (string & {})
@@ -85,7 +89,20 @@ interface Workbench {
   setActiveProject(id: string): void
   /** drag and drop of the project tabs (order kept in openProjects) and of the center tabs */
   moveProject(from: string, to: string, place: 'before' | 'after'): void
-  moveTab(projectId: string, from: string, to: string, place: 'before' | 'after'): void
+  /**
+   * Drag and drop in the tab bar: a tab or a group label ("group:<id>") moved before or after a tab, or a tab into a
+   * label ('in'). A tab dropped on a tab takes its group, or none.
+   */
+  moveTab(projectId: string, from: string, to: string, place: 'before' | 'after' | 'in'): void
+  /** a new group of these tabs */
+  groupTabs(projectId: string, tabIds: string[]): void
+  addTabToGroup(projectId: string, tabId: string, groupId: string): void
+  removeTabFromGroup(projectId: string, tabId: string): void
+  ungroupTabs(projectId: string, groupId: string): void
+  updateTabGroup(projectId: string, groupId: string, patch: Partial<Omit<TabGroup, 'id'>>): void
+  /** its tabs closed, after a confirmation when one runs Claude or a command (an unsaved file asks on its own) */
+  closeTabGroup(projectId: string, groupId: string): Promise<void>
+  groupTabsByKind(projectId: string, kind: 'claude' | 'shell'): void
   select(projectId: string, path: string, isDir: boolean): void
   newTab(projectId: string, kind: TabKind, cwd?: string, resume?: string): Promise<void>
   /** types text into the current Claude tab of the project (opens one if needed) */
@@ -231,7 +248,40 @@ export const useWorkbench = create<Workbench>((set, get) => ({
   },
   setActiveProject(id) { set({ activeProjectId: id }); get().visibleChanged() },
   moveProject(from, to, place) { set((s) => ({ projects: reorder(s.projects, (p) => p.id, from, to, place) })); persistProjects(get) },
-  moveTab(projectId, from, to, place) { set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, tabs: reorder(p.tabs, (t) => t.id, from, to, place) } : p)) })) },
+  moveTab(projectId, from, to, place) {
+    const gid = (x: string) => (x.startsWith('group:') ? x.slice(6) : null)
+    regroup(set, projectId, (g, order) => {
+      if (gid(to)) return gid(from) ? { groups: g, order } : TG.enterGroup(g, order, from, gid(to)!)
+      if (place === 'in') return { groups: g, order }
+      if (gid(from)) return TG.dropGroup(g, order, gid(from)!, to, place)
+      return TG.dropTab(g, order, from, to, place)
+    })
+  },
+  groupTabs(projectId, tabIds) {
+    regroup(set, projectId, (g, order) => TG.createGroup(g, order, tabIds, { id: nid(), name: '', color: TG.nextColor(g), folded: false }))
+  },
+  addTabToGroup(projectId, tabId, groupId) { regroup(set, projectId, (g, order) => TG.addToGroup(g, order, tabId, groupId)) },
+  removeTabFromGroup(projectId, tabId) { regroup(set, projectId, (g, order) => TG.removeFromGroup(g, order, tabId)) },
+  ungroupTabs(projectId, groupId) { regroup(set, projectId, (g, order) => ({ groups: TG.ungroup(g, groupId), order })) },
+  updateTabGroup(projectId, groupId, patch) { regroup(set, projectId, (g, order) => ({ groups: TG.updateGroup(g, groupId, patch), order })) },
+  async closeTabGroup(projectId, groupId) {
+    const p = get().projects.find((x) => x.id === projectId)
+    const g = p?.tabGroups
+    if (!p || !g) return
+    const tabs = p.tabs.filter((t) => g.members[t.id] === groupId)
+    const claude = tabs.filter((t) => t.alive && isClaude(t)).length, busy = tabs.filter((t) => t.alive && t.busy && !isClaude(t)).length
+    if (claude || busy) {
+      const what = [claude ? t('{n} Claude en cours', { n: claude }) : '', busy ? t('{n} commande(s) en cours', { n: busy }) : ''].filter(Boolean).join(', ')
+      if (!confirm(t('Fermer le groupe ? Il contient : {x}.', { x: what }))) return
+    }
+    for (const tab of tabs) await get().closeTab(projectId, tab.id)
+  },
+  groupTabsByKind(projectId, kind) {
+    const p = get().projects.find((x) => x.id === projectId)
+    if (!p) return
+    regroup(set, projectId, (g, order) => TG.groupByKind(g, order, kind, p.tabs.map((x) => ({ id: x.id, kind: x.kind })),
+      () => ({ id: nid(), name: kind === 'claude' ? 'Claude' : t('Shells'), color: TG.nextColor(g), folded: false })))
+  },
 
   select(projectId, path, isDir) {
     const folder = isDir ? path : path.replace(/[\\/][^\\/]*$/, '')
@@ -250,6 +300,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     if (kept) tab.customTitle = kept
     if (error) tab.title += ' (erreur)'
     set((s) => ({ projects: s.projects.map((x) => (x.id === projectId ? { ...x, tabs: [...x.tabs, tab], currentTabId: tab.id } : x)), lastClaudeTab: kind === 'claude' ? { ...s.lastClaudeTab, [projectId]: tab.id } : s.lastClaudeTab }))
+    // beside the group of its kind, or into it (Réglages › Terminal)
+    regroup(set, projectId, (g, order) => TG.placeOpened(g, order, tab.id, kind, get().settings?.newTabInGroup ?? 'beside'))
     if (error) console.error(error)
     else if (kind === 'claude') window.ct.claude.track(tab.id, dir, resume ? { resume } : undefined)
     get().visibleChanged()
@@ -329,7 +381,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
         const idx = x.tabs.findIndex((y) => y.id === tabId)
         const tabs = x.tabs.filter((y) => y.id !== tabId)
         const current = x.currentTabId === tabId ? tabs[Math.min(idx, tabs.length - 1)]?.id ?? null : x.currentTabId
-        return { ...x, tabs, currentTabId: current }
+        // the closed tab leaves its group, an emptied group goes
+        return { ...x, tabs, currentTabId: current, ...(x.tabGroups ? { tabGroups: TG.prune(x.tabGroups, tabs.map((y) => y.id)) } : {}) }
       }),
     }))
   },
@@ -362,7 +415,8 @@ export const useWorkbench = create<Workbench>((set, get) => ({
     get().autoSaveAll()
     set((s) => {
       const t = s.projects.find((p) => p.id === projectId)?.tabs.find((x) => x.id === tabId)
-      return { projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId } : x)), lastClaudeTab: t && isClaude(t) ? { ...s.lastClaudeTab, [projectId]: tabId } : s.lastClaudeTab }
+      // showing a tab unfolds its group
+      return { projects: s.projects.map((x) => (x.id === projectId ? { ...x, currentTabId: tabId, ...(x.tabGroups ? { tabGroups: TG.unfoldFor(x.tabGroups, tabId) } : {}) } : x)), lastClaudeTab: t && isClaude(t) ? { ...s.lastClaudeTab, [projectId]: tabId } : s.lastClaudeTab }
     })
     get().visibleChanged()
   },
@@ -481,6 +535,18 @@ export const useWorkbench = create<Workbench>((set, get) => ({
 
 function projectOf(s: Workbench, tabId: string): string {
   return s.projects.find((p) => p.tabs.some((t) => t.id === tabId))?.id ?? ''
+}
+
+/** Applies a tab-groups gesture to a project: its groups, and its tabs in the order the gesture gives. */
+function regroup(set: (fn: (s: Workbench) => Partial<Workbench>) => void, projectId: string, gesture: (g: TabGroups, order: string[]) => { groups: TabGroups; order: string[] }) {
+  set((s) => ({ projects: s.projects.map((p) => {
+    if (p.id !== projectId) return p
+    const r = gesture(p.tabGroups ?? TG.NO_GROUPS, p.tabs.map((t) => t.id))
+    const byId = new Map(p.tabs.map((t) => [t.id, t]))
+    const tabs = r.order.flatMap((id) => byId.get(id) ?? [])
+    for (const t of p.tabs) if (!r.order.includes(t.id)) tabs.push(t)
+    return { ...p, tabs, tabGroups: r.groups }
+  }) }))
 }
 
 function patchTab(set: (fn: (s: Workbench) => Partial<Workbench>) => void, tabId: string, patch: (t: Tab) => Partial<Tab>) {

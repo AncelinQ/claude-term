@@ -2,6 +2,7 @@ import { useWorkbench, type LeftActivity } from '@/stores/workbench'
 import { binding, label as keyLabel, type KeyEventLike } from '@shared/keymap'
 import { usePalette } from '@/stores/palette'
 import { useExplorer } from '@/stores/explorer'
+import { NO_GROUPS, stepTab } from '@shared/tab-groups'
 
 /** A DOM keydown as the keymap reads it (AltGr is Ctrl+Alt on Windows: it types, it is never a shortcut). */
 export const keyEvent = (e: KeyboardEvent): KeyEventLike => ({ key: e.key, code: e.code, metaKey: e.metaKey, ctrlKey: e.ctrlKey, altKey: e.altKey, shiftKey: e.shiftKey, altGraph: e.getModifierState?.('AltGraph') })
@@ -28,14 +29,27 @@ export function runAppAction(id: string): boolean {
     case 'app.closeTab': if (st.showSettings) { st.setShowSettings(false); return true } if (!p?.currentTabId) return false; st.closeTab(p.id, p.currentTabId); return true
     case 'app.nextTab': case 'app.prevTab': {
       if (!p || p.tabs.length < 2) return false
-      const i = p.tabs.findIndex((t) => t.id === p.currentTabId), d = id === 'app.nextTab' ? 1 : -1
-      st.setCurrentTab(p.id, p.tabs[(i + d + p.tabs.length) % p.tabs.length].id); return true
+      // the tabs a folded group hides are skipped
+      const next = stepTab(p.tabs.map((t) => t.id), p.tabGroups ?? NO_GROUPS, p.currentTabId, id === 'app.nextTab' ? 1 : -1)
+      if (!next || next === p.currentTabId) return false
+      st.setCurrentTab(p.id, next); return true
     }
     case 'app.newProject': st.newProject(null); return true
     case 'app.openFolder': window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }); return true
     case 'app.goToFile': usePalette.getState().open(''); return true
     case 'app.commands': usePalette.getState().open('>'); return true
     case 'app.promptList': usePalette.getState().open('/'); return true
+    case 'tabs.groupClaude': case 'tabs.groupShells': if (!p) return false; st.groupTabsByKind(p.id, id === 'tabs.groupClaude' ? 'claude' : 'shell'); return true
+    case 'tabs.newGroup': case 'tabs.toggleGroup': case 'tabs.leaveGroup': {
+      const tab = p?.currentTabId
+      if (!p || !tab) return false
+      const gid = p.tabGroups?.members[tab]
+      if (id === 'tabs.newGroup') st.groupTabs(p.id, [tab])
+      else if (!gid) return false
+      else if (id === 'tabs.leaveGroup') st.removeTabFromGroup(p.id, tab)
+      else st.updateTabGroup(p.id, gid, { folded: !p.tabGroups!.groups.find((g) => g.id === gid)?.folded })
+      return true
+    }
     case 'app.settings': st.setShowSettings(!st.showSettings); return true
     case 'app.save': st.saveCurrentFile(); return true
     case 'app.screenshot': if (!p?.root) return false; st.captureScreen(p.id); return true

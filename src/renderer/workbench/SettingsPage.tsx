@@ -101,6 +101,13 @@ export function SettingsPage({ onClose }: { onClose: () => void }) {
                 <Row label={t('Police')}>{fontSelect(settings.fontFamily, (v) => set({ fontFamily: v }))}</Row>
                 <Row label={t('Taille')}>{num(settings.fontSize, 9, 24, 'pt', (v) => set({ fontSize: v }))}</Row>
               </Group>
+              <Group title={t('Onglets')}>
+                <Row label={t("Nouvel onglet d'un type groupé")} hint={t('Un onglet Claude ou un shell ouvert quand un groupe de son type existe (Grouper les onglets Claude, Grouper les shells).')}>
+                  <select value={settings.newTabInGroup ?? 'beside'} onChange={(e) => set({ newTabInGroup: e.target.value as 'beside' | 'join' })}>
+                    <option value="beside">{t('À côté du groupe')}</option><option value="join">{t('Dans le groupe')}</option>
+                  </select>
+                </Row>
+              </Group>
               <Group title={t('Exécuteurs')}>
                 <Row label={t('Afficher le terminal au lancement')} hint={t("Un script lancé depuis le panneau Exécuter passe au premier plan. Désactivé, il démarre dans son onglet sans quitter celui où tu es.")}>
                   <Toggle checked={settings.runShow !== false} onChange={(v) => set({ runShow: v })} />

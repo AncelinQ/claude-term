@@ -29,6 +29,12 @@ export const ACTIONS: KeyAction[] = [
   { id: 'app.mcp', scope: 'general', label: 'MCP', default: 'Mod+5' },
   { id: 'app.prompts', scope: 'general', label: 'Prompts', default: 'Mod+8' },
   { id: 'app.promptList', scope: 'general', label: 'Lancer un prompt (liste)', default: 'Ctrl+Shift+1' },
+  // tab groups: in the palette, no key by default
+  { id: 'tabs.newGroup', scope: 'general', label: "Nouveau groupe avec l'onglet", default: '' },
+  { id: 'tabs.toggleGroup', scope: 'general', label: "Replier / déplier le groupe de l'onglet", default: '' },
+  { id: 'tabs.leaveGroup', scope: 'general', label: "Retirer l'onglet de son groupe", default: '' },
+  { id: 'tabs.groupClaude', scope: 'general', label: 'Grouper les onglets Claude', default: '' },
+  { id: 'tabs.groupShells', scope: 'general', label: 'Grouper les shells', default: '' },
   { id: 'app.plugins', scope: 'general', label: 'Plugins', default: 'Mod+6', vscode: 'Mod+Shift+X' },
   { id: 'app.run', scope: 'general', label: 'Exécuteurs', default: 'Mod+7', vscode: 'Mod+Shift+D' },
   { id: 'app.git', scope: 'general', label: 'Git', default: 'Mod+9', vscode: 'Ctrl+Shift+G' },

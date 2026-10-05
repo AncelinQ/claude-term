@@ -204,6 +204,8 @@ export interface Settings {
   explorerOpen: Record<string, string[]>
   /** explorer: dotfiles and what git ignores are shown (dimmed) */
   explorerShowHidden: boolean
+  /** a new Claude tab or shell when a group of that kind exists: beside it, or into it */
+  newTabInGroup: 'beside' | 'join'
   /** Exécuter panel: the user's named groups of scripts, by project root */
   runGroups: Record<string, UserRunGroup[]>
   /** a script started from the panel brings its terminal to the front */
@@ -254,6 +256,7 @@ export const DEFAULT_SETTINGS: Settings = {
   layout: {},
   explorerOpen: {},
   explorerShowHidden: true,
+  newTabInGroup: 'beside',
   runGroups: {},
   runShow: true,
   notifyOS: true,
