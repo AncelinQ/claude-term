@@ -12,7 +12,7 @@ import { SettingsPage } from './workbench/SettingsPage'
 import { setLanguage } from './i18n'
 import { findAction } from '@shared/keymap'
 import { keyEvent, runAppAction, withShortcut } from './actions'
-import { promptForKey, runPrompt } from './prompts'
+import { numberNewPrompts, promptForKey, runPrompt } from './prompts'
 import { useAsk } from './stores/ask'
 import { useUpdate } from './stores/update'
 import { watchTaskbarBadge } from './taskbar'
@@ -97,6 +97,9 @@ export function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // a prompt saved without a key gets the next free Ctrl+Shift+digit
+  useEffect(() => { numberNewPrompts() }, [settings?.prompts])
 
   if (!theme || !settings || !project) return null
   const mac = window.ct.platform === 'darwin'

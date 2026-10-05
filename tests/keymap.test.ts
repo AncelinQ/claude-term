@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ACTIONS, parse, matches, fromEvent, label, binding, conflicts, terminalSafe, findAction } from '../src/shared/keymap'
+import { ACTIONS, parse, matches, fromEvent, label, binding, conflicts, terminalSafe, findAction, sameKey } from '../src/shared/keymap'
 const ev = (key: string, code: string, m: Partial<{ metaKey: boolean; ctrlKey: boolean; altKey: boolean; shiftKey: boolean }> = {}) => ({ key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...m })
 
 describe('keymap', () => {
@@ -48,6 +48,20 @@ describe('keymap', () => {
   it('AltGr types, it is never a shortcut', () => {
     expect(matches('Mod+Alt+S', { ...ev('s', 'KeyS', { ctrlKey: true, altKey: true }), altGraph: true }, false)).toBe(false)
     expect(matches('Mod+Alt+S', ev('s', 'KeyS', { ctrlKey: true, altKey: true }), false)).toBe(true)
+  })
+  it('compares shortcuts as this platform reads them; prompts on Ctrl+Shift+digit, any keyboard layout', () => {
+    expect(sameKey('Mod+Shift+2', 'Ctrl+Shift+2', false)).toBe(true)
+    expect(sameKey('Mod+Shift+2', 'Ctrl+Shift+2', true)).toBe(false)   // ⌘ and ⌃ are two keys on macOS
+    expect(sameKey('Ctrl+Shift+A', 'Ctrl+Shift+a', true)).toBe(true)
+    expect(sameKey('Ctrl+Shift+2', 'Ctrl+2', false)).toBe(false)
+    expect(sameKey('Ctrl+Shift+2', 'nope+2', false)).toBe(false)
+    // AZERTY gives "2" with Shift, QWERTY "@": the digit row goes by its code
+    expect(matches('Ctrl+Shift+2', ev('2', 'Digit2', { ctrlKey: true, shiftKey: true }), false)).toBe(true)
+    expect(matches('Ctrl+Shift+2', ev('@', 'Digit2', { ctrlKey: true, shiftKey: true }), false)).toBe(true)
+    expect(terminalSafe('Ctrl+Shift+2', false)).toBe(true)
+    expect(terminalSafe('Ctrl+Shift+2', true)).toBe(true)
+    expect(binding('app.promptList', {}, 'jetbrains', false)).toBe('Ctrl+Shift+1')
+    expect(binding('app.promptList', {}, 'vscode', true)).toBe('Ctrl+Shift+1')
   })
   it('leaves Ctrl+letter to the shell in a terminal', () => {
     expect(terminalSafe('Mod+W', false)).toBe(false)

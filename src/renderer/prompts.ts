@@ -1,7 +1,7 @@
 import { useWorkbench, isClaude, type Tab } from '@/stores/workbench'
 import { useAsk } from '@/stores/ask'
-import { matches, terminalSafe, type KeyEventLike } from '@shared/keymap'
-import { expandPrompt, promptKeys, promptVariables, type PromptValues, type SavedPrompt } from '@shared/prompts'
+import { ACTIONS, binding, matches, sameKey, terminalSafe, type KeyEventLike } from '@shared/keymap'
+import { expandPrompt, numberPrompts, promptKeys, promptVariables, type PromptValues, type SavedPrompt } from '@shared/prompts'
 import { t } from '@/i18n'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -10,6 +10,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 export function promptForKey(e: KeyEventLike, inTerminal: boolean): SavedPrompt | null {
   const mac = window.ct.platform === 'darwin'
   return useWorkbench.getState().settings?.prompts?.find((p) => p.shortcut && matches(p.shortcut, e, mac) && (!inTerminal || terminalSafe(p.shortcut, mac))) ?? null
+}
+
+/** Prompts that never had a key get Ctrl+Shift+2 to 9 (numberPrompts), around the app's own shortcuts. */
+export function numberNewPrompts() {
+  const s = useWorkbench.getState().settings
+  if (!s?.prompts?.length) return
+  const mac = window.ct.platform === 'darwin'
+  const taken = ACTIONS.map((a) => binding(a.id, s.keybindings ?? {}, s.keymapPreset, mac)).filter(Boolean)
+  const next = numberPrompts(s.prompts, taken, (a, b) => sameKey(a, b, mac))
+  if (next) window.ct.settings.set({ prompts: next })
 }
 
 /**

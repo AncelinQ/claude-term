@@ -94,7 +94,8 @@ function PromptForm({ prompt, onSave, onCancel }: { prompt: SavedPrompt; onSave:
             if (e.key === 'Escape') return setRecording(false)
             const combo = e.key === 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey ? '' : fromEvent(e.nativeEvent, mac)
             if (combo === null) return
-            setP({ ...p, shortcut: combo || undefined }); setRecording(false)
+            // removed on purpose: '' (no key, and not numbered again)
+            setP({ ...p, shortcut: combo }); setRecording(false)
           }}>
           {recording ? t('Appuie sur les touches…') : p.shortcut ? keyLabel(p.shortcut, mac) : t('Raccourci…')}
         </button>

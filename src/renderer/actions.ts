@@ -35,6 +35,7 @@ export function runAppAction(id: string): boolean {
     case 'app.openFolder': window.ct.app.pickFolder().then((d) => { if (d) { const s = useWorkbench.getState(); const target = p && !p.root ? p : s.newProject(null); s.setRoot(target.id, d) } }); return true
     case 'app.goToFile': usePalette.getState().open(''); return true
     case 'app.commands': usePalette.getState().open('>'); return true
+    case 'app.promptList': usePalette.getState().open('/'); return true
     case 'app.settings': st.setShowSettings(!st.showSettings); return true
     case 'app.save': st.saveCurrentFile(); return true
     case 'app.screenshot': if (!p?.root) return false; st.captureScreen(p.id); return true

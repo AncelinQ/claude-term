@@ -28,6 +28,7 @@ export const ACTIONS: KeyAction[] = [
   { id: 'app.skills', scope: 'general', label: 'Skills du projet', default: 'Mod+4' },
   { id: 'app.mcp', scope: 'general', label: 'MCP', default: 'Mod+5' },
   { id: 'app.prompts', scope: 'general', label: 'Prompts', default: 'Mod+8' },
+  { id: 'app.promptList', scope: 'general', label: 'Lancer un prompt (liste)', default: 'Ctrl+Shift+1' },
   { id: 'app.plugins', scope: 'general', label: 'Plugins', default: 'Mod+6', vscode: 'Mod+Shift+X' },
   { id: 'app.run', scope: 'general', label: 'Exécuteurs', default: 'Mod+7', vscode: 'Mod+Shift+D' },
   { id: 'app.git', scope: 'general', label: 'Git', default: 'Mod+9', vscode: 'Ctrl+Shift+G' },
@@ -67,6 +68,14 @@ export function parse(s: string): Combo | null {
     if (p === 'Mod') c.mod = true; else if (p === 'Ctrl') c.ctrl = true; else if (p === 'Alt') c.alt = true; else if (p === 'Shift') c.shift = true; else return null
   }
   return c
+}
+
+/** A shortcut as this platform reads it ("Mod+Shift+2" and "Ctrl+Shift+2" are one key off macOS), to compare two. */
+export function sameKey(a: string, b: string, mac: boolean): boolean {
+  const x = parse(a), y = parse(b)
+  if (!x || !y) return false
+  const norm = (c: Combo) => `${mac && c.mod ? 'M' : ''}${(mac ? c.ctrl : c.mod || c.ctrl) ? 'C' : ''}${c.alt ? 'A' : ''}${c.shift ? 'S' : ''}+${c.key.toLowerCase()}`
+  return norm(x) === norm(y)
 }
 
 /** A keydown as the keymap reads it; altGraph: AltGr held (Windows reports it as Ctrl+Alt). */

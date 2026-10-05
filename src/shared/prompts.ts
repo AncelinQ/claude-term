@@ -6,8 +6,31 @@ export interface SavedPrompt {
   text: string
   /** send: typed then Enter; insert: typed, left to complete */
   mode: 'send' | 'insert'
-  /** a shortcut of the keymap's form ("Mod+Alt+1"), optional */
+  /** a shortcut of the keymap's form ("Mod+Alt+1"); '' none on purpose, undefined never given (numberPrompts) */
   shortcut?: string
+}
+
+/**
+ * The keys prompts get by themselves: Ctrl+Shift+2 to 9, in their list's order (Ctrl+Shift+1 opens the list;
+ * Ctrl+Shift+0 is left alone, Windows takes it to switch input method once several languages are installed).
+ * Ctrl rather than ⌘ on macOS, whose ⌘⇧3 to 5 take screenshots.
+ */
+export const PROMPT_KEYS = ['2', '3', '4', '5', '6', '7', '8', '9'].map((d) => 'Ctrl+Shift+' + d)
+
+/**
+ * Gives a key to the prompts that never had one (`shortcut` undefined): the first of PROMPT_KEYS that neither another
+ * prompt nor one of `taken` (the app's shortcuts) holds. None left: '' (no key, and never numbered again). The key is
+ * then the prompt's own, changed or removed like any shortcut. null when nothing changes.
+ */
+export function numberPrompts(prompts: SavedPrompt[], taken: string[], same: (a: string, b: string) => boolean): SavedPrompt[] | null {
+  if (!prompts.some((p) => p.shortcut === undefined)) return null
+  const held = [...taken, ...prompts.flatMap((p) => (p.shortcut ? [p.shortcut] : []))]
+  return prompts.map((p) => {
+    if (p.shortcut !== undefined) return p
+    const key = PROMPT_KEYS.find((k) => !held.some((h) => same(h, k))) ?? ''
+    if (key) held.push(key)
+    return { ...p, shortcut: key }
+  })
 }
 
 /** The variables, under their French names and English ones. */
